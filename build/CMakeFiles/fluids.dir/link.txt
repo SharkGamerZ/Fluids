@@ -1,1 +1,0 @@
-/opt/cuda/bin/g++ CMakeFiles/fluids.dir/src/main.cpp.o -o fluids  -lglfw -lGL -lm -lX11 lib/imgui/libimgui.a 
