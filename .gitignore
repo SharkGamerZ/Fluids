@@ -1,2 +1,8 @@
 /.vscode/
 /build/
+.idea/*
+
+# Ignore build output directories (may vary based on your project)
+cmake-build-debug/
+cmake-build-release/
+out/
