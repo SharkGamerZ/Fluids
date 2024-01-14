@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "iostream": "cpp"
+    },
+    "makefile.compileCommandsPath": ".vscode/compile_commands.json",
+    "makefile.makefilePath": ""
+}
