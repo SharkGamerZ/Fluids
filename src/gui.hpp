@@ -1,4 +1,6 @@
 #include <cstdlib>
+#include <cstdio>
+#include <iostream>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -12,7 +14,7 @@ static ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 int openGUI();
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-
+unsigned int getShaderProgram();
 
 // OpenGL shaders
 
@@ -28,7 +30,7 @@ static const char *vertexShaderSource = "#version 330 core\n"
 
 
 // Fragment Shader
-//     Prende in input ??
+//     Prende in input i frammenti (pixel) e
 //     restituisce in output il colore dei pixel (in questo caso arancione)
 static const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"

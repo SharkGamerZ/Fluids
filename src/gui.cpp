@@ -34,7 +34,7 @@ int openGUI()
 
     // Definizione dei vertici del triangolo
     float vertices[] = {
-    -0.2f, -0.5f, 0.0f,
+    -0.5f, -0.5f, 0.0f,
      0.5f, -0.5f, 0.0f,
      0.0f,  0.5f, 0.0f
     };  
@@ -44,49 +44,19 @@ int openGUI()
     // Inizializzazione di GLEW
     glewInit();
     // Creazione del Vertex Buffer Object e salviamo il suo ID in VBO
-    unsigned int VBO;
+    uint VBO;
     glGenBuffers(1, &VBO);
     // Colleghiamo il VBO all'Array Buffer di OpenGL
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     // Copiamo i vertici nel VBO
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices , GL_STATIC_DRAW);
 
-    // Creiamo l'id della vertexShader 
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    // Colleghiamo il codice della vertexShader all'id
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-
-    // Creiamo l'id della fragmentShader
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    // Colleghiamo il codice della fragmentShader all'id
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-
-    // Creiamo l'id del programma di shader
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-
-    // Colleghiamo le due shader al programma
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    // Usiamo il programma di shader
-    glUseProgram(shaderProgram);
-    
-    // Eliminiamo le shader
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);  
-
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);  
 
     // Creazione del Vertex Array Object e salviamo il suo ID in VAO
-    unsigned int VAO;
+    uint VAO;
     glGenVertexArrays(1, &VAO);
 
 
@@ -100,7 +70,8 @@ int openGUI()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);  
     
-
+    uint shaderProgram = getShaderProgram();
+    if (shaderProgram == 0) return EXIT_FAILURE;
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -201,4 +172,67 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     // Se l'utente preme il tasto SPACE, inverte lo stato della simulazione
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
         simulazioneIsRunning = !simulazioneIsRunning;
+}
+
+// Funzione per la creazione del programma di shader
+// @return L'ID del programma di shader o 0 se c'è stato un errore
+uint getShaderProgram() {
+    int  success;
+    char infoLog[512];
+
+
+    // Creiamo l'id della vertexShader 
+    uint vertexShader;
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    // Colleghiamo il codice della vertexShader all'id
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if(!success)
+    {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        return 0;
+    }
+    
+    // Creiamo l'id della fragmentShader
+    uint fragmentShader;
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    // Colleghiamo il codice della fragmentShader all'id
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if(!success)
+    {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        return 0;
+    }
+
+    // Creiamo l'id del programma di shader
+    uint shaderProgram;
+    shaderProgram = glCreateProgram();
+
+    // Colleghiamo le due shader al programma
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    // Verifichiamo che il programma di shader sia stato creato correttamente
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if(!success) {
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        return 0;
+    }
+
+    // Usiamo il programma di shader
+    glUseProgram(shaderProgram);
+    
+    // Eliminiamo le shader
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return shaderProgram;
 }
