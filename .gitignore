@@ -1,6 +1,7 @@
 /.vscode/
 /build/
 .idea/*
+.editorconfig
 
 # Ignore build output directories (may vary based on your project)
 cmake-build-debug/
