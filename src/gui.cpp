@@ -1,124 +1,36 @@
 #include "gui.hpp"
 
+
 int openGUI()
 {
-    // Setup della finestra
-    if (!glfwInit()) return EXIT_FAILURE;
-
-    // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(1280, 720, "Fluids", nullptr, nullptr);
-    if (window == nullptr) return EXIT_FAILURE;
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    (void) io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init();
-    
-
-    // Set the key callback
-    glfwSetKeyCallback(window, key_callback);
-
+    GLFWwindow *window = setupWindow(1280, 720);
+    ImGuiIO *io = setupImGui(window);
 
 
     // Definizione dei vertici del triangolo
+    // ------------------------------------------------------------------
     float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
-    };  
+         0.5f,  0.5f, 0.0f,  // alto destra
+         0.5f, -0.5f, 0.0f,  // basso destra
+        -0.5f, -0.5f, 0.0f,  // basso sinistra
 
+         0.5f,  0.5f, 1.0f,  // alto destra
+        -0.5f, -0.5f, 1.0f,  // basso sinistra
+        -0.5f,  0.5f, 1.0f   // alto sinistra
+    };
 
-
-    // Inizializzazione di GLEW
+    // Linka i vertici al Vertex Array
     glewInit();
-    // Creazione del Vertex Buffer Object e salviamo il suo ID in VBO
-    uint VBO;
-    glGenBuffers(1, &VBO);
-    // Colleghiamo il VBO all'Array Buffer di OpenGL
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // Copiamo i vertici nel VBO
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices , GL_STATIC_DRAW);
+    uint VAO = linkVerticestoBuffer(vertices, 18);
 
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);  
-
-    // Creazione del Vertex Array Object e salviamo il suo ID in VAO
-    uint VAO;
-    glGenVertexArrays(1, &VAO);
-
-
-    
-    // 1. bind Vertex Array Object
-    glBindVertexArray(VAO);
-    // 2. copy our vertices array in a buffer for OpenGL to use
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    // 3. then set our vertex attributes pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);  
-    
+    // Prende l'id del programma di shader
     uint shaderProgram = getShaderProgram();
     if (shaderProgram == 0) return EXIT_FAILURE;
 
-    // Main loop
+    // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
 
-
-        // Finestra della simulazione
-        if (false){
-            ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-            ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-            ImGui::Begin("Finestra simulazione");
-            ImGui::Text("Sono la simulazione!");
-            if (simulazioneIsRunning) {
-                ImGui::Text("Simulazione in corso...");
-            } else {
-                ImGui::Text("Simulazione non in corso...");
-            }
-            ImGui::End();
-        }
-
-        // Finestra per i controlli della simulazione
-        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-        {
-            static float densita = 0.0f;
-            static float gravita = 0.0f;
-            static float temperatura = 0.0f;
-
-            ImGui::Begin("Parametri di simulazione");
-            ImGui::SliderFloat("Densita", &densita, 0.0f, 1.0f);
-            ImGui::SliderFloat("Gravità", &gravita, 0.0f, 20.0f);
-            ImGui::SliderFloat("Temperatura", &temperatura, 0.0f, 1.0f);
-
-
-            // Buttons return true when clicked (most widgets return true when edited/activated)
-            if (ImGui::Button("Avvio simulazione")) simulazioneIsRunning = !simulazioneIsRunning;
-
-
-            ImGui::SameLine();
-            ImGui::Text("Stato = %B", simulazioneIsRunning);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
-        }
+        renderImGui(io);
 
         // Controllo colore 
         if(simulazioneIsRunning) {
@@ -129,21 +41,23 @@ int openGUI()
             // clear_color = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
-
         
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
+
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        
 
         // Rendering del triangolo
-        glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // Rendering
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+
 
         // check and call events and swap the buffers
         glfwPollEvents();
@@ -160,6 +74,11 @@ int openGUI()
 
     return EXIT_SUCCESS;
 }
+
+
+
+
+
 
 
 // Funzione per la gestione degli input
@@ -235,4 +154,106 @@ uint getShaderProgram() {
     glDeleteShader(fragmentShader);
 
     return shaderProgram;
+}
+
+// Funzione per setuppare la finestra e il context di IMGui
+// @return Il puntatore alla finestra o NULL se c'è stato un errore
+GLFWwindow *setupWindow(int width, int height) {
+    // Setup della finestra
+    if (!glfwInit()) return NULL;
+
+    // Create window with graphics context
+    GLFWwindow *window = glfwCreateWindow(width, height, "Fluids", nullptr, nullptr);
+    if (window == nullptr) return NULL;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+    
+    // Impostiamo la callback per la gestione degli input
+    glfwSetKeyCallback(window, key_callback);
+
+    return window;
+}
+
+// Funzione per fare il setup di IMGui
+// @param window La finestra di GLFW
+// @return Il puntatore al context di IMGui
+ImGuiIO *setupImGui(GLFWwindow *window) {
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+
+    // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init();
+
+    return &io;
+}   
+
+// Funzione per il rendering di IMGui
+// @param io Il context di IMGui
+void renderImGui(ImGuiIO *io) {
+    // Avvia il frame di ImGui
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+
+    // Finestra per i controlli della simulazione
+    {
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
+        static float densita = 0.0f;
+        static float gravita = 0.0f;
+        static float temperatura = 0.0f;
+
+        ImGui::Begin("Parametri di simulazione", NULL, ImGuiWindowFlags_NoResize);
+        ImGui::SliderFloat("Densita", &densita, 0.0f, 1.0f);
+        ImGui::SliderFloat("Gravità", &gravita, 0.0f, 20.0f);
+        ImGui::SliderFloat("Temperatura", &temperatura, 0.0f, 1.0f);
+
+
+        // Buttons return true when clicked (most widgets return true when edited/activated)
+        if (ImGui::Button("Avvio simulazione")) simulazioneIsRunning = !simulazioneIsRunning;
+
+
+        ImGui::SameLine();
+        ImGui::Text("Stato = %B", simulazioneIsRunning);
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io->Framerate, io->Framerate);
+        ImGui::End();
+    }
+}
+
+// Funzione per andare a linkare i vertici che gli vengono passati, al Vertex Buffer e successivamente al Vertex Array
+// @param vertices I vertici da linkare
+// @return L'ID del Vertex Array
+uint linkVerticestoBuffer(float *vertices, int len) {
+    uint VBO, VAO;
+    glGenBuffers(1, &VBO);      // Vertex Buffer
+
+    // Rende il Vertex Buffer attivo, creandolo se necessario
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    // Copia i dati dei vertici nel Vertex Buffer
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_STATIC_DRAW);
+
+
+
+    glGenVertexArrays(1, &VAO); // Vertex Array
+    // Rende il Vertex Array attivo, creandolo se necessario
+    // Questa operazione è necessaria perché l'Element Buffer è salvato nel Vertex Array
+    glBindVertexArray(VAO);
+
+    // Attacca il Vertex Buffer all'attuale Vertex Array
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    printf("VAO = %d\n", VAO);
+    
+    return VAO;
 }

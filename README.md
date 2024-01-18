@@ -1,6 +1,10 @@
 # Fluids
 La fantastica repo per il progetto di Multicore 2023/24
 
+## Fisica
+Per iniziare, questa simulazione si basa su una griglia di Eulero, per rappresentare dei fluidi non comprimibili.
+
+
 ## Necessari
 - OpenGL
 - GLFW
