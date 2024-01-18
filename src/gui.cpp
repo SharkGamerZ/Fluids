@@ -3,58 +3,52 @@
 
 int openGUI()
 {
-    GLFWwindow *window = setupWindow(1280, 720);
+    GLFWwindow *window = setupWindow(viewportSize, viewportSize);
     ImGuiIO *io = setupImGui(window);
 
 
-    // Definizione dei vertici del triangolo
-    // ------------------------------------------------------------------
-    float vertices[] = {
-         0.5f,  0.5f, 0.0f,  // alto destra
-         0.5f, -0.5f, 0.0f,  // basso destra
-        -0.5f, -0.5f, 0.0f,  // basso sinistra
-
-         0.5f,  0.5f, 1.0f,  // alto destra
-        -0.5f, -0.5f, 1.0f,  // basso sinistra
-        -0.5f,  0.5f, 1.0f   // alto sinistra
-    };
-
     // Linka i vertici al Vertex Array
     glewInit();
-    uint VAO = linkVerticestoBuffer(vertices, 18);
 
     // Prende l'id del programma di shader
     uint shaderProgram = getShaderProgram();
     if (shaderProgram == 0) return EXIT_FAILURE;
 
+    int size = viewportSize;
+
+    FluidMatrix *matrix = FluidMatrixCreate(size, 10.0f, 1.0f, 0.2f);
+    FluidMatrixAddDensity(matrix, 8, 8, 10.0f);
+
+    uint VAO;
+
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
 
-        renderImGui(io);
+        // renderImGui(io);
 
-        // Controllo colore 
-        if(simulazioneIsRunning) {
-            // clear_color = ImVec4(0.00f, 1.00f, 0.00f, 1.00f);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        }
-        else {
-            // clear_color = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        // Aggiungo densità al centro della matrice
+        if (dens) 
+        {
+            // Simulazione
+            FluidMatrixStep(matrix);
+            FluidMatrixAddDensity(matrix, 1, 1, 10.0f);
+            FluidMatrixAddVelocity(matrix, 1, 1, 1.0f, -1.0f);
+            dens = false;
+            VAO = drawMatrix(matrix, size);
         }
         
 
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        
 
         // Rendering del triangolo
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_POINTS, 0, size * size);
 
         // Rendering
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // ImGui::Render();
+        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
 
@@ -78,9 +72,6 @@ int openGUI()
 
 
 
-
-
-
 // Funzione per la gestione degli input
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -91,6 +82,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     // Se l'utente preme il tasto SPACE, inverte lo stato della simulazione
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
         simulazioneIsRunning = !simulazioneIsRunning;
+
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+        dens = true;
+
 }
 
 // Funzione per la creazione del programma di shader
@@ -98,7 +93,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 uint getShaderProgram() {
     int  success;
     char infoLog[512];
-
 
     // Creiamo l'id della vertexShader 
     uint vertexShader;
@@ -146,8 +140,12 @@ uint getShaderProgram() {
         return 0;
     }
 
+    int uniform_viewport = glGetUniformLocation(shaderProgram, "viewPort");
+
     // Usiamo il programma di shader
     glUseProgram(shaderProgram);
+
+    glUniform2f(uniform_viewport, viewportSize, viewportSize);
     
     // Eliminiamo le shader
     glDeleteShader(vertexShader);
@@ -230,30 +228,125 @@ void renderImGui(ImGuiIO *io) {
     }
 }
 
+// Funzione per il rendering della matrice
+// @param matrix La matrice da renderizzare
+// @param N La dimensione della matrice
+uint drawMatrix(FluidMatrix *matrix, int N) {
+    // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
+    float* vertices = (float*) calloc(sizeof(float), N * N * 3);
+    // Loop to iterate on matrix
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            vertices[3 * IX(i, j)] = i;
+            vertices[3 * IX(i, j) + 1] = j;
+            vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
+        }
+    }
+
+    printVertices(vertices, N);
+
+    // Linka i vertici al Vertex Array
+    uint VAO = linkVerticestoBuffer(vertices, N * N * 3);
+
+    return VAO;
+}
+
+
+void printVertices(float *vertices, int N) {
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            printf("%2d ", (int) vertices[3 * IX(i, j)]);
+            printf("%2d ", (int) vertices[3 * IX(i, j) + 1]);
+            printf("%2d ", (int) vertices[3 * IX(i, j) + 2]);
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
+
 // Funzione per andare a linkare i vertici che gli vengono passati, al Vertex Buffer e successivamente al Vertex Array
 // @param vertices I vertici da linkare
 // @return L'ID del Vertex Array
 uint linkVerticestoBuffer(float *vertices, int len) {
     uint VBO, VAO;
-    glGenBuffers(1, &VBO);      // Vertex Buffer
+    setupBufferAndArray(&VBO, &VAO);
 
-    // Rende il Vertex Buffer attivo, creandolo se necessario
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     // Copia i dati dei vertici nel Vertex Buffer
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_STATIC_DRAW);
-
-
-
-    glGenVertexArrays(1, &VAO); // Vertex Array
-    // Rende il Vertex Array attivo, creandolo se necessario
-    // Questa operazione è necessaria perché l'Element Buffer è salvato nel Vertex Array
-    glBindVertexArray(VAO);
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    printf("VAO = %d\n", VAO);
     
     return VAO;
+}
+
+void setupBufferAndArray(uint* VBO, uint* VAO) {
+    // Setup del Vertex Array 
+    glGenVertexArrays(1, VAO);
+    // Rende il Vertex Array attivo, creandolo se necessario
+    glBindVertexArray(*VAO);
+
+    // Setup del Vertex Buffer
+    glGenBuffers(1, VBO);
+    // Rende il Vertex Buffer attivo, creandolo se necessario
+    glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+}
+
+void printMatrix(FluidMatrix *matrix, int N) {
+    float MAX_DENSITY = 0.9f;
+    const char* arrows = "←↑→↓↖↗↘↙";
+    const char* brightnessChars = " .:-=+*#%@";
+    
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            float velocityX = matrix->Vx[IX(i, j)];
+            float velocityY = matrix->Vy[IX(i, j)];
+            
+            float density = matrix->density[IX(i, j)];
+            
+            float brightness = density / MAX_DENSITY; // Assuming MAX_DENSITY is defined
+            
+            int brightnessIndex = brightness * (strlen(brightnessChars) - 1);
+            char brightnessChar = brightnessChars[brightnessIndex];
+
+            std::cout << brightnessChar << " ";   
+
+            /*if (velocityX == 0 && velocityY == 0) {
+                std::cout << "∘"<< " "; // Print "∘" for zero velocity
+            } else {
+                // Stampa il giusto carattere
+                if (velocityX < 0) {
+                    if (velocityY < 0) {
+                        std::cout << "↙";
+                    } else if (velocityY > 0) {
+                        std::cout << "↖";
+                    } else {
+                        std::cout << "←";
+                    }
+                } else if (velocityX > 0) {
+                    if (velocityY < 0) {
+                        std::cout << "↘";
+                    } else if (velocityY > 0) {
+                        std::cout << "↗";
+                    } else {
+                        std::cout << "→";
+                    }
+                } else {
+                    if (velocityY < 0) {
+                        std::cout << "↓";
+                    } else if (velocityY > 0) {
+                        std::cout << "↑";
+                    }
+                }
+                
+                std::cout<<" ";
+            }*/
+
+        }
+        printf("\n");
+    }
+    printf("\n");
 }

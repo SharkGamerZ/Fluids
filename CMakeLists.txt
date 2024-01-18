@@ -11,6 +11,8 @@ set(SOURCE_FILES
         src/gui.hpp
         src/main.cpp
         src/main.hpp
+        src/fluid2d.cpp
+        src/fluid2d.hpp
 )
 
 add_subdirectory(lib/imgui)

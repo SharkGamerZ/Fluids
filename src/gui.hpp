@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <iostream>
 
-#include "compute.hpp"
+#include "fluid2d.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -14,9 +14,11 @@
 #include <GL/glut.h>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+
+#define viewportSize 256
 inline int display_w, display_h;
 
-
+static bool dens = true;
 inline bool simulazioneIsRunning = false;
 inline ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
@@ -30,7 +32,15 @@ uint linkVerticestoBuffer(float* vertices, int len);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 void renderImGui(ImGuiIO *io);
-void render(int width, int height, cell *matrix, uint shaderProgram);
+
+uint drawMatrix(FluidMatrix *matrix, int N);
+
+
+void setupBufferAndArray(uint* VBO, uint* VAO);
+void printMatrix(FluidMatrix *matrix, int N);
+
+
+void printVertices(float *vertices, int len);
 
 
 // OpenGL shaders
@@ -40,9 +50,12 @@ void render(int width, int height, cell *matrix, uint shaderProgram);
 //      vertici e li passa al Fragment Shader
 inline const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
+    "uniform vec2 viewPort;\n"
     "void main()\n"
     "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "   float x = (aPos.x / (viewPort.x / 2)) - 1;\n"
+    "   float y = (aPos.y / (viewPort.y / 2)) - 1;\n"
+    "   gl_Position = vec4(x, y, 0.0, aPos.z);\n"
     "}\0";
 
     
@@ -55,7 +68,7 @@ inline const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
     "void main()\n"
     "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+    "   FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
     "}\n\0";
 
 #endif

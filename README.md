@@ -3,7 +3,9 @@ La fantastica repo per il progetto di Multicore 2023/24
 
 ## Fisica
 Per iniziare, questa simulazione si basa su una griglia di Eulero, per rappresentare dei fluidi non comprimibili.
-
+La simulazione è rappresentata da 3 fasi principali:
+- **Diffusione**: ad ogni timestep ogni cella del fluido tende a "diffondersi" in quelle vicine, come una goccia di salsa di soia messa in una bacinella d'acqua. Questo comporta che se una certa cella ha una velocità, verrà diffusa nei suoi vicini.
+- **Project** (non so tradurlo): in ogni momento, la somma di fluidi che entrano/escono da una cella deve essere 0, altrimenti vorrebbe dire che della materia sta sparendo/apparendo dal nulla. Visto che le altre operazioni potrebbero andare ad infrangere questa regola, tramite questa fase ci assicuriamo che venga rispettata.
 
 ## Necessari
 - OpenGL
