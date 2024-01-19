@@ -16,7 +16,6 @@ set(SOURCE_FILES
 )
 
 add_subdirectory(lib/imgui)
-add_subdirectory(lib/glm)
 
 # Aggiungi tutte le sorgenti del progetto
 add_executable(fluids ${SOURCE_FILES})
@@ -25,7 +24,7 @@ add_executable(fluids ${SOURCE_FILES})
 target_compile_options(fluids PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp> )
 
 # Link alle librerie necessarie
-target_link_libraries(fluids PRIVATE -lglfw -lGL -lGLEW -lm -lX11 imgui glm)
+target_link_libraries(fluids PRIVATE -lglfw -lGL -lGLEW -lm -lX11 imgui)
 
-target_include_directories(fluids PRIVATE lib/imgui/ lib/glm/)
+target_include_directories(fluids PRIVATE lib/imgui/)
 
