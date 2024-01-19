@@ -4,8 +4,9 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
+#include <cmath>
 
-#include "fluid2d.hpp"
+#include "FluidMatrix.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -14,34 +15,61 @@
 #include <GL/glut.h>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
-
-
-#define viewportSize 512
-inline int display_w, display_h;
-
-static bool dens = true;
-inline bool simulazioneIsRunning = false;
-inline ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
-
 int openGUI();
+
+/**
+ * Funzione per setuppare la finestra e il context di IMGui
+ * @return Il puntatore alla finestra o nullptr se c'è stato un errore
+ */
 GLFWwindow *setupWindow(int width, int height);
+
+/**
+ * Funzione per fare il setup di IMGui
+ * @param window La finestra di GLFW
+ * @return Il puntatore al context di IMGui
+ */
 ImGuiIO *setupImGui(GLFWwindow *window);
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
+
+/**
+ * Funzione per il rendering di IMGui
+ * @param io il context di ImGui
+ */
 void renderImGui(ImGuiIO *io);
 
-
+/**
+ * Funzione per la creazione del programma di shader
+ * @return L'ID del programma di shader o 0 se c'è stato un errore
+ */
 unsigned int getShaderProgram();
-void setupBufferAndArray(uint* VBO, uint* VAO);
 
-void linkVerticestoBuffer(float* vertices, int len);
+/**
+ * Funzione per andare a creare il Vertex Buffer e il Vertex Array
+ * @param VBO Il puntatore al Vertex Buffer
+ * @param VAO Il puntatore al Vertex Array
+ */
+void setupBufferAndArray(uint *VBO, uint *VAO);
+
+/**
+ * Funzione per andare a linkare i vertici che gli vengono passati, al Vertex Buffer e successivamente al Vertex Array
+ * @param vertices I vertici da linkare
+ * @param len La lunghezza del vettore di vertici
+ */
+void linkVerticestoBuffer(float *vertices, int len);
+
+/**
+ *  Funzione per il rendering della matrice
+ * @param matrix La matrice da renderizzare
+ * @param N La dimensione della matrice
+ */
 void drawMatrix(FluidMatrix *matrix, int N);
 
 
-
-
 void printMatrix(FluidMatrix *matrix, int N);
+
 void printVertices(float *vertices, int len);
+
 void normalizeVertices(float *vertices, int N);
 
 // OpenGL shaders
@@ -67,7 +95,7 @@ inline const char *vertexShaderSource = "#version 330 core\n"
 //     "   gl_Position = vec4(x, y, 0.0, aPos.z);\n"
 //     "}\0";
 
-    
+
 
 
 // Fragment Shader
