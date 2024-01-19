@@ -67,15 +67,15 @@ void FluidMatrixStep(FluidMatrix *matrix)
     SWAP(Vx, Vx0); diffuse(xAxis, Vx, Vx0, visc, dt, N);
     SWAP(Vy, Vy0); diffuse(yAxis, Vy, Vy0, visc, dt, N);
     
-    project(Vx0, Vy0, Vx, Vy, N);
+    // project(Vx0, Vy0, Vx, Vy, N);
     
-    advect(xAxis, Vx, Vx0, Vx0, Vy0, dt, N);
-    advect(yAxis, Vy, Vy0, Vx0, Vy0, dt, N);
+    // advect(xAxis, Vx, Vx0, Vx0, Vy0, dt, N);
+    // advect(yAxis, Vy, Vy0, Vx0, Vy0, dt, N);
     
-    project(Vx, Vy, Vx0, Vy0, N);
+    // project(Vx, Vy, Vx0, Vy0, N);
     
-    diffuse(0, s, density, diff, dt, N);
-    advect(0, density, s, Vx, Vy, dt, N);
+    // diffuse(0, s, density, diff, dt, N);
+    // advect(0, density, s, Vx, Vy, dt, N);
 }
 
 // Funzione per aggiungere densità in un punto

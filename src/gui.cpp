@@ -18,7 +18,7 @@ int openGUI()
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix *matrix = FluidMatrixCreate(size, 10.0f, 1.0f, 0.2f);
-    FluidMatrixAddDensity(matrix, 8, 8, 10.0f);
+    FluidMatrixAddDensity(matrix, size/2, size/2, 10.0f);
 
     // Creiamo il Vertex Buffer e il Vertex Array
     uint VBO, VAO;
@@ -37,6 +37,12 @@ int openGUI()
             dens = false;
         }
         
+        float timeValue = glfwGetTime();
+        float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        glUseProgram(shaderProgram);
+        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+
         drawMatrix(matrix, size);
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
@@ -252,6 +258,8 @@ void drawMatrix(FluidMatrix *matrix, int N) {
 
     // Linka i vertici al Vertex Array
     linkVerticestoBuffer(vertices, N * N * 3);
+
+    free(vertices);
 }
 
 

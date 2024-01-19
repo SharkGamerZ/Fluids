@@ -54,6 +54,7 @@ inline const char *vertexShaderSource = "#version 330 core\n"
     "void main()\n"
     "{\n"
     "   gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
+        "vertexColor = aPos.z;\n"
     "}\0";
 
 // inline const char *vertexShaderSourceNorm = "#version 330 core\n"
@@ -74,9 +75,10 @@ inline const char *vertexShaderSource = "#version 330 core\n"
 //     restituisce in output il colore dei pixel (in questo caso arancione)
 inline const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
+    "uniform vec4 ourColor;\n"
     "void main()\n"
     "{\n"
-    "   FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+    "   FragColor = ourColor;\n"
     "}\n\0";
 
 #endif

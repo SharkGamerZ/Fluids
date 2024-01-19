@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.26)
 project(fluids CUDA CXX)
 
 set(CMAKE_CUDA_STANDARD 23)
