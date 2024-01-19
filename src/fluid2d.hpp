@@ -1,8 +1,11 @@
 #include <math.h>
 
 #define IX(i , j) ((j) + (i) * N)
+#define SWAP(x0,x) {float *tmp=x0;x0=x;x=tmp;}
+
 #define xAxis 1
 #define yAxis 2
+
 #define iterations 20
 
 

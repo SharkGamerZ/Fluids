@@ -21,6 +21,9 @@ int openGUI()
 
     uint VAO;
 
+    FluidMatrixAddDensity(matrix, 1, 1, 10.0f);
+    FluidMatrixAddVelocity(matrix, 1, 1, 1.0f, -1.0f);
+
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
 
@@ -31,8 +34,6 @@ int openGUI()
         {
             // Simulazione
             FluidMatrixStep(matrix);
-            FluidMatrixAddDensity(matrix, 1, 1, 10.0f);
-            FluidMatrixAddVelocity(matrix, 1, 1, 1.0f, -1.0f);
             dens = false;
             VAO = drawMatrix(matrix, size);
         }
@@ -243,25 +244,13 @@ uint drawMatrix(FluidMatrix *matrix, int N) {
         }
     }
 
-    printVertices(vertices, N);
-
     // Linka i vertici al Vertex Array
     uint VAO = linkVerticestoBuffer(vertices, N * N * 3);
 
+    // printVertices(vertices, N);
+    // printNormalizedVertices(vertices, N);
+
     return VAO;
-}
-
-
-void printVertices(float *vertices, int N) {
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            printf("%2d ", (int) vertices[3 * IX(i, j)]);
-            printf("%2d ", (int) vertices[3 * IX(i, j) + 1]);
-            printf("%2d ", (int) vertices[3 * IX(i, j) + 2]);
-            printf("\n");
-        }
-    }
-    printf("\n");
 }
 
 
@@ -295,6 +284,12 @@ void setupBufferAndArray(uint* VBO, uint* VAO) {
     glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 }
 
+
+
+// --------------------------------------------------------------
+// Funzioni DEBUG
+// --------------------------------------------------------------
+
 void printMatrix(FluidMatrix *matrix, int N) {
     float MAX_DENSITY = 0.9f;
     const char* arrows = "←↑→↓↖↗↘↙";
@@ -312,7 +307,7 @@ void printMatrix(FluidMatrix *matrix, int N) {
             int brightnessIndex = brightness * (strlen(brightnessChars) - 1);
             char brightnessChar = brightnessChars[brightnessIndex];
 
-            std::cout << brightnessChar << " ";   
+            std::cout << density << " ";   
 
             /*if (velocityX == 0 && velocityY == 0) {
                 std::cout << "∘"<< " "; // Print "∘" for zero velocity
@@ -349,4 +344,31 @@ void printMatrix(FluidMatrix *matrix, int N) {
         printf("\n");
     }
     printf("\n");
+}
+
+
+void printVertices(float *vertices, int N) {
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            printf("%f ", vertices[3 * IX(i, j)]);
+            printf("%f ", vertices[3 * IX(i, j) + 1]);
+            printf("%f ", vertices[3 * IX(i, j) + 2]);
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
+void printNormalizedVertices(float *vertices, int N) {
+    float *normalizedVertices = (float*) calloc(sizeof(float), N * N * 3);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++){
+            normalizedVertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]        / ((float) viewportSize / 2.0f)) - 1;
+            normalizedVertices[3 * IX(i, j) + 1]    = (vertices[3 * IX(i, j) + 1]    / ((float) viewportSize / 2.0f)) - 1;
+            normalizedVertices[3 * IX(i, j) + 2]    = vertices[3 * IX(i, j) + 2];
+        }
+    }
+
+    printVertices(normalizedVertices, N);
+
 }

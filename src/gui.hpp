@@ -14,6 +14,8 @@
 #include <GL/glut.h>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+#include "glm.hpp"
+
 
 #define viewportSize 256
 inline int display_w, display_h;
@@ -41,7 +43,7 @@ void printMatrix(FluidMatrix *matrix, int N);
 
 
 void printVertices(float *vertices, int len);
-
+void printNormalizedVertices(float *vertices, int N);
 
 // OpenGL shaders
 
@@ -49,6 +51,14 @@ void printVertices(float *vertices, int len);
 //      Prende in input la posizione dei
 //      vertici e li passa al Fragment Shader
 inline const char *vertexShaderSource = "#version 330 core\n"
+    "layout (location = 0) in vec3 aPos;\n"
+    "uniform vec2 viewPort;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(aPos.x, aPos.y, 0.0, aPos.z);\n"
+    "}\0";
+
+inline const char *vertexShaderSourceNorm = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
     "uniform vec2 viewPort;\n"
     "void main()\n"

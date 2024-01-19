@@ -18,8 +18,6 @@ add_library(imgui STATIC
     imgui_impl_opengl3_loader.h
 
 )
-    
-    # ... Aggiungi altri file se necessario ...
 
 
 # Specifica le include directory per ImGui
