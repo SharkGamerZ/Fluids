@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cmath>
 
-#include "FluidMatrix.h"
+#include "fluid2d.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -79,10 +79,11 @@ void normalizeVertices(float *vertices, int N);
 //      vertici e li passa al Fragment Shader
 inline const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
+    "out float ourColorAlpha;\n"
     "void main()\n"
     "{\n"
+    "   ourColorAlpha = aPos.z;\n"
     "   gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
-        "vertexColor = aPos.z;\n"
     "}\0";
 
 // inline const char *vertexShaderSourceNorm = "#version 330 core\n"
@@ -102,11 +103,11 @@ inline const char *vertexShaderSource = "#version 330 core\n"
 //     Prende in input i frammenti (pixel) e
 //     restituisce in output il colore dei pixel (in questo caso arancione)
 inline const char *fragmentShaderSource = "#version 330 core\n"
+    "in float ourColorAlpha;\n"
     "out vec4 FragColor;\n"
-    "uniform vec4 ourColor;\n"
     "void main()\n"
     "{\n"
-    "   FragColor = ourColor;\n"
+    "   FragColor = vec4(ourColorAlpha, ourColorAlpha, ourColorAlpha, ourColorAlpha);\n"
     "}\n\0";
 
 #endif

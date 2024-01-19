@@ -3,7 +3,8 @@
 // Golbal variables
 constexpr int viewportSize = 512;
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
-bool dens = true;
+
+bool frameSimulation = false;
 bool simulazioneIsRunning = false;
 int display_w, display_h;
 
@@ -23,8 +24,8 @@ int openGUI()
     int size = viewportSize;
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-    auto matrix = FluidMatrix(size, 10.0f, 1.0f, 0.2f);
-    matrix.addDensity(size/2, size/2, 10.0f);
+    auto matrix = FluidMatrixCreate(size, 100.0f, 1.0f, 0.2f);
+    FluidMatrixAddDensity(matrix, size/2, size/2, 10.0f);
 
     // Creiamo il Vertex Buffer e il Vertex Array
     uint32_t VBO, VAO;
@@ -36,20 +37,31 @@ int openGUI()
         // Rendering di IMGui
         renderImGui(io);
 
-        // Simulazione
-        if (simulazioneIsRunning || dens)
+        int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+        if (mouseLeftButtonState == GLFW_PRESS)
         {
-            matrix.step();
-            dens = false;
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+
+            int size = viewportSize;
+            int x = (int) xpos / (display_w / size);
+            int y = (int) ypos / (display_h / size);
+
+            if (x >= 0 && x <= display_w && y >= 0 && y <= display_h)
+                FluidMatrixAddDensity(matrix, x, y, 100.0f);
+
         }
 
-        float timeValue = glfwGetTime();
-        float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        glUseProgram(shaderProgram);
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+        // Simulazione
+        if (simulazioneIsRunning || frameSimulation)
+        {
+            FluidMatrixStep(matrix);
+            // std::cout<< "DEBUG: A" << std::endl;
+            frameSimulation = false;
+        }
 
-        drawMatrix(&matrix, size);
+
+        drawMatrix(matrix, size);
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -97,10 +109,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
         simulazioneIsRunning = !simulazioneIsRunning;
 
-    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-        dens = true;
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+        frameSimulation = true;
 
 }
+
 
 uint32_t getShaderProgram() {
     int  success;
@@ -176,7 +189,7 @@ GLFWwindow *setupWindow(int width, int height) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    // Impostiamo la callback per la gestione degli input
+    // Impostiamo le callback per la gestione degli input
     glfwSetKeyCallback(window, key_callback);
 
     return window;
@@ -241,7 +254,7 @@ void drawMatrix(FluidMatrix *matrix, int N) {
         for(int j = 0; j < N; j++) {
             vertices[3 * IX(i, j)] = i;
             vertices[3 * IX(i, j) + 1] = j;
-            vertices[3 * IX(i, j) + 2] = matrix->density.at(IX(i, j));
+            vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
         }
     }
 
@@ -293,10 +306,10 @@ void printMatrix(FluidMatrix *matrix, int N) {
 
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            float velocityX = matrix->Vx.at(IX(i, j));
-            float velocityY = matrix->Vy.at(IX(i, j));
+            float velocityX = matrix->Vx[IX(i, j)];
+            float velocityY = matrix->Vy[IX(i, j)];
 
-            float density = matrix->density.at(IX(i, j));
+            float density = matrix->density[IX(i, j)];
 
             float brightness = density / MAX_DENSITY; // Assuming MAX_DENSITY is defined
 
@@ -356,12 +369,12 @@ void printVertices(float *vertices, int N) {
 }
 
 // TODO DA AGGIUSTARE, LA NORMALIZZAZIONE NON FUNZIONA
-// TRASPONE LUNGO LA DIAGONALE
+// SPECCHIA ASSE X
 void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
             vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]        / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * IX(i, j) + 1]    = (vertices[3 * IX(i, j) + 1]    / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * IX(i, j) + 1]    = 1 - (vertices[3 * IX(i, j) + 1] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 }

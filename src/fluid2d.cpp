@@ -64,8 +64,8 @@ void FluidMatrixStep(FluidMatrix *matrix)
     float *s       = matrix->s;
     float *density = matrix->density;
     
-    SWAP(Vx, Vx0); diffuse(xAxis, Vx, Vx0, visc, dt, N);
-    SWAP(Vy, Vy0); diffuse(yAxis, Vy, Vy0, visc, dt, N);
+    // SWAP(Vx, Vx0); diffuse(xAxis, Vx, Vx0, visc, dt, N);
+    // SWAP(Vy, Vy0); diffuse(yAxis, Vy, Vy0, visc, dt, N);
     
     // project(Vx0, Vy0, Vx, Vy, N);
     
@@ -74,7 +74,7 @@ void FluidMatrixStep(FluidMatrix *matrix)
     
     // project(Vx, Vy, Vx0, Vy0, N);
     
-    // diffuse(0, s, density, diff, dt, N);
+    SWAP (s, density); diffuse(0, s, density, diff, dt, N);
     // advect(0, density, s, Vx, Vy, dt, N);
 }
 
