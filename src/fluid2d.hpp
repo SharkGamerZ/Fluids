@@ -33,6 +33,8 @@ void FluidMatrixStep(FluidMatrix *matrix);
 void FluidMatrixAddDensity(FluidMatrix *matrix, int x, int y, float amount);
 void FluidMatrixAddVelocity(FluidMatrix *matrix, int x, int y, float amountX, float amountY);
 
+void setDiffusion(FluidMatrix *matrix, float diffusion);
+
 static void diffuse (int mode, float *value, float *oldValue, float diffusion, float dt, int N);
 static void advect(int mode, float *d, float *d0,  float *velocX, float *velocY, float dt, int N);
 static void project(float *velocX, float *velocY, float *p, float *div, int N);

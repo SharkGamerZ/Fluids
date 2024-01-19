@@ -1,7 +1,11 @@
 #include "gui.hpp"
 
+// Defined Valuse
+#define DENSITY_ATTRIBUTE 0
+#define VELOCITY_ATTRIBUTE 1
+
 // Golbal variables
-constexpr int viewportSize = 512;
+const int viewportSize = 512;
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
@@ -24,7 +28,7 @@ int openGUI()
     int size = viewportSize;
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-    auto matrix = FluidMatrixCreate(size, 100.0f, 1.0f, 0.2f);
+    auto matrix = FluidMatrixCreate(size, 0.0f, 1.0f, 0.2f);
     FluidMatrixAddDensity(matrix, size/2, size/2, 10.0f);
 
     // Creiamo il Vertex Buffer e il Vertex Array
@@ -35,7 +39,7 @@ int openGUI()
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
         // Rendering di IMGui
-        renderImGui(io);
+        renderImGui(io, matrix);
 
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
         if (mouseLeftButtonState == GLFW_PRESS)
@@ -61,7 +65,7 @@ int openGUI()
         }
 
 
-        drawMatrix(matrix, size);
+        drawMatrix(matrix, size, DENSITY_ATTRIBUTE);
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -212,7 +216,7 @@ ImGuiIO *setupImGui(GLFWwindow *window) {
     return &io;
 }
 
-void renderImGui(ImGuiIO *io) {
+void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
     // Avvia il frame di ImGui
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -223,12 +227,14 @@ void renderImGui(ImGuiIO *io) {
     {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-        static float densita = 0.0f;
+        static float diffusione = 0.0f;
         static float gravita = 0.0f;
         static float temperatura = 0.0f;
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
-        ImGui::SliderFloat("Densita", &densita, 0.0f, 1.0f);
+        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 100.0f);
+        setDiffusion(matrix, diffusione);
+
         ImGui::SliderFloat("Gravità", &gravita, 0.0f, 20.0f);
         ImGui::SliderFloat("Temperatura", &temperatura, 0.0f, 1.0f);
 
@@ -247,14 +253,17 @@ void renderImGui(ImGuiIO *io) {
 
 
 
-void drawMatrix(FluidMatrix *matrix, int N) {
+
+void drawMatrix(FluidMatrix *matrix, int N, int attribute) {
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
             vertices[3 * IX(i, j)] = i;
             vertices[3 * IX(i, j) + 1] = j;
-            vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
+            if (attribute == DENSITY_ATTRIBUTE)     vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
+            if (attribute == VELOCITY_ATTRIBUTE)    vertices[3 * IX(i, j) + 2] = abs(matrix->Vx[IX(i, j)]) +
+                                                                                 abs(matrix->Vy[IX(i, j)]);
         }
     }
 

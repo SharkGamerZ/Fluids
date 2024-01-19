@@ -35,8 +35,9 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 /**
  * Funzione per il rendering di IMGui
  * @param io il context di ImGui
+ * @param matrix La matrice a cui (eventualmente) aggiornare i valori
  */
-void renderImGui(ImGuiIO *io);
+void renderImGui(ImGuiIO *io, FluidMatrix *matrix);
 
 /**
  * Funzione per la creazione del programma di shader
@@ -62,8 +63,9 @@ void linkVerticestoBuffer(float *vertices, int len);
  *  Funzione per il rendering della matrice
  * @param matrix La matrice da renderizzare
  * @param N La dimensione della matrice
+ * @param mode Cosa far visualzzare
  */
-void drawMatrix(FluidMatrix *matrix, int N);
+void drawMatrix(FluidMatrix *matrix, int N, int mode);
 
 
 void printMatrix(FluidMatrix *matrix, int N);
