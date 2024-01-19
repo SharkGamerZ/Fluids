@@ -3,11 +3,11 @@
 
 int openGUI()
 {
+    // Setup della finestra e del context di IMGui
     GLFWwindow *window = setupWindow(viewportSize, viewportSize);
     ImGuiIO *io = setupImGui(window);
 
-
-    // Linka i vertici al Vertex Array
+    // Chiamata a glewInit per andare a caricare tutte le funzioni di OpenGL
     glewInit();
 
     // Prende l'id del programma di shader
@@ -16,54 +16,55 @@ int openGUI()
 
     int size = viewportSize;
 
+    // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix *matrix = FluidMatrixCreate(size, 10.0f, 1.0f, 0.2f);
     FluidMatrixAddDensity(matrix, 8, 8, 10.0f);
 
-    uint VAO;
+    // Creiamo il Vertex Buffer e il Vertex Array
+    uint VBO, VAO;
+    setupBufferAndArray(&VBO, &VAO);
 
-    FluidMatrixAddDensity(matrix, 1, 1, 10.0f);
-    FluidMatrixAddVelocity(matrix, 1, 1, 1.0f, -1.0f);
 
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
+        // Rendering di IMGui
+        renderImGui(io);
 
-        // renderImGui(io);
-
-        // Aggiungo densità al centro della matrice
-        if (dens) 
+        // Simulazione
+        if (simulazioneIsRunning || dens) 
         {
-            // Simulazione
             FluidMatrixStep(matrix);
             dens = false;
-            VAO = drawMatrix(matrix, size);
         }
         
+        drawMatrix(matrix, size);
 
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-
-        // Rendering del triangolo
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, size * size);
-
-        // Rendering
-        // ImGui::Render();
-        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // In caso di resize della finestra, aggiorna le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
 
 
-        // check and call events and swap the buffers
-        glfwPollEvents();
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Rendering della matrice
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_POINTS, 0, size * size * 3);
+
+        // Rendering di IMGui
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
+        // Swappa i buffer e controlla se ci sono stati eventi (input)
         glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
     glfwDestroyWindow(window);
     glfwTerminate();
 
@@ -141,13 +142,12 @@ uint getShaderProgram() {
         return 0;
     }
 
-    int uniform_viewport = glGetUniformLocation(shaderProgram, "viewPort");
 
     // Usiamo il programma di shader
     glUseProgram(shaderProgram);
 
-    glUniform2f(uniform_viewport, viewportSize, viewportSize);
-    
+
+
     // Eliminiamo le shader
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
@@ -229,13 +229,14 @@ void renderImGui(ImGuiIO *io) {
     }
 }
 
+
+
 // Funzione per il rendering della matrice
 // @param matrix La matrice da renderizzare
 // @param N La dimensione della matrice
-uint drawMatrix(FluidMatrix *matrix, int N) {
+void drawMatrix(FluidMatrix *matrix, int N) {
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
-    // Loop to iterate on matrix
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
             vertices[3 * IX(i, j)] = i;
@@ -244,34 +245,32 @@ uint drawMatrix(FluidMatrix *matrix, int N) {
         }
     }
 
+    // Normalizziamo i vertici da un sistema di coordinate pixel
+    // A quello di coordinate OpenGL, detto NDC, che va da -1 a 1
+    // TODO da far fare nella shader
+    normalizeVertices(vertices, N);
+
     // Linka i vertici al Vertex Array
-    uint VAO = linkVerticestoBuffer(vertices, N * N * 3);
-
-    // printVertices(vertices, N);
-    // printNormalizedVertices(vertices, N);
-
-    return VAO;
+    linkVerticestoBuffer(vertices, N * N * 3);
 }
 
 
 // Funzione per andare a linkare i vertici che gli vengono passati, al Vertex Buffer e successivamente al Vertex Array
 // @param vertices I vertici da linkare
-// @return L'ID del Vertex Array
-uint linkVerticestoBuffer(float *vertices, int len) {
-    uint VBO, VAO;
-    setupBufferAndArray(&VBO, &VAO);
-
+// @param len La lunghezza del vettore di vertici
+void linkVerticestoBuffer(float *vertices, int len) {
     // Copia i dati dei vertici nel Vertex Buffer
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_STATIC_DRAW);
+    // TODO dovrei sostituirlo con glBurfersubData, per evitare di allocare memoria ogni volta
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-
-    
-    return VAO;
 }
 
+// Funzione per andare a creare il Vertex Buffer e il Vertex Array
+// @param VBO Il puntatore al Vertex Buffer
+// @param VAO Il puntatore al Vertex Array
 void setupBufferAndArray(uint* VBO, uint* VAO) {
     // Setup del Vertex Array 
     glGenVertexArrays(1, VAO);
@@ -350,25 +349,22 @@ void printMatrix(FluidMatrix *matrix, int N) {
 void printVertices(float *vertices, int N) {
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            printf("%f ", vertices[3 * IX(i, j)]);
-            printf("%f ", vertices[3 * IX(i, j) + 1]);
-            printf("%f ", vertices[3 * IX(i, j) + 2]);
+            printf("%.2f ", vertices[3 * IX(i, j)]);
+            printf("%.2f ", vertices[3 * IX(i, j) + 1]);
+            printf("%.2f ", vertices[3 * IX(i, j) + 2]);
             printf("\n");
         }
     }
     printf("\n");
 }
 
-void printNormalizedVertices(float *vertices, int N) {
-    float *normalizedVertices = (float*) calloc(sizeof(float), N * N * 3);
+// TODO DA AGGIUSTARE, LA NORMALIZZAZIONE NON FUNZIONA
+// TRASPONE LUNGO LA DIAGONALE
+void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
-            normalizedVertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]        / ((float) viewportSize / 2.0f)) - 1;
-            normalizedVertices[3 * IX(i, j) + 1]    = (vertices[3 * IX(i, j) + 1]    / ((float) viewportSize / 2.0f)) - 1;
-            normalizedVertices[3 * IX(i, j) + 2]    = vertices[3 * IX(i, j) + 2];
+            vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]        / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * IX(i, j) + 1]    = (vertices[3 * IX(i, j) + 1]    / ((float) (viewportSize - 1) / 2.0f)) - 1;
         }
     }
-
-    printVertices(normalizedVertices, N);
-
 }
