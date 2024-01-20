@@ -5,7 +5,7 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int viewportSize = 256;
+const int viewportSize = 128;
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
@@ -39,6 +39,7 @@ int openGUI()
 #else
     FluidMatrix matrix = FluidMatrix(size, 1.0f, 1.0f, 0.2f);
     matrix.addDensity(size/2, size/2, 10.0);
+    matrix.addVelocity(size/2, size/2, 10.0, 10.0);
 #endif
     // Creiamo il Vertex Buffer e il Vertex Array
     uint32_t VBO, VAO;
@@ -74,7 +75,6 @@ int openGUI()
                 mouseDeltaTime = mouseTime - mouseTime0;
                 deltaX = xpos - xpos0;
                 deltaY = ypos - ypos0;
-                printf("[DEBUG}: xpos: %d, ypos: %d dT=%f\ndeltaX = %d deltaY = %d\n", (int) xpos, (int) ypos, mouseDeltaTime, (int)deltaX, (int)deltaY);
                 mouseTime0 = mouseTime;
                 xpos0 = xpos;
                 ypos0 = ypos;
