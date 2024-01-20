@@ -5,14 +5,15 @@ La fantastica repo per il progetto di Multicore 2023/24
 - OpenGL
 - GLFW
 - glew
-- ImGUI
 - nvcc
+- glut
 
 ## Fisica
 Per iniziare, questa simulazione si basa su una griglia di Eulero, per rappresentare dei fluidi non comprimibili.
 La simulazione è rappresentata da 3 fasi principali:
-- **Diffusione**: ad ogni timestep ogni cella del fluido tende a "diffondersi" in quelle vicine, come una goccia di salsa di soia messa in una bacinella d'acqua. Questo comporta che se una certa cella ha una velocità, verrà diffusa nei suoi vicini.
-- **Project** (non so tradurlo): in ogni momento, la somma di fluidi che entrano/escono da una cella deve essere 0, altrimenti vorrebbe dire che della materia sta sparendo/apparendo dal nulla. Visto che le altre operazioni potrebbero andare ad infrangere questa regola, tramite questa fase ci assicuriamo che venga rispettata.
+- **Diffusion**: ad ogni timestep ogni cella del fluido tende a "diffondersi" in quelle vicine, come una goccia di salsa di soia messa in una bacinella d'acqua. Questo comporta che se una certa cella ha una velocità, verrà diffusa nei suoi vicini.
+- **Advect**: una cella che ha una certa velocità, comporta che al timestep successivo il contenuto della cella si sposti nelle celle "puntate" dalla sua velocità.
+- **Project** : in ogni momento, la somma di fluidi che entrano/escono da una cella deve essere 0, altrimenti vorrebbe dire che della materia sta sparendo/apparendo dal nulla. Visto che le altre operazioni potrebbero andare ad infrangere questa regola, tramite questa fase ci assicuriamo che venga rispettata.
 
 
 ## Come funziona il codice
@@ -50,21 +51,28 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 
 - [x] Mostrare la matrice del fluido a schermo come una serie di vertici
 - [x] Usare la densità della matrice per determinare il colore di ogni pixel
-- [ ] Modificare `drawMatrix()` per mostrare la velocità
-- [ ] Scrivere le shader in dei file e caricarli da lì (Forse tramite classe `Shader`)
+- [x] Modificare `drawMatrix()` per mostrare la velocità
+- [ ] Aggiungere la velocità in maniera proporzionale
+- [ ] Far visualizzare la velocità con colori in base alla direzione
+- [ ] Fare la visualizzazione della velocità tramite linee e non intensità colore
+- [ ] Rendere la finestra non resizable
+- [ ] Scrivere le shader in dei file e caricarli da lì (Forse tramite [classe](https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/shader_s.h) `Shader`)
 - [ ] Normalizzare i vertici nelle shader
 
 
 ### ImGui
-- [ ] Rendere i controlli di ImGui legati alle proprie variabili
+- [x] **Da rivedere**(Non sicuro che venga aggiunta la giusta velocità alla matrice) Usare l'accellerazione del mouse per aggiungere velocità al fluido
+- [x] Aggiungere una scelta per visualizzare densità o velocità
 - [ ] Aggiungere timestep alle variabili
-- [ ] Aggiungere una scelta per visualizzare densità o velocità
-- [ ] Usare l'accellerazione del mouse per aggiungere velocità al fluido
+- [ ] Rendere i controlli di ImGui legati alle proprie variabili
 
 
 
 ## Simulazione
+- [x] Cambiare nome ad s in density0
 - [ ] Far funzionare la `diffuse()` affinché se `diffuse=0` la matrice resti ferma senza evolversi nel tempo. (Probabilmente da controllare che valore si trova nella densità al timestep precedente)
+- [ ] Debuggare Advect (va in seg Fault)
+- [ ] Parallelizzare la diffuse
 - [ ] Implementare la "**gravità**" tramite un flow laminare di velocità generato dalla prima riga verso il basso.
 
 # Bibliografia

@@ -63,9 +63,8 @@ void linkVerticestoBuffer(float *vertices, int len);
  *  Funzione per il rendering della matrice
  * @param matrix La matrice da renderizzare
  * @param N La dimensione della matrice
- * @param mode Cosa far visualzzare
  */
-void drawMatrix(FluidMatrix *matrix, int N, int mode);
+void drawMatrix(FluidMatrix *matrix, int N);
 
 
 void printMatrix(FluidMatrix *matrix, int N);

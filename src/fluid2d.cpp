@@ -18,8 +18,8 @@ FluidMatrix *FluidMatrixCreate(int size, int diffusion, int viscosity, float dt)
     matrix->diff = diffusion;
     matrix->visc = viscosity;
     
-    matrix->s = (float*) calloc(N * N, sizeof(float));
     matrix->density = (float*) calloc(N * N, sizeof(float));
+    matrix->density0= (float*) calloc(N * N, sizeof(float));
     
     // Velocities
     matrix->Vx = (float*) calloc(N * N, sizeof(float));
@@ -36,8 +36,8 @@ FluidMatrix *FluidMatrixCreate(int size, int diffusion, int viscosity, float dt)
 // @param matrix La matrice da liberare
 void FluidMatrixFree(FluidMatrix *matrix)
 {
-    free(matrix->s);
     free(matrix->density);
+    free(matrix->density0);
     
     free(matrix->Vx);
     free(matrix->Vy);
@@ -61,11 +61,11 @@ void FluidMatrixStep(FluidMatrix *matrix)
     float *Vy      = matrix->Vy;
     float *Vx0     = matrix->Vx0;
     float *Vy0     = matrix->Vy0;
-    float *s       = matrix->s;
     float *density = matrix->density;
+    float *density0= matrix->density0;
     
-    // SWAP(Vx, Vx0); diffuse(xAxis, Vx, Vx0, visc, dt, N);
-    // SWAP(Vy, Vy0); diffuse(yAxis, Vy, Vy0, visc, dt, N);
+    diffuse(xAxis, Vx, Vx0, visc, dt, N);
+    diffuse(yAxis, Vy, Vy0, visc, dt, N);
     
     // project(Vx0, Vy0, Vx, Vy, N);
     
@@ -74,8 +74,8 @@ void FluidMatrixStep(FluidMatrix *matrix)
     
     // project(Vx, Vy, Vx0, Vy0, N);
     
-    SWAP (s, density); diffuse(0, s, density, diff, dt, N);
-    // advect(0, density, s, Vx, Vy, dt, N);
+    SWAP (density0, density); diffuse(0, density0, density, diff, dt, N);
+    // advect(0, density, density0, Vx, Vy, dt, N);
 }
 
 // Funzione per aggiungere densità in un punto
@@ -110,6 +110,7 @@ static void diffuse (int mode, float *value, float *oldValue, float diffusion, f
 {
     float diffusionRate = dt * diffusion * N * N;
     lin_solve(mode, value, oldValue, diffusionRate, N);
+
 }
 
 static void advect(int mode, float *d, float *d0,  float *velocX, float *velocY, float dt, int N)

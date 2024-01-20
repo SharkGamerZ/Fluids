@@ -1,3 +1,5 @@
+#include <cstring>
+#include <iostream>
 #include <math.h>
 
 #define IX(i , j) ((j) + (i) * N)
@@ -15,8 +17,8 @@ struct FluidMatrix {
     float diff;
     float visc;
     
-    float *s;
     float *density;
+    float *density0;
     
     float *Vx;
     float *Vy;

@@ -10,7 +10,12 @@ const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
 bool simulazioneIsRunning = false;
+int simulationAttribute = DENSITY_ATTRIBUTE;
 int display_w, display_h;
+
+// Variabili per il mouse
+double xpos, ypos, xpos0, ypos0, deltaX, deltaY;
+double mouseTime, mouseTime0, mouseDeltaTime;
 
 int openGUI()
 {
@@ -41,20 +46,35 @@ int openGUI()
         // Rendering di IMGui
         renderImGui(io, matrix);
 
+
+        // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
         if (mouseLeftButtonState == GLFW_PRESS)
         {
-            double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
 
-            int size = viewportSize;
-            int x = (int) xpos / (display_w / size);
-            int y = (int) ypos / (display_h / size);
+            if (xpos >= 0 && xpos <= display_w && ypos >= 0 && ypos <= display_h)
+            {
+                // Aggiunge densità
+                FluidMatrixAddDensity(matrix, xpos, ypos, 100.0f);
 
-            if (x >= 0 && x <= display_w && y >= 0 && y <= display_h)
-                FluidMatrixAddDensity(matrix, x, y, 100.0f);
+                // Calcola la velocità
+                mouseTime = glfwGetTime();
+                mouseDeltaTime = mouseTime - mouseTime0;
+                deltaX = xpos - xpos0;
+                deltaY = ypos - ypos0;
+                printf("[DEBUG}: xpos: %d, ypos: %d dT=%f\ndeltaX = %d deltaY = %d\n", (int) xpos, (int) ypos, mouseDeltaTime, (int)deltaX, (int)deltaY);
+                mouseTime0 = mouseTime;
+                xpos0 = xpos;
+                ypos0 = ypos;
+
+                // Aggiunge velocità
+                FluidMatrixAddVelocity(matrix, xpos, ypos, deltaX, deltaY);
+            }
+
 
         }
+
 
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
@@ -65,7 +85,7 @@ int openGUI()
         }
 
 
-        drawMatrix(matrix, size, DENSITY_ATTRIBUTE);
+        drawMatrix(matrix, size);
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -227,17 +247,19 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
     {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-        static float diffusione = 0.0f;
+        static float diffusione = 1.0f;
         static float gravita = 0.0f;
         static float temperatura = 0.0f;
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
-        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 100.0f);
+        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f);
         setDiffusion(matrix, diffusione);
 
         ImGui::SliderFloat("Gravità", &gravita, 0.0f, 20.0f);
         ImGui::SliderFloat("Temperatura", &temperatura, 0.0f, 1.0f);
 
+        ImGui::RadioButton("Densità", &simulationAttribute, DENSITY_ATTRIBUTE); ImGui::SameLine();
+        ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE); ImGui::SameLine();
 
         // Buttons return true when clicked (most widgets return true when edited/activated)
         if (ImGui::Button("Avvio simulazione")) simulazioneIsRunning = !simulazioneIsRunning;
@@ -254,15 +276,15 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 
 
 
-void drawMatrix(FluidMatrix *matrix, int N, int attribute) {
+void drawMatrix(FluidMatrix *matrix, int N) {
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
             vertices[3 * IX(i, j)] = i;
             vertices[3 * IX(i, j) + 1] = j;
-            if (attribute == DENSITY_ATTRIBUTE)     vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
-            if (attribute == VELOCITY_ATTRIBUTE)    vertices[3 * IX(i, j) + 2] = abs(matrix->Vx[IX(i, j)]) +
+            if (simulationAttribute == DENSITY_ATTRIBUTE)     vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
+            if (simulationAttribute == VELOCITY_ATTRIBUTE)    vertices[3 * IX(i, j) + 2] = abs(matrix->Vx[IX(i, j)]) +
                                                                                  abs(matrix->Vy[IX(i, j)]);
         }
     }
