@@ -52,7 +52,8 @@ void FluidMatrix::step() {
         std::swap(Vy0, Vy);
         diffuse(yAxis, Vy, Vy0, visc, dt);
 
-        project(Vx0, Vy0, Vx, Vy);
+        // project(Vx0, Vy0, Vx, Vy);
+        project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
         advect(xAxis, Vx, Vx0, Vx0, Vy0, dt);

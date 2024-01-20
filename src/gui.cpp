@@ -5,7 +5,7 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int viewportSize = 128;
+const int viewportSize = 100;
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
@@ -26,21 +26,13 @@ int openGUI()
     // Chiamata a glewInit per andare a caricare tutte le funzioni di OpenGL
     glewInit();
 
-    // Prende l'id del programma di shader
-    uint32_t shaderProgram = getShaderProgram();
-    if (shaderProgram == 0) return EXIT_FAILURE;
-
     int size = viewportSize;
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-#if FM_OLD
-    auto matrix = FluidMatrixCreate(size, 0.0f, 1.0f, 0.2f);
-    FluidMatrixAddDensity(matrix, size/2, size/2, 10.0f);
-#else
     FluidMatrix matrix = FluidMatrix(size, 1.0f, 1.0f, 0.2f);
     matrix.addDensity(size/2, size/2, 10.0);
     matrix.addVelocity(size/2, size/2, 10.0, 10.0);
-#endif
+
     // Creiamo il Vertex Buffer e il Vertex Array
     uint32_t VBO, VAO;
     setupBufferAndArray(&VBO, &VAO);
@@ -49,11 +41,12 @@ int openGUI()
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
         // Rendering di IMGui
-#if FM_OLD
-        renderImGui(io, matrix);
-#else
         renderImGui(io, &matrix);
-#endif
+
+        // Prende l'id del programma di shader in base a se si sta visualizzando la densità o la velocità
+        uint32_t shaderProgram = getShaderProgram();
+        if (shaderProgram == 0) return EXIT_FAILURE;
+
 
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -64,11 +57,7 @@ int openGUI()
             if (xpos >= 0 && xpos <= display_w && ypos >= 0 && ypos <= display_h)
             {
                 // Aggiunge densità
-#if FM_OLD
-                FluidMatrixAddDensity(matrix, xpos, ypos, 100.0f);
-#else
                 matrix.addDensity(xpos, ypos, 100.0f);
-#endif
 
                 // Calcola la velocità
                 mouseTime = glfwGetTime();
@@ -80,11 +69,8 @@ int openGUI()
                 ypos0 = ypos;
 
                 // Aggiunge velocità
-#if FM_OLD
-                FluidMatrixAddVelocity(matrix, xpos, ypos, deltaX, deltaY);
-#else
                 matrix.addVelocity(xpos, ypos, deltaX, deltaY);
-#endif
+
             }
 
 
@@ -94,27 +80,22 @@ int openGUI()
         // Aggiunta effetto macchina del vento
         for (int i = 0; i < size; i++)
         {
-            matrix.addVelocity(0, i, 1.0, 0.0);
+            matrix.addVelocity(2, i, 10.0, 0.0);
         }
 
 
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
         {
-#if FM_OLD
-            FluidMatrixStep(matrix);
-#else
             matrix.step();
-#endif
+
             // std::cout<< "DEBUG: A" << std::endl;
             frameSimulation = false;
         }
 
-#if FM_OLD
-        drawMatrix(matrix, size);
-#else
+
         drawMatrix(&matrix, size);
-#endif
+
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -173,11 +154,22 @@ uint32_t getShaderProgram() {
     char infoLog[512];
 
     // Get the shader source code from the GLSL files
-    std::string vertexShaderSource = readFile("../src/shaders/vertexShader.vert");
-    const char* vertexShaderSourceCStr = vertexShaderSource.c_str();
+    std::string vertexShaderSource;
+    std::string fragmentShaderSource;
+    if (simulationAttribute == DENSITY_ATTRIBUTE) 
+    {
+        vertexShaderSource = readFile("../src/shaders/density.vert");
+        fragmentShaderSource = readFile("../src/shaders/density.frag");
+    }
+    else
+    {
+        vertexShaderSource = readFile("../src/shaders/velocity.vert");
+        fragmentShaderSource = readFile("../src/shaders/velocity.frag");
+    }
 
-    std::string fragmentShaderSource = readFile("../src/shaders/fragmentShader.frag");
+    const char* vertexShaderSourceCStr = vertexShaderSource.c_str();
     const char* fragmentShaderSourceCStr = fragmentShaderSource.c_str();
+
 
     // Creiamo l'id della vertexShader
     uint32_t vertexShader;
