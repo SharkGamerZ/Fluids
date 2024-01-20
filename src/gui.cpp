@@ -91,6 +91,13 @@ int openGUI()
         }
 
 
+        // Aggiunta effetto macchina del vento
+        for (int i = 0; i < size; i++)
+        {
+            matrix.addVelocity(0, i, 1.0, 0.0);
+        }
+
+
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
         {

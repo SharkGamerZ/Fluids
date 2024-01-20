@@ -35,16 +35,6 @@ std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix) {
 }
 
 void FluidMatrix::step() {
-//    diffuse(xAxis, Vx, Vx0, visc, dt);
-//    diffuse(yAxis, Vy, Vy0, visc, dt);
-//
-//    project(Vx0, Vy0, Vx, Vy);
-//
-//    advect(xAxis, Vx, Vx0, Vx0, Vy0, dt);
-//    advect(yAxis, Vy, Vy0, Vx0, Vy0, dt);
-//
-//    project(Vx, Vy, Vx0, Vy0);
-//
     // density step
     {    
         std::swap(density0, density);
@@ -53,6 +43,25 @@ void FluidMatrix::step() {
         std::swap(density0, density);
         advect(0, density, density0, Vx, Vy, dt);
     }
+
+    // velocity step
+    {
+        std::swap(Vx0, Vx);
+        diffuse(xAxis, Vx, Vx0, visc, dt);
+
+        std::swap(Vy0, Vy);
+        diffuse(yAxis, Vy, Vy0, visc, dt);
+
+        project(Vx0, Vy0, Vx, Vy);
+
+        std::swap(Vx0, Vx);
+        advect(xAxis, Vx, Vx0, Vx0, Vy0, dt);
+        std::swap(Vy0, Vy);
+        advect(yAxis, Vy, Vy0, Vx0, Vy0, dt);
+
+        project(Vx, Vy, Vx0, Vy0);
+    }
+
 }
 
 
@@ -101,12 +110,12 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
             y = j - (dt0 * vY[IX(i, j)]);
 
             if (x < 0.5f) x = 0.5f;
-            if (x > N + 0.5f) x = N + 0.5f;
+            if (x > (N - 2) + 0.5f) x = (N - 2) + 0.5f;
             i0 = (int) x;
             i1 = i0 + 1;
 
             if (y < 0.5f) y = 0.5f;
-            if (y > N + 0.5f) y = N + 0.5f;
+            if (y > (N - 2)+ 0.5f) y = (N - 2) + 0.5f;
             j0 = (int) y;
             j1 = j0 + 1;
 
