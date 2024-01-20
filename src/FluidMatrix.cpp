@@ -47,6 +47,7 @@ void FluidMatrix::step() {
 //
     std::swap(density0, density);
     diffuse(0, density0, density, diff, dt);
+    std::swap(density0, density);
 //    advect(0, density, density0, Vx, Vy, dt);
 }
 
