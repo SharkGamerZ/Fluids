@@ -52,11 +52,11 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [x] Mostrare la matrice del fluido a schermo come una serie di vertici
 - [x] Usare la densità della matrice per determinare il colore di ogni pixel
 - [x] Modificare `drawMatrix()` per mostrare la velocità
+- [x] Scrivere le shader in dei file e caricarli da lì 
 - [ ] Aggiungere la velocità in maniera proporzionale
 - [ ] Far visualizzare la velocità con colori in base alla direzione
 - [ ] Fare la visualizzazione della velocità tramite linee e non intensità colore
 - [ ] Rendere la finestra non resizable
-- [ ] Scrivere le shader in dei file e caricarli da lì (Forse tramite [classe](https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/shader_s.h) `Shader`)
 - [ ] Normalizzare i vertici nelle shader
 
 

@@ -166,10 +166,10 @@ uint32_t getShaderProgram() {
     char infoLog[512];
 
     // Get the shader source code from the GLSL files
-    std::string vertexShaderSource = readFile("../src/shaders/vertexShader.vsh");
+    std::string vertexShaderSource = readFile("../src/shaders/vertexShader.vert");
     const char* vertexShaderSourceCStr = vertexShaderSource.c_str();
 
-    std::string fragmentShaderSource = readFile("../src/shaders/fragmentShader.fsh");
+    std::string fragmentShaderSource = readFile("../src/shaders/fragmentShader.frag");
     const char* fragmentShaderSourceCStr = fragmentShaderSource.c_str();
 
     // Creiamo l'id della vertexShader

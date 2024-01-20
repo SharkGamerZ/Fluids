@@ -64,8 +64,8 @@ void FluidMatrixStep(FluidMatrix *matrix)
     float *density = matrix->density;
     float *density0= matrix->density0;
     
-    diffuse(xAxis, Vx, Vx0, visc, dt, N);
-    diffuse(yAxis, Vy, Vy0, visc, dt, N);
+    // diffuse(xAxis, Vx, Vx0, visc, dt, N);
+    // diffuse(yAxis, Vy, Vy0, visc, dt, N);
     
     // project(Vx0, Vy0, Vx, Vy, N);
     

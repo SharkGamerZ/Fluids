@@ -3,10 +3,10 @@
 // Fragment Shader
 //     Prende in input i frammenti (pixel) e
 //     restituisce in output il colore dei pixel (in questo caso arancione)
-in float ourColorAlpha;
+in float colorAlpha;
 out vec4 FragColor;
 
 void main()
 {
-    FragColor = vec4(ourColorAlpha, ourColorAlpha, ourColorAlpha, ourColorAlpha);
+    FragColor = vec4(colorAlpha, colorAlpha, colorAlpha, colorAlpha);
 }
