@@ -163,19 +163,26 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 uint32_t getShaderProgram() {
     int  success;
-    std::string infoLog;
+    char infoLog[512];
+
+    // Get the shader source code from the GLSL files
+    std::string vertexShaderSource = readFile("../src/shaders/vertexShader.vsh");
+    const char* vertexShaderSourceCStr = vertexShaderSource.c_str();
+
+    std::string fragmentShaderSource = readFile("../src/shaders/fragmentShader.fsh");
+    const char* fragmentShaderSourceCStr = fragmentShaderSource.c_str();
 
     // Creiamo l'id della vertexShader
     uint32_t vertexShader;
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
     // Colleghiamo il codice della vertexShader all'id
-    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
+    glShaderSource(vertexShader, 1, &vertexShaderSourceCStr, nullptr);
     glCompileShader(vertexShader);
 
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
     if(!success)
     {
-        glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog.data());
+        glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
         std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
         return 0;
     }
@@ -184,13 +191,13 @@ uint32_t getShaderProgram() {
     uint32_t fragmentShader;
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     // Colleghiamo il codice della fragmentShader all'id
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSourceCStr, nullptr);
     glCompileShader(fragmentShader);
 
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if(!success)
     {
-        glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog.data());
+        glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
         return 0;
     }
@@ -207,7 +214,7 @@ uint32_t getShaderProgram() {
     // Verifichiamo che il programma di shader sia stato creato correttamente
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if(!success) {
-        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog.data());
+        glGetProgramInfoLog(shaderProgram, sizeof(infoLog), nullptr, infoLog);
         return 0;
     }
 

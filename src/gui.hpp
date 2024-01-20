@@ -14,6 +14,7 @@
 #include "FluidMatrix.h"
 #endif
 
+#include "utils.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -81,18 +82,6 @@ void normalizeVertices(float *vertices, int N);
 
 // OpenGL shaders
 
-// Vertex Shader
-//      Prende in input la posizione dei
-//      vertici e li passa al Fragment Shader
-inline const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "out float ourColorAlpha;\n"
-    "void main()\n"
-    "{\n"
-    "   ourColorAlpha = aPos.z;\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
-    "}\0";
-
 // inline const char *vertexShaderSourceNorm = "#version 330 core\n"
 //     "layout (location = 0) in vec3 aPos;\n"
 //     "uniform vec2 viewPort;\n"
@@ -102,19 +91,5 @@ inline const char *vertexShaderSource = "#version 330 core\n"
 //     "   float y = (aPos.y / (viewPort.y / 2)) - 1;\n"
 //     "   gl_Position = vec4(x, y, 0.0, aPos.z);\n"
 //     "}\0";
-
-
-
-
-// Fragment Shader
-//     Prende in input i frammenti (pixel) e
-//     restituisce in output il colore dei pixel (in questo caso arancione)
-inline const char *fragmentShaderSource = "#version 330 core\n"
-    "in float ourColorAlpha;\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(ourColorAlpha, ourColorAlpha, ourColorAlpha, ourColorAlpha);\n"
-    "}\n\0";
 
 #endif

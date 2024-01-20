@@ -11,6 +11,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/fluid2d.cpp
         src/FluidMatrix.cpp
+        src/utils.cpp
 )
 
 add_subdirectory(lib/imgui)
