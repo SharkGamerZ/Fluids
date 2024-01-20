@@ -19,8 +19,8 @@ public:
     float diff; ///< diffusion
     float visc; ///< viscosity
 
-    std::vector<float> s; ///<
     std::vector<float> density; ///< density
+    std::vector<float> density0; ///< density at previous step
 
     std::vector<float> Vx; ///< velocity on x axis
     std::vector<float> Vy; ///< velocity on y axis
@@ -68,36 +68,36 @@ public:
      * @param diffusion diffusion
      * @param dt delta time
      */
-    void diffuse(int mode, std::vector<float> value, std::vector<float> oldValue, float diffusion, float dt);
+    void diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt);
 
     /**
      * Advect the matrix
      * @param mode x or y axis
      * @param d value to advect
      * @param d0 value at previous step
-     * @param velocX velocity on x axis
-     * @param velocY velocity on y axis
+     * @param vX velocity on x axis
+     * @param vY velocity on y axis
      * @param dt delta time
      */
     void
-    advect(int mode, std::vector<float> d, std::vector<float> d0, std::vector<float> velocX, std::vector<float> velocY,
+    advect(int mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY,
            float dt);
 
     /**
      * Project the matrix
-     * @param velocX velocity on x axis
-     * @param velocY velocity on y axis
+     * @param vX velocity on x axis
+     * @param vY velocity on y axis
      * @param p
      * @param div
      */
-    void project(std::vector<float> velocX, std::vector<float> velocY, std::vector<float> p, std::vector<float> div);
+    void project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p, std::vector<float> &div);
 
     /**
      * Set the boundary of the matrix
      * @param mode x or y axis
      * @param attr attribute to set
      */
-    void set_bnd(int mode, std::vector<float> attr);
+    void set_bnd(int mode, std::vector<float> &attr);
 
     /**
      * Solve the linear equation
@@ -106,7 +106,7 @@ public:
      * @param oldValue value at previous step
      * @param diffusionRate diffusion rate
      */
-    void lin_solve(int mode, std::vector<float> value, std::vector<float> oldValue, float diffusionRate);
+    void lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate);
 };
 
 
