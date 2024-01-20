@@ -1,7 +1,7 @@
 #ifndef GUI_HPP_
 #define GUI_HPP_
 
-#define FM_OLD 0 ///< Set to 1 to use the C version, 0 to use the C++ version
+#define FM_OLD 1 ///< Set to 1 to use the C version, 0 to use the C++ version
 
 #include <cstdlib>
 #include <cstdio>

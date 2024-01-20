@@ -283,7 +283,7 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
         ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f);
 #if FM_OLD
-        setDiffusion(matrix, diffusione);
+        matrix->diff = diffusione;
 #else
         matrix->diff = diffusione;
 #endif

@@ -95,12 +95,6 @@ void FluidMatrixAddVelocity(FluidMatrix *matrix, int x, int y, float amountX, fl
     matrix->Vy[index] += amountY;
 }
 
-void setDiffusion(FluidMatrix *matrix, float diffusion)
-{
-    matrix->diff = diffusion;
-}
-
-
 // Funzione per simulare la diffusione in un timestep
 // @param mode Se è xAxis o yAxis
 // @param value Il valore da diffondere
