@@ -1,12 +1,18 @@
 #ifndef GUI_HPP_
 #define GUI_HPP_
 
+#define FM_OLD 0 ///< Set to 1 to use the C version, 0 to use the C++ version
+
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
 #include <cmath>
 
+#if FM_OLD
 #include "fluid2d.hpp"
+#else
+#include "FluidMatrix.h"
+#endif
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"

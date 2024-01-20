@@ -33,9 +33,13 @@ int openGUI()
     int size = viewportSize;
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
+#if FM_OLD
     auto matrix = FluidMatrixCreate(size, 0.0f, 1.0f, 0.2f);
     FluidMatrixAddDensity(matrix, size/2, size/2, 10.0f);
-
+#else
+    FluidMatrix matrix = FluidMatrix(size, 0.0f, 1.0f, 0.2f);
+    matrix.addDensity(size/2, size/2, 10.0);
+#endif
     // Creiamo il Vertex Buffer e il Vertex Array
     uint32_t VBO, VAO;
     setupBufferAndArray(&VBO, &VAO);
@@ -44,8 +48,11 @@ int openGUI()
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
         // Rendering di IMGui
+#if FM_OLD
         renderImGui(io, matrix);
-
+#else
+        renderImGui(io, &matrix);
+#endif
 
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -56,7 +63,11 @@ int openGUI()
             if (xpos >= 0 && xpos <= display_w && ypos >= 0 && ypos <= display_h)
             {
                 // Aggiunge densità
+#if FM_OLD
                 FluidMatrixAddDensity(matrix, xpos, ypos, 100.0f);
+#else
+                matrix.addDensity(xpos, ypos, 100.0f);
+#endif
 
                 // Calcola la velocità
                 mouseTime = glfwGetTime();
@@ -69,7 +80,11 @@ int openGUI()
                 ypos0 = ypos;
 
                 // Aggiunge velocità
+#if FM_OLD
                 FluidMatrixAddVelocity(matrix, xpos, ypos, deltaX, deltaY);
+#else
+                matrix.addVelocity(xpos, ypos, deltaX, deltaY);
+#endif
             }
 
 
@@ -79,13 +94,20 @@ int openGUI()
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
         {
+#if FM_OLD
             FluidMatrixStep(matrix);
+#else
+            matrix.step();
+#endif
             // std::cout<< "DEBUG: A" << std::endl;
             frameSimulation = false;
         }
 
-
+#if FM_OLD
         drawMatrix(matrix, size);
+#else
+        drawMatrix(&matrix, size);
+#endif
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -253,7 +275,11 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
         ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f);
+#if FM_OLD
         setDiffusion(matrix, diffusione);
+#else
+        matrix->diff = diffusione;
+#endif
 
         ImGui::SliderFloat("Gravità", &gravita, 0.0f, 20.0f);
         ImGui::SliderFloat("Temperatura", &temperatura, 0.0f, 1.0f);
