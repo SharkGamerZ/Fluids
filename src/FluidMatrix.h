@@ -68,7 +68,7 @@ public:
      * @param diffusion diffusion
      * @param dt delta time
      */
-    void diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt);
+    void diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
 
     /**
      * Advect the matrix
@@ -79,9 +79,7 @@ public:
      * @param vY velocity on y axis
      * @param dt delta time
      */
-    void
-    advect(int mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY,
-           float dt);
+    void advect(int mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY, float dt) const;
 
     /**
      * Project the matrix
@@ -90,14 +88,14 @@ public:
      * @param p
      * @param div
      */
-    void project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p, std::vector<float> &div);
+    void project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p, std::vector<float> &div) const;
 
     /**
      * Set the boundary of the matrix
      * @param mode x or y axis
      * @param attr attribute to set
      */
-    void set_bnd(int mode, std::vector<float> &attr);
+    void set_bnd(int mode, std::vector<float> &attr) const;
 
     /**
      * Solve the linear equation
@@ -106,7 +104,7 @@ public:
      * @param oldValue value at previous step
      * @param diffusionRate diffusion rate
      */
-    void lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate);
+    void lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
 };
 
 

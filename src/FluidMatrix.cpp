@@ -24,8 +24,8 @@ std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix) {
        << ",\n\tdt: " << matrix.dt
        << ",\n\tdiff: " << matrix.diff
        << ",\n\tvisc: " << matrix.visc
-       << ",\n\ts: " << matrix.density0.size()
        << ",\n\tdensity: " << matrix.density.size()
+       << ",\n\tdensity0: " << matrix.density0.size()
        << ",\n\tVx: " << matrix.Vx.size()
        << ",\n\tVy: " << matrix.Vy.size()
        << ",\n\tVx0: " << matrix.Vx0.size()
@@ -53,27 +53,24 @@ void FluidMatrix::step() {
 
 void FluidMatrix::addDensity(int x, int y, float amount) {
     int N = this->size;
-    this->density.at(IX(x, y)) += amount;
+    this->density[IX(x, y)] += amount;
 }
 
 void FluidMatrix::addVelocity(int x, int y, float amountX, float amountY) {
     int N = this->size;
     int index = IX(x, y);
 
-    this->Vx.at(index) += amountX;
-    this->Vy.at(index) += amountY;
+    this->Vx[index] += amountX;
+    this->Vy[index] += amountY;
 }
 
-void
-FluidMatrix::diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) {
+void FluidMatrix::diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const {
     int N = this->size;
     float diffusionRate = dt * diffusion * N * N;
     lin_solve(mode, value, oldValue, diffusionRate);
 }
 
-void FluidMatrix::advect(int mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX,
-                         std::vector<float> &vY, float dt) {
-
+void FluidMatrix::advect(int mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY, float dt) const {
     int N = this->size;
 
     // indexes at the previous step
@@ -91,8 +88,8 @@ void FluidMatrix::advect(int mode, std::vector<float> &d, std::vector<float> &d0
 
     for (j = 1, jfloat = 1; j < N - 1; j++, jfloat++) {
         for (i = 1, ifloat = 1; i < N - 1; i++, ifloat++) {
-            tmp1 = dtx * vX.at(IX(i, j));
-            tmp2 = dty * vY.at(IX(i, j));
+            tmp1 = dtx * vX[IX(i, j)];
+            tmp2 = dty * vY[IX(i, j)];
             x = ifloat - tmp1;
             y = jfloat - tmp2;
 
@@ -111,27 +108,26 @@ void FluidMatrix::advect(int mode, std::vector<float> &d, std::vector<float> &d0
             t1 = y - j0;
             t0 = 1 - t1;
 
-            d.at(IX(i, j)) =
-                    s0 * (t0 * d0.at(IX(i0, j0)) + t1 * d0.at(IX(i0, j1))) +
-                    s1 * (t0 * d0.at(IX(i1, j0)) + t1 * d0.at(IX(i1, j1)));
+            d[IX(i, j)] =
+                    s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) +
+                    s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
         }
     }
 
     set_bnd(mode, d);
 }
 
-void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p,
-                          std::vector<float> &div) {
+void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p, std::vector<float> &div) const {
     int N = this->size;
     for (int j = 1; j < N - 1; j++) {
         for (int i = 1; i < N - 1; i++) {
-            div.at(IX(i, j)) = -0.5f * (
-                    vX.at(IX(i + 1, j))
-                    - vX.at(IX(i - 1, j))
-                    + vY.at(IX(i, j + 1))
-                    - vY.at(IX(i, j - 1))
+            div[IX(i, j)] = -0.5f * (
+                    vX[IX(i + 1, j)]
+                    - vX[IX(i - 1, j)]
+                    + vY[IX(i, j + 1)]
+                    - vY[IX(i, j - 1)]
             ) / N;
-            p.at(IX(i, j)) = 0;
+            p[IX(i, j)] = 0;
         }
     }
     set_bnd(0, div);
@@ -140,47 +136,45 @@ void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::v
 
     for (int j = 1; j < N - 1; j++) {
         for (int i = 1; i < N - 1; i++) {
-            vX.at(IX(i, j)) -= 0.5f * (p.at(IX(i + 1, j))
-                                       - p.at(IX(i - 1, j))) * N;
-            vY.at(IX(i, j)) -= 0.5f * (p.at(IX(i, j + 1))
-                                       - p.at(IX(i, j - 1))) * N;
+            vX[IX(i, j)] -= 0.5f * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) * N;
+            vY[IX(i, j)] -= 0.5f * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) * N;
         }
     }
     set_bnd(xAxis, vX);
     set_bnd(yAxis, vY);
 }
 
-void FluidMatrix::set_bnd(int mode, std::vector<float> &attr) {
+void FluidMatrix::set_bnd(int mode, std::vector<float> &attr) const {
     int N = this->size;
     for (int i = 1; i < N - 1; i++) {
-        attr.at(IX(i, 0)) = mode == yAxis ? -attr.at(IX(i, 1)) : attr.at(IX(i, 1));
-        attr.at(IX(i, N - 1)) = mode == yAxis ? -attr.at(IX(i, N - 2)) : attr.at(IX(i, N - 2));
+        attr[IX(i, 0)] = mode == yAxis ? -attr[IX(i, 1)] : attr[IX(i, 1)];
+        attr[IX(i, N - 1)] = mode == yAxis ? -attr[IX(i, N - 2)] : attr[IX(i, N - 2)];
     }
     for (int j = 1; j < N - 1; j++) {
-        attr.at(IX(0, j)) = mode == xAxis ? -attr.at(IX(1, j)) : attr.at(IX(1, j));
-        attr.at(IX(N - 1, j)) = mode == xAxis ? -attr.at(IX(N - 2, j)) : attr.at(IX(N - 2, j));
+        attr[IX(0, j)] = mode == xAxis ? -attr[IX(1, j)] : attr[IX(1, j)];
+        attr[IX(N - 1, j)] = mode == xAxis ? -attr[IX(N - 2, j)] : attr[IX(N - 2, j)];
     }
 
-    attr.at(IX(0, 0)) = 0.5f * (attr.at(IX(1, 0)) + attr.at(IX(0, 1)));
-    attr.at(IX(0, N - 1)) = 0.5f * (attr.at(IX(1, N - 1)) + attr.at(IX(0, N - 2)));
+    attr[IX(0, 0)] = 0.5f * (attr[IX(1, 0)] + attr[IX(0, 1)]);
+    attr[IX(0, N - 1)] = 0.5f * (attr[IX(1, N - 1)] + attr[IX(0, N - 2)]);
 
-    attr.at(IX(N - 1, 0)) = 0.5f * (attr.at(IX(N - 2, 0)) + attr.at(IX(N - 1, 1)));
-    attr.at(IX(N - 1, N - 1)) = 0.5f * (attr.at(IX(N - 2, N - 1)) + attr.at(IX(N - 1, N - 2)));
+    attr[IX(N - 1, 0)] = 0.5f * (attr[IX(N - 2, 0)] + attr[IX(N - 1, 1)]);
+    attr[IX(N - 1, N - 1)] = 0.5f * (attr[IX(N - 2, N - 1)] + attr[IX(N - 1, N - 2)]);
 }
 
-void FluidMatrix::lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) {
+void FluidMatrix::lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const {
     int N = this->size;
     float c = 1 + 4 * diffusionRate;
     float cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++) {
         for (int j = 1; j < N - 1; j++) {
             for (int i = 1; i < N - 1; i++) {
-                value.at(IX(i, j)) = (oldValue.at(IX(i, j))
-                                      + diffusionRate * (
-                        value.at(IX(i + 1, j))
-                        + value.at(IX(i - 1, j))
-                        + value.at(IX(i, j + 1))
-                        + value.at(IX(i, j - 1))
+                value[IX(i, j)] = (oldValue[IX(i, j)]
+                                   + diffusionRate * (
+                        value[IX(i + 1, j)]
+                        + value[IX(i - 1, j)]
+                        + value[IX(i, j + 1)]
+                        + value[IX(i, j - 1)]
                 )) * cRecip;
             }
         }
