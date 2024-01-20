@@ -5,7 +5,7 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int viewportSize = 512;
+const int viewportSize = 256;
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
@@ -37,7 +37,7 @@ int openGUI()
     auto matrix = FluidMatrixCreate(size, 0.0f, 1.0f, 0.2f);
     FluidMatrixAddDensity(matrix, size/2, size/2, 10.0f);
 #else
-    FluidMatrix matrix = FluidMatrix(size, 0.0f, 1.0f, 0.2f);
+    FluidMatrix matrix = FluidMatrix(size, 1.0f, 1.0f, 0.2f);
     matrix.addDensity(size/2, size/2, 10.0);
 #endif
     // Creiamo il Vertex Buffer e il Vertex Array
@@ -277,19 +277,17 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
         static float diffusione = 1.0f;
-        static float gravita = 0.0f;
+        static float deltaTime = 0.2f;
         static float temperatura = 0.0f;
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
         ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f);
-#if FM_OLD
         matrix->diff = diffusione;
-#else
-        matrix->diff = diffusione;
-#endif
 
-        ImGui::SliderFloat("Gravità", &gravita, 0.0f, 20.0f);
-        ImGui::SliderFloat("Temperatura", &temperatura, 0.0f, 1.0f);
+
+        ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f);
+        matrix->dt = deltaTime;
+
 
         ImGui::RadioButton("Densità", &simulationAttribute, DENSITY_ATTRIBUTE); ImGui::SameLine();
         ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE); ImGui::SameLine();

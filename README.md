@@ -63,14 +63,14 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 ### ImGui
 - [x] **Da rivedere**(Non sicuro che venga aggiunta la giusta velocità alla matrice) Usare l'accellerazione del mouse per aggiungere velocità al fluido
 - [x] Aggiungere una scelta per visualizzare densità o velocità
-- [ ] Aggiungere timestep alle variabili
-- [ ] Rendere i controlli di ImGui legati alle proprie variabili
+- [x] Aggiungere timestep alle variabili
+- [x] Rendere i controlli di ImGui legati alle proprie variabili
 
 
 
 ## Simulazione
 - [x] Cambiare nome ad s in density0
-- [ ] Far funzionare la `diffuse()` affinché se `diffuse=0` la matrice resti ferma senza evolversi nel tempo. (Probabilmente da controllare che valore si trova nella densità al timestep precedente)
+- [ ] **PRIORITA-THOMAS'** Far funzionare la `diffuse()`
 - [ ] Debuggare Advect (va in seg Fault)
 - [ ] Parallelizzare la diffuse
 - [ ] Implementare la "**gravità**" tramite un flow laminare di velocità generato dalla prima riga verso il basso.
