@@ -65,7 +65,7 @@ int openGUI()
 
                 // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
                 // probabilmente la simulazione è rotta e non riesce a gestire la velocità
-                // // Calcola la velocità
+                // Calcola la velocità
                 // mouseTime = glfwGetTime();
                 // mouseDeltaTime = mouseTime - mouseTime0;
                 // deltaX = xpos - xpos0;
@@ -75,16 +75,16 @@ int openGUI()
                 // ypos0 = ypos;
 
                 // // Aggiunge velocità
-                // matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
+                // matrix.addVelocity(xposScaled, yposScaled, 0.6, 0.01);
             }
         }
 
 
-        // // Aggiunta effetto macchina del vento
-        // for (int i = 0; i < matrixSize; i++)
-        // {
-        //     matrix.addVelocity(2, i, 10.0, 0.0);
-        // }
+        // Aggiunta effetto macchina del vento
+        for (int i = 0; i < matrixSize; i++)
+        {
+            matrix.addVelocity(2, i, 100.0, 0.0);
+        }
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)
@@ -294,11 +294,11 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
         static float temperatura = 0.0f;
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
-        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f);
+        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f, "%.3f",ImGuiSliderFlags_Logarithmic);
         matrix->diff = diffusione;
 
 
-        ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f);
+        ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
         matrix->dt = deltaTime;
 
 
