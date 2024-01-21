@@ -35,7 +35,6 @@ int openGUI()
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
-    std::cout<<matrix;
     // Creiamo il Vertex Buffer e il Vertex Array
     uint32_t VBO, VAO;
     setupBufferAndArray(&VBO, &VAO);
@@ -61,7 +60,6 @@ int openGUI()
             yposScaled = round(ypos / scalingFactor);
             if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize)
             {
-                printf("[DEBUG]: xpos = %f, ypos = %f\n", xpos, ypos);
                 // Aggiunge densità
                 matrix.addDensity(xposScaled, yposScaled, 100.0f);
 
