@@ -37,6 +37,12 @@ public:
      */
     friend std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix);
 
+
+    /**
+     * Reset the matrix
+     */
+    void reset();
+
     // Instance methods
     /**
      * Simulate a time-step

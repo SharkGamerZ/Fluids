@@ -34,6 +34,17 @@ std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix) {
     return os;
 }
 
+
+void FluidMatrix::reset() {
+    // Imposta tutti i vettori della matrice a 0
+    std::fill(density.begin(), density.end(), 0);
+    std::fill(density0.begin(), density0.end(), 0);
+    std::fill(Vx.begin(), Vx.end(), 0);
+    std::fill(Vy.begin(), Vy.end(), 0);
+    std::fill(Vx0.begin(), Vx0.end(), 0);
+    std::fill(Vy0.begin(), Vy0.end(), 0);
+}
+
 void FluidMatrix::step() {
     // density step
     {    
@@ -53,6 +64,7 @@ void FluidMatrix::step() {
         diffuse(yAxis, Vy, Vy0, visc, dt);
 
         project(Vx0, Vy0, Vx, Vy);
+        project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
         advect(xAxis, Vx, Vx0, Vx0, Vy0, dt);
