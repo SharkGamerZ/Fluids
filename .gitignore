@@ -2,6 +2,8 @@
 /build/
 .idea/*
 .editorconfig
+.kdev4/
+Fluids.kdev4
 
 # Ignore build output directories (may vary based on your project)
 cmake-build-debug/
