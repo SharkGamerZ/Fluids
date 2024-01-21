@@ -53,10 +53,11 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [x] Usare la densità della matrice per determinare il colore di ogni pixel
 - [x] Modificare `drawMatrix()` per mostrare la velocità
 - [x] Scrivere le shader in dei file e caricarli da lì 
+- [x] Rendere la finestra non resizable
+- [x] Implementare uno scaling factor
 - [ ] **Matteo** Fare la visualizzazione della velocità tramite linee e non intensità colore
 - [ ] Aggiungere la velocità in maniera proporzionale
 - [ ] Far visualizzare la velocità con colori in base alla direzione
-- [ ] Rendere la finestra non resizable
 - [ ] Normalizzare i vertici nelle shader
 
 
@@ -65,6 +66,7 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [x] Aggiungere una scelta per visualizzare densità o velocità
 - [x] Aggiungere timestep alle variabili
 - [x] Rendere i controlli di ImGui legati alle proprie variabili
+- [x] Aggiungere possibilità di resettare la matrice premendo il pulsante **R**
 
 
 

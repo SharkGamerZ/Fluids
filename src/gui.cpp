@@ -5,16 +5,22 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int viewportSize = 100;
+const int matrixSize = 100;
+const int scalingFactor = 6;
+const int viewportSize = matrixSize * scalingFactor;
+
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
 bool simulazioneIsRunning = false;
+bool resetSimulation = false;
+
 int simulationAttribute = DENSITY_ATTRIBUTE;
 int display_w, display_h;
 
 // Variabili per il mouse
 double xpos, ypos, xpos0, ypos0, deltaX, deltaY;
+double xposScaled, yposScaled;
 double mouseTime, mouseTime0, mouseDeltaTime;
 
 int openGUI()
@@ -26,13 +32,10 @@ int openGUI()
     // Chiamata a glewInit per andare a caricare tutte le funzioni di OpenGL
     glewInit();
 
-    int size = viewportSize;
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-    FluidMatrix matrix = FluidMatrix(size, 1.0f, 1.0f, 0.2f);
-    matrix.addDensity(size/2, size/2, 10.0);
-    matrix.addVelocity(size/2, size/2, 10.0, 10.0);
-
+    FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
+    std::cout<<matrix;
     // Creiamo il Vertex Buffer e il Vertex Array
     uint32_t VBO, VAO;
     setupBufferAndArray(&VBO, &VAO);
@@ -48,53 +51,59 @@ int openGUI()
         if (shaderProgram == 0) return EXIT_FAILURE;
 
 
+
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
         if (mouseLeftButtonState == GLFW_PRESS)
         {
             glfwGetCursorPos(window, &xpos, &ypos);
-
-            if (xpos >= 0 && xpos <= display_w && ypos >= 0 && ypos <= display_h)
+            xposScaled = floor(xpos / scalingFactor);
+            yposScaled = round(ypos / scalingFactor);
+            if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize)
             {
+                printf("[DEBUG]: xpos = %f, ypos = %f\n", xpos, ypos);
                 // Aggiunge densità
-                matrix.addDensity(xpos, ypos, 100.0f);
+                matrix.addDensity(xposScaled, yposScaled, 100.0f);
 
-                // Calcola la velocità
-                mouseTime = glfwGetTime();
-                mouseDeltaTime = mouseTime - mouseTime0;
-                deltaX = xpos - xpos0;
-                deltaY = ypos - ypos0;
-                mouseTime0 = mouseTime;
-                xpos0 = xpos;
-                ypos0 = ypos;
+                // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
+                // probabilmente la simulazione è rotta e non riesce a gestire la velocità
+                // // Calcola la velocità
+                // mouseTime = glfwGetTime();
+                // mouseDeltaTime = mouseTime - mouseTime0;
+                // deltaX = xpos - xpos0;
+                // deltaY = ypos - ypos0;
+                // mouseTime0 = mouseTime;
+                // xpos0 = xpos;
+                // ypos0 = ypos;
 
-                // Aggiunge velocità
-                matrix.addVelocity(xpos, ypos, deltaX, deltaY);
-
+                // // Aggiunge velocità
+                // matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
             }
-
-
         }
 
 
-        // Aggiunta effetto macchina del vento
-        for (int i = 0; i < size; i++)
+        // // Aggiunta effetto macchina del vento
+        // for (int i = 0; i < matrixSize; i++)
+        // {
+        //     matrix.addVelocity(2, i, 10.0, 0.0);
+        // }
+
+        // Controlla se la simulazione vada resettata
+        if(resetSimulation)
         {
-            matrix.addVelocity(2, i, 10.0, 0.0);
+            matrix.reset();
+            resetSimulation = false;
         }
-
 
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
         {
             matrix.step();
-
-            // std::cout<< "DEBUG: A" << std::endl;
             frameSimulation = false;
         }
 
 
-        drawMatrix(&matrix, size);
+        drawMatrix(&matrix);
 
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
@@ -107,7 +116,7 @@ int openGUI()
 
         // Rendering della matrice
         glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, size * size * 3);
+        glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize * 3);
 
         // Rendering di IMGui
         ImGui::Render();
@@ -143,8 +152,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
         simulazioneIsRunning = !simulazioneIsRunning;
 
+    // Se l'utente preme il tasto RIGHT, fa avanzare la simulazione di un frame
     if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
         frameSimulation = true;
+
+    // Se l'utente preme il tasto R, resetta la simulazione
+    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+        resetSimulation = true;
 
 }
 
@@ -234,6 +248,8 @@ GLFWwindow *setupWindow(int width, int height) {
     // Setup della finestra
     if (!glfwInit()) return nullptr;
 
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+
     // Create window with graphics context
     GLFWwindow *window = glfwCreateWindow(width, height, "Fluids", nullptr, nullptr);
     if (window == nullptr) return nullptr;
@@ -275,7 +291,7 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
     {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-        static float diffusione = 1.0f;
+        static float diffusione = 0.01f;
         static float deltaTime = 0.2f;
         static float temperatura = 0.0f;
 
@@ -306,16 +322,20 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 
 
 
-void drawMatrix(FluidMatrix *matrix, int N) {
+void drawMatrix(FluidMatrix *matrix) {
+    int N = viewportSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            vertices[3 * IX(i, j)] = i;
-            vertices[3 * IX(i, j) + 1] = j;
-            if (simulationAttribute == DENSITY_ATTRIBUTE)     vertices[3 * IX(i, j) + 2] = matrix->density[IX(i, j)];
-            if (simulationAttribute == VELOCITY_ATTRIBUTE)    vertices[3 * IX(i, j) + 2] = abs(matrix->Vx[IX(i, j)]) +
-                                                                                 abs(matrix->Vy[IX(i, j)]);
+            vertices[3 * (IX(i, j))]       = i;
+            vertices[3 * (IX(i, j)) + 1]   = j;
+            if (simulationAttribute == DENSITY_ATTRIBUTE)
+                vertices[3 * IX(i, j) + 2] = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+
+            if (simulationAttribute == VELOCITY_ATTRIBUTE)    
+                vertices[3 * IX(i, j) + 2] =  abs(matrix->Vx[(i/scalingFactor)*matrixSize + (j/scalingFactor)]) 
+                                            + abs(matrix->Vy[(i/scalingFactor)*matrixSize + (j/scalingFactor)]);
         }
     }
 
