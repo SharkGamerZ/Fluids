@@ -5,9 +5,10 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 64;
+const int matrixSize = 60;
 const int scalingFactor = 6;
 const int viewportSize = matrixSize * scalingFactor;
+const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
 
@@ -61,16 +62,21 @@ int openGUI()
                 // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
                 // probabilmente la simulazione è rotta e non riesce a gestire la velocità
                 // Calcola la velocità
-                // mouseTime = glfwGetTime();
-                // mouseDeltaTime = mouseTime - mouseTime0;
-                // deltaX = xpos - xpos0;
-                // deltaY = ypos - ypos0;
-                // mouseTime0 = mouseTime;
-                // xpos0 = xpos;
-                // ypos0 = ypos;
+                mouseTime = glfwGetTime();
+                mouseDeltaTime = mouseTime - mouseTime0;
+                deltaX = xpos - xpos0;
+                deltaY = ypos - ypos0;
+                mouseTime0 = mouseTime;
+                xpos0 = xpos;
+                ypos0 = ypos;
 
-                // // Aggiunge velocità
-                // matrix.addVelocity(xposScaled, yposScaled, 0.6, 0.01);
+
+                // deltaX *= 100;
+                // deltaY *= 100;
+                
+
+                // Aggiunge velocità
+                matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
             }
         }
 
@@ -353,13 +359,21 @@ void drawMatrix(FluidMatrix *matrix) {
     }
     else
     {
+        N /= chunkSize;
         glBindVertexArray(VAO);
         linkLinesToBuffer(vertices, N * N * 4);
-        glDrawArrays(GL_LINES, 0, 2);
-        for (int i = 0; i < N*N*4; i++)
-        {
-            glDrawArrays(GL_LINES, i, 2);
-        }
+        glDrawArrays(GL_LINES, 0, N*N*4);
+        // for (int i = 1; i < N*N * 4; i+=4)
+        // {
+        //     glDrawArrays(GL_LINES, i, 1);
+        //     printf(BOLD RED    "Vertice   " RESET "x:%.5f y:%.5f\n",vertices[i], vertices[i+1]);
+        //     printf(BOLD YELLOW "Variabili " RESET "N:%3d i:%3d\n",N,i);
+        // }
+
+        // for (i; i < N*N*2; i++)
+        // {
+        //     glDrawArrays(GL_LINES, i, 2);
+        // }
     }
     free(vertices);
 }
@@ -372,7 +386,7 @@ float *getDensityVertices(FluidMatrix *matrix) {
         for(int j = 0; j < N; j++) {
             vertices[3 * (IX(i, j))]       = i;
             vertices[3 * (IX(i, j)) + 1]   = j;
-            vertices[3 * (IX(i, j)) + 2]     = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+            vertices[3 * (IX(i, j)) + 2]   = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
         }
     }
 
@@ -385,18 +399,47 @@ float *getDensityVertices(FluidMatrix *matrix) {
 }
 
 float *getVelocityVertices(FluidMatrix *matrix) {
-    int N = viewportSize;
+    int N = viewportSize / chunkSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N come la matrice
-    //          * 5 visto che ho 2 coordinate per il primo punto e 2 per il secondo
-    //          ed 1 per il colore
-    float* vertices = (float*) calloc(sizeof(float), N * N * 4);
+    //          *4 visto che ho 2 coordinate per il primo punto e 2 per il secondo
+    //          /9 per mettere una linea ogni 9 pixel
+    float* vertices = (float*) calloc(sizeof(float), (N*N * 4));
+
+    int matrixI = (chunkSize - 1)/2;
+    int matrixJ = (chunkSize - 1)/2;
+
     for(int i = 0; i < N; i++) {
+        matrixJ = (chunkSize - 1)/2;
         for(int j = 0; j < N; j++) {
-            vertices[4 * (IX(i, j))]       = i;
-            vertices[4 * (IX(i, j)) + 1]   = j;
-            vertices[4 * (IX(i, j)) + 2]   = i + matrix->Vx[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
-            vertices[4 * (IX(i, j)) + 3]   = j + matrix->Vy[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+            vertices[4 * (IX(i, j))]       = matrixI;
+            vertices[4 * (IX(i, j)) + 1]   = matrixJ;
+
+            // // Calcolo media velocità
+            // float vx = 0;
+            // float vy = 0;
+            // int newI, newJ;
+            // for (int k = -(chunkSize - 1)/2; k <= (chunkSize - 1)/2; k++) {
+            //     for (int l = -(chunkSize - 1)/2; l <= (chunkSize - 1)/2; l++) {
+            //         newI = matrixI + k;
+            //         newJ = matrixJ + l;
+            //         if (newI >=0 && newI < matrixSize && newJ >=0 && newJ < matrixSize)
+            //         {
+            //             vx += matrix->Vx[((newI)/scalingFactor)*matrixSize + ((newJ)/scalingFactor)];
+            //             vy += matrix->Vy[((newI)/scalingFactor)*matrixSize + ((newJ)/scalingFactor)];
+            //         }
+            //     }
+            // }
+            // vertices[4 * (IX(i, j)) + 2]   = matrixI + vx + 1;
+            // vertices[4 * (IX(i, j)) + 3]   = matrixJ + vy + 1;
+
+
+
+            vertices[4 * (IX(i, j)) + 2]   = matrixI + matrix->Vx[(matrixI/scalingFactor)*matrixSize + (matrixJ/scalingFactor)] + 1;
+            vertices[4 * (IX(i, j)) + 3]   = matrixJ + matrix->Vy[(matrixI/scalingFactor)*matrixSize + (matrixJ/scalingFactor)] + 1;
+
+            matrixJ +=chunkSize;
         }
+        matrixI +=chunkSize;
     }
 
     // Normalizziamo i vertici da un sistema di coordinate pixel
@@ -424,7 +467,7 @@ void linkLinesToBuffer(float *vertices, int len) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 }
 
@@ -528,6 +571,7 @@ void normalizeVertices(float *vertices, int N) {
 }
 
 void normalizeSpeedVertices(float *vertices, int N) {
+
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
             vertices[4 * IX(i, j)]        = (vertices[4 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
@@ -537,4 +581,5 @@ void normalizeSpeedVertices(float *vertices, int N) {
             vertices[4 * IX(i, j) + 3]    = 1-(vertices[4 * IX(i, j) + 3] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
+
 }
