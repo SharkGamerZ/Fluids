@@ -5,10 +5,10 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 150;
+const int matrixSize = 100;
 const int scalingFactor = 3;
 const int viewportSize = matrixSize * scalingFactor;
-const int chunkSize = 3;    // Variabile usata quando si va a mostrare la velocità
+const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
 const ImVec4 clear_color = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 
@@ -37,11 +37,10 @@ int openGUI()
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
 
-    for (int i = 0; i < matrixSize; i++)
-    {
-        for (int j = 0; j < matrixSize; j++)
-            matrix.addVelocity(j, i, 1.0, 0.0);
-    }
+    // for (int i = 0; i < matrixSize; i++)
+    // {
+    //     matrix.addVelocity(1, i, 1000.0, 0.0);
+    // }
 
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
@@ -77,8 +76,8 @@ int openGUI()
             // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
             // probabilmente la simulazione è rotta e non riesce a gestire la velocità
             // Calcola la velocità
-            // deltaX *= 100;
-            // deltaY *= 100;
+            deltaX *= 10;
+            deltaY *= 10;
             
 
             // Aggiunge velocità
@@ -87,11 +86,11 @@ int openGUI()
         
 
 
-        // Aggiunta effetto macchina del vento
-        for (int i = 0; i < matrixSize; i++)
-        {
-            matrix.addVelocity(2, i, 1000.0, 0.0);
-        }
+        // // Aggiunta effetto macchina del vento
+        // for (int i = 0; i < matrixSize; i++)
+        // {
+        //     matrix.addVelocity(2, i, 1000.0, 0.0);
+        // }
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)
@@ -369,19 +368,13 @@ void drawMatrix(FluidMatrix *matrix) {
         glBindVertexArray(VAO);
         linkLinesToBuffer(vertices, N * N * 4);
         glDrawArrays(GL_LINES, 0, N*N*4);
-        // for (int i = 1; i < N*N * 4; i+=4)
-        // {
-        //     glDrawArrays(GL_LINES, i, 1);
-        //     printf(BOLD RED    "Vertice   " RESET "x:%.5f y:%.5f\n",vertices[i], vertices[i+1]);
-        //     printf(BOLD YELLOW "Variabili " RESET "N:%3d i:%3d\n",N,i);
-        // }
-
-        // for (i; i < N*N*2; i++)
-        // {
-        //     glDrawArrays(GL_LINES, i, 2);
-        // }
     }
     free(vertices);
+
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
+
 }
 
 float *getDensityVertices(FluidMatrix *matrix) {
@@ -427,18 +420,18 @@ float *getVelocityVertices(FluidMatrix *matrix) {
             int count = 0;
             for (int k = -(chunkSize - 1)/2; k <= (chunkSize - 1)/2; k++) {
                 for (int l = -(chunkSize - 1)/2; l <= (chunkSize - 1)/2; l++) {
-                    newI = viewPortI + k;
-                    newJ = viewPortJ + l;
+                    newI = (viewPortI + k)/scalingFactor;
+                    newJ = (viewPortJ + l)/scalingFactor;
                     if (newI >=0 && newI < matrixSize && newJ >=0 && newJ < matrixSize)
                     {
-                        vx += matrix->Vx[((newI)/scalingFactor)*matrixSize + ((newJ)/scalingFactor)];
-                        vy += matrix->Vy[((newI)/scalingFactor)*matrixSize + ((newJ)/scalingFactor)];
+                        vx += matrix->Vx[newI*matrixSize + newJ];
+                        vy += matrix->Vy[newI*matrixSize + newJ];
                         count++;
                     }
                 }
             }
-            vx /= count/2;
-            vy /= count/2;
+            vx /= count;
+            vy /= count;
             vertices[4 * (IX(i, j)) + 2]   = viewPortI + vx + 1;
             vertices[4 * (IX(i, j)) + 3]   = viewPortJ + vy + 1;
 
@@ -457,6 +450,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     // TODO da far fare nella shader
     normalizeSpeedVertices(vertices, N);
 
+
+    
     return vertices;
 }
 

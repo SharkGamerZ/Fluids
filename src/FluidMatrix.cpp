@@ -90,6 +90,8 @@ void FluidMatrix::addVelocity(int x, int y, float amountX, float amountY) {
 
     this->Vx[index] += amountX;
     this->Vy[index] += amountY;
+    this->Vx0[index] += amountX;
+    this->Vy0[index] += amountY;
 }
 
 // GIUSTA
@@ -141,6 +143,11 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
             s0 = 1 - s1;
             t1 = y - j0;
             t0 = 1 - t1;
+
+            // printf(BOLD BLUE "vX:" RESET " %f, " BOLD BLUE "vY:" RESET " %f, ", vX[IX(i, j)], vY[IX(i, j)]);
+            
+            // printf(BOLD RED "x:" RESET " %f, " BOLD RED "y:" RESET " %f, ", x, y);
+            // printf(BOLD YELLOW "i0:" RESET " %d, " BOLD YELLOW "i1:" RESET " %d, " BOLD YELLOW "j0:" RESET " %d, " BOLD YELLOW "j1:" RESET " %d\n", i0, i1, j0, j1);
 
             value[IX(i, j)] =   s0 * (t0 * oldValue[IX(i0, j0)] + t1 * oldValue[IX(i0, j1)]) +
                                 s1 * (t0 * oldValue[IX(i1, j0)] + t1 * oldValue[IX(i1, j1)]);

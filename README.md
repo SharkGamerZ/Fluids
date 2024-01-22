@@ -55,9 +55,9 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [x] Scrivere le shader in dei file e caricarli da lì 
 - [x] Rendere la finestra non resizable
 - [x] Implementare uno scaling factor
-- [ ] **Matteo** Fare la visualizzazione della velocità tramite linee
-- [ ] Aggiungere la velocità in maniera proporzionale
-- [ ] Far visualizzare la velocità con colori in base alla direzione
+- [x] **Matteo** Fare la visualizzazione della velocità tramite linee
+- [ ] Cambiare glUseProgram per non eseguirlo ogni volta
+- [ ] Usare glBufferSubData per efficienza
 - [ ] Normalizzare i vertici nelle shader
 
 
