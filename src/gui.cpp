@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 300;
-const int scalingFactor = 2;
+const int matrixSize = 150;
+const int scalingFactor = 3;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 3;    // Variabile usata quando si va a mostrare la velocità
 
@@ -87,12 +87,11 @@ int openGUI()
         
 
 
-        // // Aggiunta effetto macchina del vento
-        // for (int i = 0; i < matrixSize; i++)
-        // {
-        //     for (int j = 0; j < matrixSize; j++)
-        //         matrix.addVelocity(j, i, 0.1, 0.0);
-        // }
+        // Aggiunta effetto macchina del vento
+        for (int i = 0; i < matrixSize; i++)
+        {
+            matrix.addVelocity(2, i, 1000.0, 0.0);
+        }
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)

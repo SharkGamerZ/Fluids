@@ -46,14 +46,6 @@ void FluidMatrix::reset() {
 }
 
 void FluidMatrix::step() {
-    // density step
-    {    
-        std::swap(density0, density);
-        diffuse(0, density, density0, diff, dt);
-
-        std::swap(density0, density);
-        advect(0, density, density0, Vx, Vy, dt);
-    }
 
     // velocity step
     {
@@ -62,18 +54,26 @@ void FluidMatrix::step() {
 
         std::swap(Vy0, Vy);
         diffuse(yAxis, Vy, Vy0, visc, dt);
-
-        project(Vx0, Vy0, Vx, Vy);
-        project(Vx, Vy, Vx0, Vy0);
+// project va fatto solo sui valori aggiornati (questo creava il buco nero)
+//           project(Vx0, Vy0, Vx, Vy);
+         project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
         advect(xAxis, Vx, Vx0, Vx0, Vy0, dt);
         std::swap(Vy0, Vy);
         advect(yAxis, Vy, Vy0, Vx0, Vy0, dt);
 
-        project(Vx, Vy, Vx0, Vy0);
+         project(Vx, Vy, Vx0, Vy0);
     }
 
+    // density step
+    {
+        std::swap(density0, density);
+        diffuse(0, density, density0, diff, dt);
+
+        std::swap(density0, density);
+        advect(0, density, density0, Vx, Vy, dt);
+    }
 }
 
 
@@ -114,8 +114,8 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
 
     // indexes at the previous step
     int i0, j0, i1, j1;
-
-    float dt0 = dt * (N - 2);
+    //tolto tutti gli (N-2 con solo N come in diffuse)
+    float dt0 = dt * N;
 
     float s0, s1, t0, t1;
     float tmp1, tmp2, x, y;
@@ -128,12 +128,12 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
             y = j - (dt0 * vY[IX(i, j)]);
 
             if (x < 0.5f) x = 0.5f;
-            if (x > (N - 2) + 0.5f) x = (N - 2) + 0.5f;
+            if (x > N  + 0.5f) x = N + 0.5f;
             i0 = (int) x;
             i1 = i0 + 1;
 
             if (y < 0.5f) y = 0.5f;
-            if (y > (N - 2)+ 0.5f) y = (N - 2) + 0.5f;
+            if (y > N+ 0.5f) y = N + 0.5f;
             j0 = (int) y;
             j1 = j0 + 1;
 
