@@ -12,7 +12,7 @@
 
 constexpr int xAxis = 1; ///< x axis
 constexpr int yAxis = 2; ///< y axis
-constexpr int ITERATIONS = 20; ///< number of iterations
+constexpr int ITERATIONS = 8; ///< number of iterations
 
 class FluidMatrix {
 public:

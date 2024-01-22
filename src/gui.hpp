@@ -66,6 +66,12 @@ void setupBufferAndArray(uint *VBO, uint *VAO);
  */
 void linkVerticestoBuffer(float *vertices, int len);
 
+
+void linkLinesToBuffer(float *vertices, int len);
+
+float *getDensityVertices(FluidMatrix *matrix);
+float *getVelocityVertices(FluidMatrix *matrix);
+
 /**
  *  Funzione per il rendering della matrice
  * @param matrix La matrice da renderizzare
@@ -78,6 +84,8 @@ void printMatrix(FluidMatrix *matrix, int N);
 void printVertices(float *vertices, int len);
 
 void normalizeVertices(float *vertices, int N);
+
+void normalizeSpeedVertices(float *vertices, int N);
 
 // OpenGL shaders
 

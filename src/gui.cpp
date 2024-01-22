@@ -5,7 +5,7 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 100;
+const int matrixSize = 64;
 const int scalingFactor = 6;
 const int viewportSize = matrixSize * scalingFactor;
 
@@ -35,9 +35,6 @@ int openGUI()
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
-    // Creiamo il Vertex Buffer e il Vertex Array
-    uint32_t VBO, VAO;
-    setupBufferAndArray(&VBO, &VAO);
 
 
     // Ciclo principale
@@ -45,11 +42,9 @@ int openGUI()
         // Rendering di IMGui
         renderImGui(io, &matrix);
 
-        // Prende l'id del programma di shader in base a se si sta visualizzando la densità o la velocità
-        uint32_t shaderProgram = getShaderProgram();
-        if (shaderProgram == 0) return EXIT_FAILURE;
 
-
+        // --------------------------------------------------------------
+        // Simulazione
 
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -80,11 +75,11 @@ int openGUI()
         }
 
 
-        // Aggiunta effetto macchina del vento
-        for (int i = 0; i < matrixSize; i++)
-        {
-            matrix.addVelocity(2, i, 100.0, 0.0);
-        }
+        // // Aggiunta effetto macchina del vento
+        // for (int i = 0; i < matrixSize; i++)
+        // {
+        //     matrix.addVelocity(2, i, 100.0, 0.0);
+        // }
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)
@@ -100,8 +95,8 @@ int openGUI()
             frameSimulation = false;
         }
 
+        // --------------------------------------------------------------
 
-        drawMatrix(&matrix);
 
 
         // In caso di resize della finestra, aggiorna le dimensioni del viewport
@@ -113,8 +108,8 @@ int openGUI()
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Rendering della matrice
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize * 3);
+        drawMatrix(&matrix);
+
 
         // Rendering di IMGui
         ImGui::Render();
@@ -157,6 +152,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     // Se l'utente preme il tasto R, resetta la simulazione
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
         resetSimulation = true;
+
+    // Se l'utente preme il tasto V, cambia l'attributo della simulazione
+    if (key == GLFW_KEY_V && action == GLFW_PRESS)
+        simulationAttribute = (simulationAttribute + 1) % 2;
 
 }
 
@@ -321,6 +320,51 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 
 
 void drawMatrix(FluidMatrix *matrix) {
+    // Scegliamo quali shader usare
+    GLuint shaderProgram = getShaderProgram();
+    
+    GLuint VAO, VBO;
+
+    // Setup del Vertex Array
+    glGenVertexArrays(1, &VAO);
+    // Rende il Vertex Array attivo, creandolo se necessario
+    glBindVertexArray(VAO);
+
+    // Setup del Vertex Buffer
+    glGenBuffers(1, &VBO);
+    // Rende il Vertex Buffer attivo, creandolo se necessario
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+
+    int N = viewportSize;
+    // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
+    float* vertices;
+    if (simulationAttribute == DENSITY_ATTRIBUTE)
+        vertices = getDensityVertices(matrix);
+    else
+        vertices = getVelocityVertices(matrix);
+
+    // Linka i vertici al Vertex Array
+    if (simulationAttribute == DENSITY_ATTRIBUTE)
+    {
+        glBindVertexArray(VAO);
+        linkVerticestoBuffer(vertices, N * N * 3);
+        glDrawArrays(GL_POINTS, 0, N * N * 3);
+    }
+    else
+    {
+        glBindVertexArray(VAO);
+        linkLinesToBuffer(vertices, N * N * 4);
+        glDrawArrays(GL_LINES, 0, 2);
+        for (int i = 0; i < N*N*4; i++)
+        {
+            glDrawArrays(GL_LINES, i, 2);
+        }
+    }
+    free(vertices);
+}
+
+float *getDensityVertices(FluidMatrix *matrix) {
     int N = viewportSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
@@ -328,12 +372,7 @@ void drawMatrix(FluidMatrix *matrix) {
         for(int j = 0; j < N; j++) {
             vertices[3 * (IX(i, j))]       = i;
             vertices[3 * (IX(i, j)) + 1]   = j;
-            if (simulationAttribute == DENSITY_ATTRIBUTE)
-                vertices[3 * IX(i, j) + 2] = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
-
-            if (simulationAttribute == VELOCITY_ATTRIBUTE)    
-                vertices[3 * IX(i, j) + 2] =  abs(matrix->Vx[(i/scalingFactor)*matrixSize + (j/scalingFactor)]) 
-                                            + abs(matrix->Vy[(i/scalingFactor)*matrixSize + (j/scalingFactor)]);
+            vertices[3 * (IX(i, j)) + 2]     = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
         }
     }
 
@@ -342,12 +381,31 @@ void drawMatrix(FluidMatrix *matrix) {
     // TODO da far fare nella shader
     normalizeVertices(vertices, N);
 
-    // Linka i vertici al Vertex Array
-    linkVerticestoBuffer(vertices, N * N * 3);
-
-    free(vertices);
+    return vertices;
 }
 
+float *getVelocityVertices(FluidMatrix *matrix) {
+    int N = viewportSize;
+    // Creiamo un vettore di vertici per la matrice, grande N*N come la matrice
+    //          * 5 visto che ho 2 coordinate per il primo punto e 2 per il secondo
+    //          ed 1 per il colore
+    float* vertices = (float*) calloc(sizeof(float), N * N * 4);
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            vertices[4 * (IX(i, j))]       = i;
+            vertices[4 * (IX(i, j)) + 1]   = j;
+            vertices[4 * (IX(i, j)) + 2]   = i + matrix->Vx[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+            vertices[4 * (IX(i, j)) + 3]   = j + matrix->Vy[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+        }
+    }
+
+    // Normalizziamo i vertici da un sistema di coordinate pixel
+    // A quello di coordinate OpenGL, detto NDC, che va da -1 a 1
+    // TODO da far fare nella shader
+    normalizeSpeedVertices(vertices, N);
+
+    return vertices;
+}
 
 
 void linkVerticestoBuffer(float *vertices, int len) {
@@ -357,6 +415,16 @@ void linkVerticestoBuffer(float *vertices, int len) {
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+}
+
+void linkLinesToBuffer(float *vertices, int len) {
+    // Copia i dati dei vertici nel Vertex Buffer
+    // TODO dovrei sostituirlo con glBurfersubData, per evitare di allocare memoria ogni volta
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
+
+    // Attacca il Vertex Buffer all'attuale Vertex Array
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 }
 
@@ -452,8 +520,21 @@ void printVertices(float *vertices, int N) {
 void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
-            vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]        / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * IX(i, j) + 1]    = 1 - (vertices[3 * IX(i, j) + 1] / ((float) (viewportSize - 1) / 2.0f));
+            vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * IX(i, j) + 1]    = 1-(vertices[3 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+
+        }
+    }
+}
+
+void normalizeSpeedVertices(float *vertices, int N) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++){
+            vertices[4 * IX(i, j)]        = (vertices[4 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * IX(i, j) + 1]    = 1-(vertices[4 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+
+            vertices[4 * IX(i, j) + 2]    = (vertices[4 * IX(i, j) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * IX(i, j) + 3]    = 1-(vertices[4 * IX(i, j) + 3] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 }
