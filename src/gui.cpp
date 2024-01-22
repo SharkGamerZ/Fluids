@@ -76,8 +76,8 @@ int openGUI()
             // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
             // probabilmente la simulazione è rotta e non riesce a gestire la velocità
             // Calcola la velocità
-            deltaX *= 10;
-            deltaY *= 10;
+            // deltaX *= 10;
+            // deltaY *= 10;
             
 
             // Aggiunge velocità

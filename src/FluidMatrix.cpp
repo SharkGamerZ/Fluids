@@ -47,6 +47,17 @@ void FluidMatrix::reset() {
 
 void FluidMatrix::step() {
 
+
+    // density step
+    {
+        std::swap(density0, density);
+        diffuse(Axis::ZERO, density, density0, diff, dt);
+
+        std::swap(density0, density);
+        printf("Densità\n");
+        advect(Axis::ZERO, density, density0, Vx, Vy, dt);
+    }
+
     // velocity step
     {
         std::swap(Vx0, Vx);
@@ -55,25 +66,20 @@ void FluidMatrix::step() {
         std::swap(Vy0, Vy);
         diffuse(Axis::Y, Vy, Vy0, visc, dt);
 // project va fatto solo sui valori aggiornati (questo creava il buco nero)
-//           project(Vx0, Vy0, Vx, Vy);
+        project(Vx0, Vy0, Vx, Vy);
         project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
+        printf("Velocità x\n");
         advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
         std::swap(Vy0, Vy);
+        printf("Velocità y\n");
         advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
 
         project(Vx, Vy, Vx0, Vy0);
     }
 
-    // density step
-    {
-        std::swap(density0, density);
-        diffuse(Axis::ZERO, density, density0, diff, dt);
 
-        std::swap(density0, density);
-        advect(Axis::ZERO, density, density0, Vx, Vy, dt);
-    }
 }
 
 
@@ -115,7 +121,7 @@ void FluidMatrix::advect(Axis mode, std::vector<float> &value, std::vector<float
     // indexes at the previous step
     int i0, j0, i1, j1;
     //tolto tutti gli (N-2 con solo N come in diffuse)
-    float dt0 = dt * N;
+    float dt0 = dt * (N - 2);
 
     float s0, s1, t0, t1;
     float x, y;
