@@ -62,7 +62,7 @@ int openGUI()
         mouseTime0 = mouseTime;
         xpos0 = xpos;
         ypos0 = ypos;
-        
+
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
 
@@ -72,7 +72,7 @@ int openGUI()
             if (mouseLeftButtonState == GLFW_PRESS)
                 matrix.addDensity(xposScaled, yposScaled, 100.0f);
 
-            
+
             // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
             // probabilmente la simulazione è rotta e non riesce a gestire la velocità
             // Calcola la velocità
@@ -83,7 +83,7 @@ int openGUI()
             // Aggiunge velocità
             matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
         }
-        
+
 
 
         // // Aggiunta effetto macchina del vento
@@ -178,7 +178,7 @@ uint32_t getShaderProgram() {
     // Get the shader source code from the GLSL files
     std::string vertexShaderSource;
     std::string fragmentShaderSource;
-    if (simulationAttribute == DENSITY_ATTRIBUTE) 
+    if (simulationAttribute == DENSITY_ATTRIBUTE)
     {
         vertexShaderSource = readFile("../src/shaders/density.vert");
         fragmentShaderSource = readFile("../src/shaders/density.frag");
@@ -333,7 +333,7 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 void drawMatrix(FluidMatrix *matrix) {
     // Scegliamo quali shader usare
     GLuint shaderProgram = getShaderProgram();
-    
+
     GLuint VAO, VBO;
 
     // Setup del Vertex Array
@@ -369,6 +369,7 @@ void drawMatrix(FluidMatrix *matrix) {
         linkLinesToBuffer(vertices, N * N * 4);
         glDrawArrays(GL_LINES, 0, N*N*4);
     }
+
     free(vertices);
 
     glDeleteVertexArrays(1, &VAO);

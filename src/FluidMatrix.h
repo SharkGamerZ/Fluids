@@ -10,9 +10,10 @@
 
 #define IX(i, j) ((j) + (i) * N) ///< index of the matrix
 
-constexpr int xAxis = 1; ///< x axis
-constexpr int yAxis = 2; ///< y axis
-constexpr int ITERATIONS = 8; ///< number of iterations
+const int ITERATIONS = 8; ///< number of iterations
+enum Axis {
+    X, Y, ZERO
+}; ///< axis of the matrix
 
 class FluidMatrix {
 public:
@@ -68,6 +69,7 @@ public:
      */
     void addVelocity(int x, int y, float amountX, float amountY);
 
+private:
     /**
      * Diffuse the matrix
      * @param mode x or y axis
@@ -76,7 +78,7 @@ public:
      * @param diffusion diffusion
      * @param dt delta time
      */
-    void diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
+    void diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
 
     /**
      * Advect the matrix
@@ -87,7 +89,7 @@ public:
      * @param vY velocity on y axis
      * @param dt delta time
      */
-    void advect(int mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY, float dt) const;
+    void advect(Axis mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY, float dt) const;
 
     /**
      * Project the matrix
@@ -103,7 +105,7 @@ public:
      * @param mode x or y axis
      * @param attr attribute to set
      */
-    void set_bnd(int mode, std::vector<float> &attr) const;
+    void set_bnd(Axis mode, std::vector<float> &attr) const;
 
     /**
      * Solve the linear equation
@@ -112,10 +114,10 @@ public:
      * @param oldValue value at previous step
      * @param diffusionRate diffusion rate
      */
-    void lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
+    void lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
 
 
-    void parallel_lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
+    void parallel_lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
 };
 
 

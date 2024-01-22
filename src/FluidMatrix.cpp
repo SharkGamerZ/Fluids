@@ -50,33 +50,31 @@ void FluidMatrix::step() {
     // velocity step
     {
         std::swap(Vx0, Vx);
-        diffuse(xAxis, Vx, Vx0, visc, dt);
+        diffuse(Axis::X, Vx, Vx0, visc, dt);
 
         std::swap(Vy0, Vy);
-        diffuse(yAxis, Vy, Vy0, visc, dt);
+        diffuse(Axis::Y, Vy, Vy0, visc, dt);
 // project va fatto solo sui valori aggiornati (questo creava il buco nero)
 //           project(Vx0, Vy0, Vx, Vy);
-         project(Vx, Vy, Vx0, Vy0);
+        project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
-        advect(xAxis, Vx, Vx0, Vx0, Vy0, dt);
+        advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
         std::swap(Vy0, Vy);
-        advect(yAxis, Vy, Vy0, Vx0, Vy0, dt);
+        advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
 
-         project(Vx, Vy, Vx0, Vy0);
+        project(Vx, Vy, Vx0, Vy0);
     }
 
     // density step
     {
         std::swap(density0, density);
-        diffuse(0, density, density0, diff, dt);
+        diffuse(Axis::ZERO, density, density0, diff, dt);
 
         std::swap(density0, density);
-        advect(0, density, density0, Vx, Vy, dt);
+        advect(Axis::ZERO, density, density0, Vx, Vy, dt);
     }
 }
-
-
 
 
 void FluidMatrix::addDensity(int x, int y, float amount) {
@@ -95,7 +93,7 @@ void FluidMatrix::addVelocity(int x, int y, float amountX, float amountY) {
 }
 
 // GIUSTA
-void FluidMatrix::diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const {
+void FluidMatrix::diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const {
     // std::vector<float> tmp = value;
     auto begin = std::chrono::high_resolution_clock::now();
 
@@ -111,7 +109,7 @@ void FluidMatrix::diffuse(int mode, std::vector<float> &value, std::vector<float
 }
 
 // DA controllare come stanno i float (se sono tutti float o se ci sono anche int)
-void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float> &oldValue, std::vector<float> &vX, std::vector<float> &vY, float dt) const {
+void FluidMatrix::advect(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, std::vector<float> &vX, std::vector<float> &vY, float dt) const {
     int N = this->size;
 
     // indexes at the previous step
@@ -120,9 +118,7 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
     float dt0 = dt * N;
 
     float s0, s1, t0, t1;
-    float tmp1, tmp2, x, y;
-
-    int i, j;
+    float x, y;
 
     for (int i = 1; i < N - 1; i++) {
         for (int j = 1; j < N - 1; j++) {
@@ -130,12 +126,12 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
             y = j - (dt0 * vY[IX(i, j)]);
 
             if (x < 0.5f) x = 0.5f;
-            if (x > N  + 0.5f) x = N + 0.5f;
+            if (x > N + 0.5f) x = N + 0.5f;
             i0 = (int) x;
             i1 = i0 + 1;
 
             if (y < 0.5f) y = 0.5f;
-            if (y > N+ 0.5f) y = N + 0.5f;
+            if (y > N + 0.5f) y = N + 0.5f;
             j0 = (int) y;
             j1 = j0 + 1;
 
@@ -158,8 +154,6 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
 }
 
 
-
-
 void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p, std::vector<float> &div) const {
     int N = this->size;
     for (int j = 1; j < N - 1; j++) {
@@ -173,9 +167,9 @@ void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::v
             p[IX(i, j)] = 0;
         }
     }
-    set_bnd(0, div);
-    set_bnd(0, p);
-    lin_solve(0, p, div, 1);
+    set_bnd(Axis::ZERO, div);
+    set_bnd(Axis::ZERO, p);
+    lin_solve(Axis::ZERO, p, div, 1);
 
     for (int j = 1; j < N - 1; j++) {
         for (int i = 1; i < N - 1; i++) {
@@ -183,21 +177,21 @@ void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::v
             vY[IX(i, j)] -= 0.5f * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) * N;
         }
     }
-    set_bnd(xAxis, vX);
-    set_bnd(yAxis, vY);
+    set_bnd(Axis::X, vX);
+    set_bnd(Axis::Y, vY);
 }
 
 
 // IN TEORIA GIUSTA
-void FluidMatrix::set_bnd(int mode, std::vector<float> &attr) const {
+void FluidMatrix::set_bnd(Axis mode, std::vector<float> &attr) const {
     int N = this->size;
     for (int i = 1; i < N - 1; i++) {
-        attr[IX(i, 0    )] = mode == yAxis ? -attr[IX(i, 1)] : attr[IX(i, 1)];
-        attr[IX(i, N - 1)] = mode == yAxis ? -attr[IX(i, N - 2)] : attr[IX(i, N - 2)];
+        attr[IX(i, 0    )] = mode == Axis::Y ? -attr[IX(i, 1)] : attr[IX(i, 1)];
+        attr[IX(i, N - 1)] = mode == Axis::Y ? -attr[IX(i, N - 2)] : attr[IX(i, N - 2)];
     }
     for (int j = 1; j < N - 1; j++) {
-        attr[IX(0, j    )] = mode == xAxis ? -attr[IX(1, j)] : attr[IX(1, j)];
-        attr[IX(N - 1, j)] = mode == xAxis ? -attr[IX(N - 2, j)] : attr[IX(N - 2, j)];
+        attr[IX(0, j    )] = mode == Axis::X ? -attr[IX(1, j)] : attr[IX(1, j)];
+        attr[IX(N - 1, j)] = mode == Axis::X ? -attr[IX(N - 2, j)] : attr[IX(N - 2, j)];
     }
 
     attr[IX(0    , 0    )] = 0.5f * (attr[IX(1, 0)] + attr[IX(0, 1)]);
@@ -208,7 +202,7 @@ void FluidMatrix::set_bnd(int mode, std::vector<float> &attr) const {
 }
 
 // GIUSTA
-void FluidMatrix::lin_solve(int mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate) const {
+void FluidMatrix::lin_solve(Axis mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate) const {
     int N = this->size;
     float c = 1 + 4 * diffusionRate;
     float cRecip = 1.0 / c;
@@ -228,7 +222,7 @@ void FluidMatrix::lin_solve(int mode, std::vector<float> &nextValue, std::vector
     }
 }
 
-void FluidMatrix::parallel_lin_solve(int mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate) const {
+void FluidMatrix::parallel_lin_solve(Axis mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate) const {
     int N = this->size;
     float c = 1 + 4 * diffusionRate;
     float cRecip = 1.0 / c;
