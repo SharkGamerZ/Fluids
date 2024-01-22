@@ -55,7 +55,7 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [x] Scrivere le shader in dei file e caricarli da lì 
 - [x] Rendere la finestra non resizable
 - [x] Implementare uno scaling factor
-- [ ] **Matteo** Fare la visualizzazione della velocità tramite linee e non intensità colore
+- [ ] **Matteo** Fare la visualizzazione della velocità tramite linee
 - [ ] Aggiungere la velocità in maniera proporzionale
 - [ ] Far visualizzare la velocità con colori in base alla direzione
 - [ ] Normalizzare i vertici nelle shader
@@ -74,6 +74,7 @@ Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [x] Cambiare nome ad s in density0
 - [x] Debuggare Advect (va in seg Fault)
 - [ ] **PRIORITA-THOMAS'** Far funzionare la `diffuse()`
+- [ ] Far funzionare la advect
 - [ ] Parallelizzare la diffuse
 - [ ] Implementare la "**gravità**" tramite un flow laminare di velocità generato dalla prima riga verso il basso.
 

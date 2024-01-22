@@ -1,16 +1,18 @@
 #ifndef FLUIDS_FLUIDMATRIX_H
 #define FLUIDS_FLUIDMATRIX_H
 
+#include "utils.h"
 
 #include <vector>
 #include <ostream>
 #include <iostream>
+#include <omp.h>
 
 #define IX(i, j) ((j) + (i) * N) ///< index of the matrix
 
 constexpr int xAxis = 1; ///< x axis
 constexpr int yAxis = 2; ///< y axis
-constexpr int ITERATIONS = 20; ///< number of iterations
+constexpr int ITERATIONS = 8; ///< number of iterations
 
 class FluidMatrix {
 public:
@@ -111,6 +113,9 @@ public:
      * @param diffusionRate diffusion rate
      */
     void lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
+
+
+    void parallel_lin_solve(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
 };
 
 

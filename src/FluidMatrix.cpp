@@ -95,9 +95,15 @@ void FluidMatrix::addVelocity(int x, int y, float amountX, float amountY) {
 // GIUSTA
 void FluidMatrix::diffuse(int mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const {
     // std::vector<float> tmp = value;
+    auto begin = std::chrono::high_resolution_clock::now();
+
     int N = this->size;
     float diffusionRate = dt * diffusion * N * N;
-    lin_solve(mode, value, oldValue, diffusionRate);
+    // lin_solve(mode, value, oldValue, diffusionRate);
+    parallel_lin_solve(mode, value, oldValue, diffusionRate);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << BOLD YELLOW "diffuse: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
     // std::swap(oldValue, value);
     // value = std::move(tmp);
 }
@@ -212,6 +218,33 @@ void FluidMatrix::lin_solve(int mode, std::vector<float> &nextValue, std::vector
             }
         }
         set_bnd(mode, nextValue);
+    }
+}
+
+void FluidMatrix::parallel_lin_solve(int mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate) const {
+    int N = this->size;
+    float c = 1 + 4 * diffusionRate;
+    float cRecip = 1.0 / c;
+    #pragma omp parallel default(none) shared(nextValue, value) private (cRecip, diffusionRate, N)
+    {
+        for (int k = 0; k < ITERATIONS; k++)
+        {
+            #pragma omp for collapse(2)
+            for (int j = 1; j < N - 1; j++)
+            {
+                for (int i = 1; i < N - 1; i++)
+                {
+                    nextValue[IX(i, j)] = (value[IX(i, j)]
+                                    + diffusionRate * (
+                            nextValue[IX(i + 1, j)]
+                            + nextValue[IX(i - 1, j)]
+                            + nextValue[IX(i, j + 1)]
+                            + nextValue[IX(i, j - 1)]
+                    )) * cRecip;
+                }
+            }
+            set_bnd(mode, nextValue);
+        }
     }
 }
 
