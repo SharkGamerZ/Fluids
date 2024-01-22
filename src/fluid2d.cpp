@@ -129,8 +129,8 @@ static void advect(int mode, float *d, float *d0,  float *velocX, float *velocY,
             tmp2 = dty * velocY[IX(i, j)];
             x    = ifloat - tmp1; 
             y    = jfloat - tmp2;
-            
-            if(x < 0.5f) x = 0.5f; 
+
+            if(x < 0.5f) x = 0.5f;
             if(x > Nfloat + 0.5f) x = Nfloat + 0.5f; 
             i0 = floorf(x); 
             i1 = i0 + 1.0f;
@@ -224,8 +224,8 @@ static void lin_solve(int mode, float *value, float *oldValue, float diffusionRa
     for (int k = 0; k < iterations; k++) {
         for (int j = 1; j < N - 1; j++) {
             for (int i = 1; i < N - 1; i++) {
-                value[IX(i, j)] =(oldValue[IX(i, j)] + diffusionRate*(   value[IX(i+1, j  )] + value[IX(i-1, j  )]
-                                                                        +value[IX(i  , j+1)] + value[IX(i  , j-1)])) * cRecip; }
+                value[IX(i, j)] =(oldValue[IX(i, j)] + diffusionRate*(   value[IX(i+1, j  )] + value[IX(i-1, j  )] + value[IX(i  , j+1)] + value[IX(i  , j-1)])) * cRecip;
+                }
             }
         set_bnd(mode, value, N);
     }

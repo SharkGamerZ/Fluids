@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 100;
-const int scalingFactor = 6;
+const int matrixSize = 15;
+const int scalingFactor = 50;
 const int viewportSize = matrixSize * scalingFactor;
 
 const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
@@ -63,28 +63,29 @@ int openGUI()
                 // Aggiunge densità
                 matrix.addDensity(xposScaled, yposScaled, 100.0f);
 
-                // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
-                // probabilmente la simulazione è rotta e non riesce a gestire la velocità
-                // Calcola la velocità
-                // mouseTime = glfwGetTime();
-                // mouseDeltaTime = mouseTime - mouseTime0;
-                // deltaX = xpos - xpos0;
-                // deltaY = ypos - ypos0;
-                // mouseTime0 = mouseTime;
-                // xpos0 = xpos;
-                // ypos0 = ypos;
+                // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo ---- Forse fixato
+//                 probabilmente la simulazione è rotta e non riesce a gestire la velocità
+//              Capire cosa voleva fare Matteo con questo calcolo della velocità
+//                 Calcola la velocità
+//                 mouseTime = glfwGetTime();
+//                 mouseDeltaTime = mouseTime - mouseTime0;
+//                 deltaX = xpos - xpos0;
+//                 deltaY = ypos - ypos0;
+//                 mouseTime0 = mouseTime;
+//                 xpos0 = xpos;
+//                 ypos0 = ypos;
 
-                // // Aggiunge velocità
-                // matrix.addVelocity(xposScaled, yposScaled, 0.6, 0.01);
+//                 Aggiunge velocità
+                matrix.addVelocity(xposScaled, yposScaled, 100000, 0);
             }
         }
 
 
         // Aggiunta effetto macchina del vento
-        for (int i = 0; i < matrixSize; i++)
-        {
-            matrix.addVelocity(2, i, 100.0, 0.0);
-        }
+//         for (int i = 0; i < matrixSize; i++)
+//         {
+//             matrix.addVelocity(2, i, 100.0, 0.0);
+//         }
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)
