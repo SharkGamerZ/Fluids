@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 100;
-const int scalingFactor = 4;
+const int matrixSize = 10;
+const int scalingFactor = 45;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -70,14 +70,14 @@ int openGUI()
         {
             // Aggiunge densità
             if (mouseLeftButtonState == GLFW_PRESS)
-                matrix.addDensity(xposScaled, yposScaled, 100.0f);
+                matrix.addDensity(xposScaled, yposScaled, 0.5f);
 
 
             // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
             // probabilmente la simulazione è rotta e non riesce a gestire la velocità
             // Calcola la velocità
-            // deltaX *= 10;
-            // deltaY *= 10;
+             deltaX *= 100;
+             deltaY *= 100;
             
 
             // Aggiunge velocità

@@ -66,7 +66,7 @@ void FluidMatrix::step() {
         std::swap(Vy0, Vy);
         diffuse(Axis::Y, Vy, Vy0, visc, dt);
 // project va fatto solo sui valori aggiornati (questo creava il buco nero)
-        project(Vx0, Vy0, Vx, Vy);
+//         project(Vx0, Vy0, Vx, Vy);
         project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
