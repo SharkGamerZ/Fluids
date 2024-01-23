@@ -14,7 +14,7 @@ set(SOURCE_FILES
         src/utils.cpp
 )
 
-add_subdirectory(lib/imgui)
+add_subdirectory(lib/imgui/)
 
 # Aggiungi tutte le sorgenti del progetto
 add_executable(fluids ${SOURCE_FILES})

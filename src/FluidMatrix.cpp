@@ -55,7 +55,7 @@ void FluidMatrix::step() {
         std::swap(Vy0, Vy);
         diffuse(yAxis, Vy, Vy0, visc, dt);
 // project va fatto solo sui valori aggiornati (questo creava il buco nero)
-//           project(Vx0, Vy0, Vx, Vy);
+//         project(Vx0, Vy0, Vx, Vy);
          project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
@@ -115,7 +115,7 @@ void FluidMatrix::advect(int mode, std::vector<float> &value, std::vector<float>
     // indexes at the previous step
     int i0, j0, i1, j1;
     //tolto tutti gli (N-2 con solo N come in diffuse)
-    float dt0 = dt * N;
+    float dt0 = dt * (N-2);
 
     float s0, s1, t0, t1;
     float tmp1, tmp2, x, y;
@@ -157,12 +157,7 @@ void FluidMatrix::project(std::vector<float> &vX, std::vector<float> &vY, std::v
     int N = this->size;
     for (int j = 1; j < N - 1; j++) {
         for (int i = 1; i < N - 1; i++) {
-            div[IX(i, j)] = -0.5f * (
-                    vX[IX(i + 1, j)]
-                    - vX[IX(i - 1, j)]
-                    + vY[IX(i, j + 1)]
-                    - vY[IX(i, j - 1)]
-            ) / N;
+            div[IX(i, j)] = -0.5f * (vX[IX(i + 1, j)] - vX[IX(i - 1, j)] + vY[IX(i, j + 1)] - vY[IX(i, j - 1)]) / N;
             p[IX(i, j)] = 0;
         }
     }
@@ -192,6 +187,7 @@ void FluidMatrix::set_bnd(int mode, std::vector<float> &attr) const {
         attr[IX(0, j    )] = mode == xAxis ? -attr[IX(1, j)] : attr[IX(1, j)];
         attr[IX(N - 1, j)] = mode == xAxis ? -attr[IX(N - 2, j)] : attr[IX(N - 2, j)];
     }
+
 
     attr[IX(0    , 0    )] = 0.5f * (attr[IX(1, 0)] + attr[IX(0, 1)]);
     attr[IX(0    , N - 1)] = 0.5f * (attr[IX(1, N - 1)] + attr[IX(0, N - 2)]);

@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 150;
-const int scalingFactor = 3;
+const int matrixSize = 100;
+const int scalingFactor = 4;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -56,28 +56,29 @@ int openGUI()
             yposScaled = round(ypos / scalingFactor);
             if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize)
             {
-                // Aggiunge densità
-                matrix.addDensity(xposScaled, yposScaled, 10.0f);
+                //calcoli per "colpo" di velocità
+                deltaX = xpos - xpos0;
+                deltaY = ypos - ypos0;
+                xpos0 = xpos;
+                ypos0 = ypos;
+                deltaX *= 100;
+                deltaY *= 100;
 
+                // Aggiunge velocità
+                matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
+
+                // Aggiunge densità
+
+                matrix.addDensity(xposScaled, yposScaled, 0.2f);
                 // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo ---- Forse fixato
 //                 probabilmente la simulazione è rotta e non riesce a gestire la velocità
 //              Capire cosa voleva fare Matteo con questo calcolo della velocità
 //              Calcola la velocità
 //              mouseTime = glfwGetTime();
 //              mouseDeltaTime = mouseTime - mouseTime0;
-                deltaX = xpos - xpos0;
-                deltaY = ypos - ypos0;
+
 //              mouseTime0 = mouseTime;
-                xpos0 = xpos;
-                ypos0 = ypos;
 
-
-                deltaX *= 100;
-                deltaY *= 100;
-
-
-                // Aggiunge velocità
-                matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
             }
         }
 
