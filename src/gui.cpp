@@ -10,7 +10,7 @@ const int scalingFactor = 4;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
-const ImVec4 clear_color = ImVec4(0.20f, 0.10f, 0.10f, 1.00f);
+const ImVec4 clear_color = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 
 bool frameSimulation = false;
 bool simulazioneIsRunning = false;
@@ -37,6 +37,10 @@ int openGUI()
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
 
+    // for (int i = 0; i < matrixSize; i++)
+    // {
+    //     matrix.addVelocity(1, i, 1000.0, 0.0);
+    // }
 
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
@@ -47,47 +51,46 @@ int openGUI()
         // --------------------------------------------------------------
         // Simulazione
 
+        // Si salva di quanto si è spostato il mouse per poter aggiungere velocità
+        glfwGetCursorPos(window, &xpos, &ypos);
+        xposScaled = round(xpos / scalingFactor);
+        yposScaled = round(ypos / scalingFactor);
+        mouseTime = glfwGetTime();
+        mouseDeltaTime = mouseTime - mouseTime0;
+        deltaX = xpos - xpos0;
+        deltaY = ypos - ypos0;
+        mouseTime0 = mouseTime;
+        xpos0 = xpos;
+        ypos0 = ypos;
+
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-        if (mouseLeftButtonState == GLFW_PRESS)
+
+        if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize)
         {
-            glfwGetCursorPos(window, &xpos, &ypos);
-            xposScaled = floor(xpos / scalingFactor);
-            yposScaled = round(ypos / scalingFactor);
-            if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize)
-            {
-                //calcoli per "colpo" di velocità
-                deltaX = xpos - xpos0;
-                deltaY = ypos - ypos0;
-                xpos0 = xpos;
-                ypos0 = ypos;
-                deltaX *= 100;
-                deltaY *= 100;
+            // Aggiunge densità
+            if (mouseLeftButtonState == GLFW_PRESS)
+                matrix.addDensity(xposScaled, yposScaled, 100.0f);
 
-                // Aggiunge velocità
-                matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
 
-                // Aggiunge densità
+            // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
+            // probabilmente la simulazione è rotta e non riesce a gestire la velocità
+            // Calcola la velocità
+            // deltaX *= 10;
+            // deltaY *= 10;
+            
 
-                matrix.addDensity(xposScaled, yposScaled, 0.2f);
-                // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo ---- Forse fixato
-//                 probabilmente la simulazione è rotta e non riesce a gestire la velocità
-//              Capire cosa voleva fare Matteo con questo calcolo della velocità
-//              Calcola la velocità
-//              mouseTime = glfwGetTime();
-//              mouseDeltaTime = mouseTime - mouseTime0;
-
-//              mouseTime0 = mouseTime;
-
-            }
+            // Aggiunge velocità
+            matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
         }
 
 
-        // Aggiunta effetto macchina del vento
-        for (int i = 0; i < matrixSize; i++)
-        {
-            matrix.addVelocity(2, i, 1000.0, 0.0);
-        }
+
+        // // Aggiunta effetto macchina del vento
+        // for (int i = 0; i < matrixSize; i++)
+        // {
+        //     matrix.addVelocity(2, i, 1000.0, 0.0);
+        // }
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)
@@ -175,7 +178,7 @@ uint32_t getShaderProgram() {
     // Get the shader source code from the GLSL files
     std::string vertexShaderSource;
     std::string fragmentShaderSource;
-    if (simulationAttribute == DENSITY_ATTRIBUTE) 
+    if (simulationAttribute == DENSITY_ATTRIBUTE)
     {
         vertexShaderSource = readFile("../src/shaders/density.vert");
         fragmentShaderSource = readFile("../src/shaders/density.frag");
@@ -330,7 +333,7 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 void drawMatrix(FluidMatrix *matrix) {
     // Scegliamo quali shader usare
     GLuint shaderProgram = getShaderProgram();
-    
+
     GLuint VAO, VBO;
 
     // Setup del Vertex Array
@@ -365,19 +368,14 @@ void drawMatrix(FluidMatrix *matrix) {
         glBindVertexArray(VAO);
         linkLinesToBuffer(vertices, N * N * 4);
         glDrawArrays(GL_LINES, 0, N*N*4);
-        // for (int i = 1; i < N*N * 4; i+=4)
-        // {
-        //     glDrawArrays(GL_LINES, i, 1);
-        //     printf(BOLD RED    "Vertice   " RESET "x:%.5f y:%.5f\n",vertices[i], vertices[i+1]);
-        //     printf(BOLD YELLOW "Variabili " RESET "N:%3d i:%3d\n",N,i);
-        // }
-
-        // for (i; i < N*N*2; i++)
-        // {
-        //     glDrawArrays(GL_LINES, i, 2);
-        // }
     }
+
     free(vertices);
+
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
+
 }
 
 float *getDensityVertices(FluidMatrix *matrix) {
@@ -407,41 +405,45 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     //          /9 per mettere una linea ogni 9 pixel
     float* vertices = (float*) calloc(sizeof(float), (N*N * 4));
 
-    int matrixI = (chunkSize - 1)/2;
-    int matrixJ = (chunkSize - 1)/2;
+    int viewPortI = (chunkSize - 1)/2;
+    int viewPortJ = (chunkSize - 1)/2;
 
     for(int i = 0; i < N; i++) {
-        matrixJ = (chunkSize - 1)/2;
+        viewPortJ = (chunkSize - 1)/2;
         for(int j = 0; j < N; j++) {
-            vertices[4 * (IX(i, j))]       = matrixI;
-            vertices[4 * (IX(i, j)) + 1]   = matrixJ;
+            vertices[4 * (IX(i, j))]       = viewPortI;
+            vertices[4 * (IX(i, j)) + 1]   = viewPortJ;
 
-            // // Calcolo media velocità
-            // float vx = 0;
-            // float vy = 0;
-            // int newI, newJ;
-            // for (int k = -(chunkSize - 1)/2; k <= (chunkSize - 1)/2; k++) {
-            //     for (int l = -(chunkSize - 1)/2; l <= (chunkSize - 1)/2; l++) {
-            //         newI = matrixI + k;
-            //         newJ = matrixJ + l;
-            //         if (newI >=0 && newI < matrixSize && newJ >=0 && newJ < matrixSize)
-            //         {
-            //             vx += matrix->Vx[((newI)/scalingFactor)*matrixSize + ((newJ)/scalingFactor)];
-            //             vy += matrix->Vy[((newI)/scalingFactor)*matrixSize + ((newJ)/scalingFactor)];
-            //         }
-            //     }
-            // }
-            // vertices[4 * (IX(i, j)) + 2]   = matrixI + vx + 1;
-            // vertices[4 * (IX(i, j)) + 3]   = matrixJ + vy + 1;
+            // Calcolo media velocità
+            float vx = 0;
+            float vy = 0;
+            int newI, newJ;
+            int count = 0;
+            for (int k = -(chunkSize - 1)/2; k <= (chunkSize - 1)/2; k++) {
+                for (int l = -(chunkSize - 1)/2; l <= (chunkSize - 1)/2; l++) {
+                    newI = (viewPortI + k)/scalingFactor;
+                    newJ = (viewPortJ + l)/scalingFactor;
+                    if (newI >=0 && newI < matrixSize && newJ >=0 && newJ < matrixSize)
+                    {
+                        vx += matrix->Vx[newI*matrixSize + newJ];
+                        vy += matrix->Vy[newI*matrixSize + newJ];
+                        count++;
+                    }
+                }
+            }
+            vx /= count;
+            vy /= count;
+            vertices[4 * (IX(i, j)) + 2]   = viewPortI + vx + 1;
+            vertices[4 * (IX(i, j)) + 3]   = viewPortJ + vy + 1;
 
 
+            // vertices[4 * (IX(i, j)) + 2]   = viewPortI + matrix->Vx[(viewPortI/scalingFactor)*matrixSize + (viewPortJ/scalingFactor)] + 1;
+            // vertices[4 * (IX(i, j)) + 3]   = viewPortJ + matrix->Vy[(viewPortI/scalingFactor)*matrixSize + (viewPortJ/scalingFactor)] + 1;
 
-            vertices[4 * (IX(i, j)) + 2]   = matrixI + matrix->Vx[(matrixI/scalingFactor)*matrixSize + (matrixJ/scalingFactor)] + 1;
-            vertices[4 * (IX(i, j)) + 3]   = matrixJ + matrix->Vy[(matrixI/scalingFactor)*matrixSize + (matrixJ/scalingFactor)] + 1;
 
-            matrixJ +=chunkSize;
+            viewPortJ +=chunkSize;
         }
-        matrixI +=chunkSize;
+        viewPortI +=chunkSize;
     }
 
     // Normalizziamo i vertici da un sistema di coordinate pixel
@@ -449,6 +451,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     // TODO da far fare nella shader
     normalizeSpeedVertices(vertices, N);
 
+
+    
     return vertices;
 }
 
@@ -490,75 +494,6 @@ void setupBufferAndArray(uint32_t* VBO, uint32_t* VAO) {
 // --------------------------------------------------------------
 // Funzioni DEBUG
 // --------------------------------------------------------------
-
-void printMatrix(FluidMatrix *matrix, int N) {
-    float MAX_DENSITY = 0.9f;
-    const char* arrows = "←↑→↓↖↗↘↙";
-    const char* brightnessChars = " .:-=+*#%@";
-
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            float velocityX = matrix->Vx[IX(i, j)];
-            float velocityY = matrix->Vy[IX(i, j)];
-
-            float density = matrix->density[IX(i, j)];
-
-            float brightness = density / MAX_DENSITY; // Assuming MAX_DENSITY is defined
-
-            int brightnessIndex = brightness * (strlen(brightnessChars) - 1);
-            char brightnessChar = brightnessChars[brightnessIndex];
-
-            std::cout << density << " ";
-
-            /*if (velocityX == 0 && velocityY == 0) {
-                std::cout << "∘"<< " "; // Print "∘" for zero velocity
-            } else {
-                // Stampa il giusto carattere
-                if (velocityX < 0) {
-                    if (velocityY < 0) {
-                        std::cout << "↙";
-                    } else if (velocityY > 0) {
-                        std::cout << "↖";
-                    } else {
-                        std::cout << "←";
-                    }
-                } else if (velocityX > 0) {
-                    if (velocityY < 0) {
-                        std::cout << "↘";
-                    } else if (velocityY > 0) {
-                        std::cout << "↗";
-                    } else {
-                        std::cout << "→";
-                    }
-                } else {
-                    if (velocityY < 0) {
-                        std::cout << "↓";
-                    } else if (velocityY > 0) {
-                        std::cout << "↑";
-                    }
-                }
-
-                std::cout<<" ";
-            }*/
-
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-
-void printVertices(float *vertices, int N) {
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            printf("%.2f ", vertices[3 * IX(i, j)]);
-            printf("%.2f ", vertices[3 * IX(i, j) + 1]);
-            printf("%.2f ", vertices[3 * IX(i, j) + 2]);
-            printf("\n");
-        }
-    }
-    printf("\n");
-}
 
 // TODO DA AGGIUSTARE, LA NORMALIZZAZIONE NON FUNZIONA
 // SPECCHIA ASSE X
