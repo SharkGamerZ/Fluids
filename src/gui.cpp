@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 10;
-const int scalingFactor = 45;
+const int matrixSize = 300;
+const int scalingFactor = 2;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -70,27 +70,93 @@ int openGUI()
         {
             // Aggiunge densità
             if (mouseLeftButtonState == GLFW_PRESS)
-                matrix.addDensity(xposScaled, yposScaled, 0.5f);
+                {
+//                     Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
+//                     matrix.addDensity(2, 2, 1.0f);
+//
+//                     matrix.addVelocity(2, 2, 10000000.0f, 0);
 
 
-            // TODO Al momento disattivato perché se riattivato crea un buco nero dove clicchiamo
-            // probabilmente la simulazione è rotta e non riesce a gestire la velocità
-            // Calcola la velocità
-             deltaX *= 100;
-             deltaY *= 100;
-            
+                    //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
 
-            // Aggiunge velocità
-            matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
+                    matrix.addDensity(xposScaled, yposScaled, 100.0f);
+//                     Calcola la velocità
+                    deltaX *= matrixSize * 1000;
+                    deltaY *= matrixSize * 1000;
+
+
+//                     Aggiunge velocità
+                    matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
+                }
+
         }
 
 
 
-        // // Aggiunta effetto macchina del vento
-        // for (int i = 0; i < matrixSize; i++)
-        // {
-        //     matrix.addVelocity(2, i, 1000.0, 0.0);
-        // }
+//         // Aggiunta effetto macchina del vento
+//         for (int i = 0; i < matrixSize; i++)
+//         {
+//             matrix.addVelocity(2, i, 1000.0, 0.0);
+//         }
+
+//         int tenth = 0.1 * matrixSize;
+//
+//         for (int i = tenth; i < matrixSize - tenth; i++ )
+//         {
+//             matrix.addVelocity(i, tenth, matrixSize * 10.0, 0);
+//             matrix.addVelocity(i, i, -matrixSize * 10.0, -matrixSize * 10.0);
+//             matrix.addVelocity(i, matrixSize - tenth, matrixSize * 10.0, 0);
+//             matrix.addVelocity(matrixSize-i, i, -matrixSize * 10.0, matrixSize * 10.0);
+//         }
+/*  Runna se ha coraggio ;)
+ *
+        int seventh = ((1.0f/7.0f) * matrixSize);
+        int space = (seventh / 7);
+
+        for (int i = space; i < space + seventh; i++)
+        {
+            matrix.addVelocity(i, space, matrixSize * 100.0, 0);
+            if (i < (2.0f/3.0f) * seventh + space )
+            {
+                matrix.addVelocity(i, matrixSize / 2, matrixSize * 100.0, 0);
+            }
+
+            matrix.addVelocity(i + space + seventh, space, matrixSize * 100.0, 0);
+            matrix.addVelocity(i + space + seventh, matrixSize / 2, -matrixSize * 100.0, 0);
+            matrix.addVelocity(i + space + seventh, matrixSize / 2 + i, matrixSize * 100.0, matrixSize * 100.0);
+
+            matrix.addVelocity(i + (space*2) + (seventh*2), space, matrixSize * 100.0, 0);
+            matrix.addVelocity(i + (space*2) + (seventh*2), matrixSize - space, -matrixSize * 100.0, 0);
+
+            matrix.addVelocity(i + (space*3) + (seventh*3), space, matrixSize * 100.0,0);
+
+            matrix.addVelocity(i + (space*3) + (seventh*3), matrixSize - space, -matrixSize * 100.0, 0);
+
+            matrix.addVelocity(i + (space*5) + (seventh*5), space, -matrixSize * 100.0, 0);
+            matrix.addVelocity(i + (space*5) + (seventh*5), matrixSize - space, matrixSize * 100.0, 0);
+        }
+
+        for(int i = space; i < matrixSize - space; i++)
+        {
+            matrix.addVelocity(space, i, 0, -matrixSize * 100.0);
+
+            matrix.addVelocity(space*2 + seventh, i, 0, -matrixSize * 100.0);
+            if(i < matrixSize/2)
+            {
+                matrix.addVelocity(space*2 + seventh*2, i, 0, matrixSize * 100.0);
+            }
+
+            matrix.addVelocity(space*3 + seventh*2, i, 0, -matrixSize * 100.0);
+            matrix.addVelocity(space*3 + seventh*3, i, 0, matrixSize * 100.0);
+
+            matrix.addVelocity(space*4 + seventh*3, i, 0, -matrixSize * 100.0);
+
+            matrix.addVelocity(space*5 + seventh*4 + seventh/2, i, 0, matrixSize * 10.0);
+
+            matrix.addVelocity(space*6 + seventh*5, i, 0, matrixSize * 100.0);
+            matrix.addVelocity(space*6 + seventh*6, i, 0, -matrixSize * 100.0);
+        }*/
+
 
         // Controlla se la simulazione vada resettata
         if(resetSimulation)

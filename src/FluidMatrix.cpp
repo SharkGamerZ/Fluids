@@ -94,8 +94,8 @@ void FluidMatrix::addVelocity(int x, int y, float amountX, float amountY) {
 
     this->Vx[index] += amountX;
     this->Vy[index] += amountY;
-    this->Vx0[index] += amountX;
-    this->Vy0[index] += amountY;
+//     this->Vx0[index] += amountX;
+//     this->Vy0[index] += amountY;
 }
 
 // GIUSTA
@@ -105,8 +105,8 @@ void FluidMatrix::diffuse(Axis mode, std::vector<float> &value, std::vector<floa
 
     int N = this->size;
     float diffusionRate = dt * diffusion * N * N;
-    // lin_solve(mode, value, oldValue, diffusionRate);
-    parallel_lin_solve(mode, value, oldValue, diffusionRate);
+    lin_solve(mode, value, oldValue, diffusionRate);
+//     parallel_lin_solve(mode, value, oldValue, diffusionRate);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << BOLD YELLOW "diffuse: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
@@ -120,11 +120,13 @@ void FluidMatrix::advect(Axis mode, std::vector<float> &value, std::vector<float
 
     // indexes at the previous step
     int i0, j0, i1, j1;
-    //tolto tutti gli (N-2 con solo N come in diffuse)
+
     float dt0 = dt * (N - 2);
 
     float s0, s1, t0, t1;
     float x, y;
+
+//     Per ogni cella vediamo da dove deve arrivare il value, tramite la prima formula. Poi visto che potrebbe arrivare da un punto non esattamente su una cella, effettuiamo l'iterpolazione lineare tra le coordinate più vicine per capire quella del punto preciso.
 
     for (int i = 1; i < N - 1; i++) {
         for (int j = 1; j < N - 1; j++) {
@@ -132,12 +134,12 @@ void FluidMatrix::advect(Axis mode, std::vector<float> &value, std::vector<float
             y = j - (dt0 * vY[IX(i, j)]);
 
             if (x < 0.5f) x = 0.5f;
-            if (x > N + 0.5f) x = N + 0.5f;
+            if (x > N - 2 + 0.5f) x = N - 2 + 0.5f;
             i0 = (int) x;
             i1 = i0 + 1;
 
             if (y < 0.5f) y = 0.5f;
-            if (y > N + 0.5f) y = N + 0.5f;
+            if (y > N - 2 + 0.5f) y = N - 2 + 0.5f;
             j0 = (int) y;
             j1 = j0 + 1;
 
@@ -151,8 +153,7 @@ void FluidMatrix::advect(Axis mode, std::vector<float> &value, std::vector<float
             // printf(BOLD RED "x:" RESET " %f, " BOLD RED "y:" RESET " %f, ", x, y);
             // printf(BOLD YELLOW "i0:" RESET " %d, " BOLD YELLOW "i1:" RESET " %d, " BOLD YELLOW "j0:" RESET " %d, " BOLD YELLOW "j1:" RESET " %d\n", i0, i1, j0, j1);
 
-            value[IX(i, j)] =   s0 * (t0 * oldValue[IX(i0, j0)] + t1 * oldValue[IX(i0, j1)]) +
-                                s1 * (t0 * oldValue[IX(i1, j0)] + t1 * oldValue[IX(i1, j1)]);
+            value[IX(i, j)] =   s0 * (t0 * oldValue[IX(i0, j0)] + t1 * oldValue[IX(i0, j1)]) + s1 * (t0 * oldValue[IX(i1, j0)] + t1 * oldValue[IX(i1, j1)]);
         }
     }
 
