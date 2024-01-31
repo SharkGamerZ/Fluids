@@ -1,18 +1,23 @@
 #ifndef FLUIDS_FLUIDMATRIX_H
 #define FLUIDS_FLUIDMATRIX_H
 
-#include "../utils.h"
+#include "../utils.hpp"
 
 #include <vector>
 #include <ostream>
 #include <iostream>
 #include <omp.h>
 
-#define PARALLEL 1
+
+#define SERIAL 0
+#define OPENMP 1
+#define CUDA 2
+inline int executionMode = SERIAL;
+
 
 #define IX(i, j) ((j) + (i) * N) ///< index of the matrix
 
-const int ITERATIONS = 8; ///< number of iterations
+const int ITERATIONS = 20; ///< number of iterations
 enum Axis {
     X, Y, ZERO
 }; ///< axis of the matrix
@@ -83,6 +88,16 @@ private:
     void diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
 
     /**
+     * OpenMP version of diffuse
+     * @param mode x or y axis
+     * @param value value to diffuse
+     * @param oldValue value at previous step
+     * @param diffusion diffusion
+     * @param dt delta time
+     */
+    void omp_diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
+
+    /**
      * Advect the matrix
      * @param mode x or y axis
      * @param d value to advect
@@ -119,7 +134,7 @@ private:
     void lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
 
 
-    void parallel_lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
+    void omp_lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
 };
 
 

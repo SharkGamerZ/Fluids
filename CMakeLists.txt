@@ -15,11 +15,16 @@ set(SOURCE_FILES
         src/utils.cpp
 )
 
+set(TEST_SOURCE_FILES
+        test/test.cpp
+)
+
 
 add_subdirectory(lib/imgui/)
 
 # Aggiungi tutte le sorgenti del progetto
 add_executable(fluids ${SOURCE_FILES})
+add_executable(test ${TEST_SOURCE_FILES})
 
 # Aggiungi le opzioni di compilazione per CUDA
 target_compile_options(fluids PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp> )
@@ -30,3 +35,5 @@ target_link_libraries(fluids PRIVATE OpenMP::OpenMP_CXX)
 
 target_include_directories(fluids PRIVATE lib/imgui/)
 
+
+target_link_libraries(test PRIVATE OpenMP::OpenMP_CXX)

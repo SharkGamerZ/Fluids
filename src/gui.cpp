@@ -37,11 +37,6 @@ int openGUI()
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
     FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
 
-    // for (int i = 0; i < matrixSize; i++)
-    // {
-    //     matrix.addVelocity(1, i, 1000.0, 0.0);
-    // }
-
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
         // Rendering di IMGui
@@ -71,10 +66,10 @@ int openGUI()
             // Aggiunge densità
             if (mouseLeftButtonState == GLFW_PRESS)
                 {
-//                     Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
-//                     matrix.addDensity(2, 2, 1.0f);
-//
-//                     matrix.addVelocity(2, 2, 10000000.0f, 0);
+                    // Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
+                    // matrix.addDensity(2, 2, 1.0f);
+
+                    // matrix.addVelocity(2, 2, 10000000.0f, 0);
 
 
                     //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
@@ -176,11 +171,11 @@ int openGUI()
 
 
 
-        // In caso di resize della finestra, aggiorna le dimensioni del viewport
+        // Setta le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
 
-
+        // Imposta il colore di sfondo
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -377,9 +372,14 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
         ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
         matrix->dt = deltaTime;
 
-
+        ImGui::Text("Visualizzazione");
         ImGui::RadioButton("Densità", &simulationAttribute, DENSITY_ATTRIBUTE); ImGui::SameLine();
-        ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE); ImGui::SameLine();
+        ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE);
+
+        ImGui::Text("Esecuzione");
+        ImGui::RadioButton("Seriale", &executionMode, SERIAL); ImGui::SameLine();
+        ImGui::RadioButton("OpenMP", &executionMode, OPENMP); ImGui::SameLine();
+        ImGui::RadioButton("CUDA", &executionMode, CUDA);
 
         // Buttons return true when clicked (most widgets return true when edited/activated)
         if (ImGui::Button("Avvio simulazione")) simulazioneIsRunning = !simulazioneIsRunning;
@@ -555,11 +555,6 @@ void setupBufferAndArray(uint32_t* VBO, uint32_t* VAO) {
     glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 }
 
-
-
-// --------------------------------------------------------------
-// Funzioni DEBUG
-// --------------------------------------------------------------
 
 // TODO DA AGGIUSTARE, LA NORMALIZZAZIONE NON FUNZIONA
 // SPECCHIA ASSE X
