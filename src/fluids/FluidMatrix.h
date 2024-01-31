@@ -17,7 +17,7 @@ inline int executionMode = SERIAL;
 
 #define IX(i, j) ((j) + (i) * N) ///< index of the matrix
 
-const int ITERATIONS = 20; ///< number of iterations
+const int ITERATIONS = 1; ///< number of iterations
 enum Axis {
     X, Y, ZERO
 }; ///< axis of the matrix

@@ -16,7 +16,7 @@ set(SOURCE_FILES
 )
 
 set(TEST_SOURCE_FILES
-        test/test.cpp
+        test/test.cu
 )
 
 
@@ -28,6 +28,7 @@ add_executable(test ${TEST_SOURCE_FILES})
 
 # Aggiungi le opzioni di compilazione per CUDA
 target_compile_options(fluids PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp> )
+target_compile_options(test PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp> )
 
 # Link alle librerie necessarie
 target_link_libraries(fluids PRIVATE -lglfw -lGL -lGLEW -lm -lX11 imgui -fopenmp)

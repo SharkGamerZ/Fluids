@@ -46,18 +46,18 @@ void FluidMatrix::reset() {
 }
 
 void FluidMatrix::step() {
+    auto begin = std::chrono::high_resolution_clock::now();
+    
+    void (FluidMatrix::*diffuse)(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
+
+    if (executionMode == SERIAL) diffuse = &FluidMatrix::diffuse;
+    else if (executionMode == OPENMP) diffuse = &FluidMatrix::omp_diffuse;
+
+
     // density step
     {
         std::swap(density0, density);
-        
-        auto begin = std::chrono::high_resolution_clock::now();
-
-        if (executionMode == SERIAL) diffuse(Axis::ZERO, density, density0, diff, dt);
-        else if (executionMode == OPENMP) omp_diffuse(Axis::ZERO, density, density0, diff, dt);
-
-        auto end = std::chrono::high_resolution_clock::now();
-        std::cout << BOLD YELLOW "Diffuse: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
-
+        this->diffuse(Axis::ZERO, density, density0, diff, dt);
 
         std::swap(density0, density);
         advect(Axis::ZERO, density, density0, Vx, Vy, dt);
@@ -66,10 +66,10 @@ void FluidMatrix::step() {
     // velocity step
     {
         std::swap(Vx0, Vx);
-        diffuse(Axis::X, Vx, Vx0, visc, dt);
+        this->diffuse(Axis::X, Vx, Vx0, visc, dt);
 
         std::swap(Vy0, Vy);
-        diffuse(Axis::Y, Vy, Vy0, visc, dt);
+        this->diffuse(Axis::Y, Vy, Vy0, visc, dt);
         
 // project va fatto solo sui valori aggiornati (questo creava il buco nero)
 //         project(Vx0, Vy0, Vx, Vy);
@@ -83,6 +83,8 @@ void FluidMatrix::step() {
         project(Vx, Vy, Vx0, Vy0);
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << BOLD YELLOW "Diffuse: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
 
 }
 
@@ -232,27 +234,25 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<float> &nextValue, std::v
     int N = this->size;
     float c = 1 + 4 * diffusionRate;
     float cRecip = 1.0 / c;
-    #pragma omp parallel default(none) shared(nextValue, value, cRecip, diffusionRate, N, mode)
+    for (int k = 0; k < ITERATIONS; k++)
     {
-        for (int k = 0; k < ITERATIONS; k++)
+        #pragma omp parallel for collapse(2) default(shared)
+        for (int j = 1; j < N - 1; j++)
         {
-            #pragma omp for collapse(2)
-            for (int j = 1; j < N - 1; j++)
+            for (int i = 1; i < N - 1; i++)
             {
-                for (int i = 1; i < N - 1; i++)
-                {
-                    nextValue[IX(i, j)] = (value[IX(i, j)]
-                                    + diffusionRate * (
-                            nextValue[IX(i + 1, j)]
-                            + nextValue[IX(i - 1, j)]
-                            + nextValue[IX(i, j + 1)]
-                            + nextValue[IX(i, j - 1)]
-                    )) * cRecip;
-                }
+                nextValue[IX(i, j)] = (value[IX(i, j)]
+                                + diffusionRate * (
+                        nextValue[IX(i + 1, j)]
+                        + nextValue[IX(i - 1, j)]
+                        + nextValue[IX(i, j + 1)]
+                        + nextValue[IX(i, j - 1)]
+                )) * cRecip;
             }
-            set_bnd(mode, nextValue);
         }
+        set_bnd(mode, nextValue);
     }
+
 }
 
 
