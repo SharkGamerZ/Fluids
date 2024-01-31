@@ -50,30 +50,31 @@ void FluidMatrix::step() {
 
     // density step
     {
+        printf("Densità\n");
         std::swap(density0, density);
         diffuse(Axis::ZERO, density, density0, diff, dt);
 
         std::swap(density0, density);
-        printf("Densità\n");
         advect(Axis::ZERO, density, density0, Vx, Vy, dt);
     }
 
     // velocity step
     {
+        printf("Velocità x\n");
         std::swap(Vx0, Vx);
         diffuse(Axis::X, Vx, Vx0, visc, dt);
 
+        printf("Velocità y\n");
         std::swap(Vy0, Vy);
         diffuse(Axis::Y, Vy, Vy0, visc, dt);
+        
 // project va fatto solo sui valori aggiornati (questo creava il buco nero)
 //         project(Vx0, Vy0, Vx, Vy);
         project(Vx, Vy, Vx0, Vy0);
 
         std::swap(Vx0, Vx);
-        printf("Velocità x\n");
         advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
         std::swap(Vy0, Vy);
-        printf("Velocità y\n");
         advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
 
         project(Vx, Vy, Vx0, Vy0);
@@ -100,18 +101,16 @@ void FluidMatrix::addVelocity(int x, int y, float amountX, float amountY) {
 
 // GIUSTA
 void FluidMatrix::diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const {
-    // std::vector<float> tmp = value;
     auto begin = std::chrono::high_resolution_clock::now();
 
     int N = this->size;
     float diffusionRate = dt * diffusion * N * N;
-    lin_solve(mode, value, oldValue, diffusionRate);
-//     parallel_lin_solve(mode, value, oldValue, diffusionRate);
+
+    if (PARALLEL) parallel_lin_solve(mode, value, oldValue, diffusionRate);
+    else lin_solve(mode, value, oldValue, diffusionRate);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << BOLD YELLOW "diffuse: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
-    // std::swap(oldValue, value);
-    // value = std::move(tmp);
 }
 
 // DA controllare come stanno i float (se sono tutti float o se ci sono anche int)
@@ -229,7 +228,7 @@ void FluidMatrix::parallel_lin_solve(Axis mode, std::vector<float> &nextValue, s
     int N = this->size;
     float c = 1 + 4 * diffusionRate;
     float cRecip = 1.0 / c;
-    #pragma omp parallel default(none) shared(nextValue, value) private (cRecip, diffusionRate, N)
+    #pragma omp parallel default(none) shared(nextValue, value, cRecip, diffusionRate, N, mode)
     {
         for (int k = 0; k < ITERATIONS; k++)
         {

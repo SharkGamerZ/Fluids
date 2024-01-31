@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <iostream>
 
 
 #define RED     "\033[31m"

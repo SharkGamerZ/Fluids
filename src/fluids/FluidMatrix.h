@@ -1,12 +1,14 @@
 #ifndef FLUIDS_FLUIDMATRIX_H
 #define FLUIDS_FLUIDMATRIX_H
 
-#include "utils.h"
+#include "../utils.h"
 
 #include <vector>
 #include <ostream>
 #include <iostream>
 #include <omp.h>
+
+#define PARALLEL 1
 
 #define IX(i, j) ((j) + (i) * N) ///< index of the matrix
 

@@ -1,4 +1,3 @@
-#include <iostream>
 #include "utils.h"
 
 std::string readFile(const std::string &filePath) {
