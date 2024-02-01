@@ -5,7 +5,7 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 150;
+const int matrixSize = 100;
 const int scalingFactor = 6;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
@@ -80,8 +80,8 @@ int openGUI()
                 }
 
             // Calcola la velocità
-            deltaX *= matrixSize * 1000;
-            deltaY *= matrixSize * 1000;
+            deltaX *= 10;
+            deltaY *= 10;
             // Aggiunge velocità
             matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
         }
