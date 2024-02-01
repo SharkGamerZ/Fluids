@@ -4,10 +4,12 @@
 
 int max_cells;
 
+int64_t serialTimeMean = 0, ompTimeMean = 0, cudaTimeMean = 0;
+
 int main() {
-    const int maxSize = 500;
+    const int maxSize = 100;
     
-    for (int matrixSize = 250; matrixSize <= maxSize; matrixSize+= 50)
+    for (int matrixSize = 100; matrixSize <= maxSize; matrixSize+= 50)
     {
         // SETUP ----------------------------------------------------------------------------------------------
         std::cout<<"------------------------------------------------------------------"<<std::endl;
@@ -33,15 +35,12 @@ int main() {
         std::copy(oldValue.begin(), oldValue.end(), oldValueOmp.begin());
 
         // SERIAL ----------------------------------------------------------------------------------------------
-
-        int64_t serialTimeMean = 0;
-
         std::cout << BOLD BLUE "Matrix size: " << RESET << matrixSize << std::endl;
         for (int i = 0; i < 10; i++) {
             auto serialBegin = std::chrono::high_resolution_clock::now();
             diffuse(matrixSize, Axis::ZERO, value, oldValue, diff, dt);
             auto serialEnd = std::chrono::high_resolution_clock::now();
-            auto serialTime = std::chrono::duration_cast<std::chrono::microseconds>(serialEnd - serialBegin).count();
+            auto serialTime = std::chrono::duration_cast<std::chrono::milliseconds>(serialEnd - serialBegin).count();
 
             serialTimeMean += serialTime;
 
@@ -49,7 +48,7 @@ int main() {
         }
 
         serialTimeMean /= 10;
-        std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " micros "<<std::endl<<std::endl;
+        std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " millis "<<std::endl<<std::endl;
 
 
 
@@ -67,13 +66,13 @@ int main() {
             auto ompBegin = std::chrono::high_resolution_clock::now();
             omp_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
             auto ompEnd = std::chrono::high_resolution_clock::now();
-            auto ompTime = std::chrono::duration_cast<std::chrono::microseconds>(ompEnd - ompBegin).count();
+            auto ompTime = std::chrono::duration_cast<std::chrono::milliseconds>(ompEnd - ompBegin).count();
 
             ompTimeMean += ompTime;
         }
         ompTimeMean /= 10;
         
-        std::cout << BOLD RED "OMP Diffuse: " << ompTimeMean << RESET " micros" << std::endl;
+        std::cout << BOLD RED "OMP Diffuse: " << ompTimeMean << RESET " millis" << std::endl;
 
         speedup = (double) serialTimeMean / (double) ompTimeMean;
         efficiency = speedup / max_threads;
@@ -82,24 +81,13 @@ int main() {
 
 
         // CUDA ----------------------------------------------------------------------------------------------
-        int64_t cudaTimeMean = 0;
-
-
-
-
         for (int i = 0; i < 10; i++) {
-            auto cudaBegin = std::chrono::high_resolution_clock::now();
             cuda_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
-            cudaDeviceSynchronize();
-            auto cudaEnd = std::chrono::high_resolution_clock::now();
-            auto cudaTime = std::chrono::duration_cast<std::chrono::microseconds>(cudaEnd - cudaBegin).count();
-
-            cudaTimeMean += cudaTime;
         }
 
         cudaTimeMean /= 10;
         
-        std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " micros" << std::endl;
+        std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " millis" << std::endl;
 
         speedup = (double) serialTimeMean / (double) cudaTimeMean;
         std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " "<<std::endl<<std::endl;
@@ -142,6 +130,12 @@ void cuda_diffuse(int N, Axis mode, std::vector<float> &value, std::vector<float
     dim3 BlockSize(16, 16, 1);
     dim3 GridSize((N+15)/16, (N+15)/16, 1);
 
+    cudaEvent_t cudaStart, cudaStop;	
+    float milliseconds = 0;
+
+    cudaEventCreate(&cudaStart);
+    cudaEventCreate(&cudaStop);
+
     float* d_value;
     float* d_oldValue;
 
@@ -151,9 +145,26 @@ void cuda_diffuse(int N, Axis mode, std::vector<float> &value, std::vector<float
     cudaMemcpy(d_value, &value[0], N * N * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_oldValue, &oldValue[0], N * N * sizeof(float), cudaMemcpyHostToDevice);
 
+    std::cout<<"Hello from host"<<std::endl;
+
+    cudaEventRecord(cudaStart);    
     kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &value[0], &oldValue[0], diffusionRate);
+    cudaEventRecord(cudaStop);
 
     cudaMemcpy(&value[0], d_value, N * N * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaEventSynchronize(cudaStop);
+    cudaEventElapsedTime(&milliseconds, cudaStart, cudaStop);
+
+    printf("Time for the kernel: %f ms\n", milliseconds);
+    cudaTimeMean += milliseconds;
+
+
+    cudaFree(d_value);
+    cudaFree(d_oldValue);
+
+    cudaEventDestroy(cudaStart);
+    cudaEventDestroy(cudaStop);
 }
 
 
@@ -202,6 +213,7 @@ void omp_lin_solve(int N, Axis mode, std::vector<float> &nextValue, std::vector<
 
 __global__ void kernel_lin_solve(int N, Axis mode, float* nextValue, float* value, float diffusionRate) {
 
+
     float c = 1 + 4 * diffusionRate;
     float cRecip = 1.0 / c;
     
@@ -210,6 +222,7 @@ __global__ void kernel_lin_solve(int N, Axis mode, float* nextValue, float* valu
 
 	if(col == 0 || col >= N - 1 || row == 0 || row >= N - 1) return;
 
+    printf("Hello from col: %d row: %d\n", col, row);
 
     for (int k = 0; k < ITERATIONS; k++) {
         nextValue[IX(row, col)] = (value[IX(row,col)]
@@ -220,10 +233,10 @@ __global__ void kernel_lin_solve(int N, Axis mode, float* nextValue, float* valu
                 + nextValue[IX(row, col - 1)]
         )) * cRecip;
 
-        __syncthreads();
-        if (col == 1 && row == 1)
-            kernel_set_bnd<<<1,1>>>(N, mode, nextValue);
-        __syncthreads();
+        // __syncthreads();
+        // if (col == 1 && row == 1)
+        //     kernel_set_bnd(N, mode, nextValue);
+        // __syncthreads();
     }
 }
 
