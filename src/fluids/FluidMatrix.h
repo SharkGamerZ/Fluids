@@ -26,20 +26,20 @@ enum Axis {
 class FluidMatrix {
 public:
     int size; ///< size of the matrix
-    float dt; ///< delta time
-    float diff; ///< diffusion
-    float visc; ///< viscosity
+    double dt; ///< delta time
+    double diff; ///< diffusion
+    double visc; ///< viscosity
 
-    std::vector<float> density; ///< density
-    std::vector<float> density0; ///< density at previous step
+    std::vector<double> density; ///< density
+    std::vector<double> density0; ///< density at previous step
 
-    std::vector<float> Vx; ///< velocity on x axis
-    std::vector<float> Vy; ///< velocity on y axis
+    std::vector<double> Vx; ///< velocity on x axis
+    std::vector<double> Vy; ///< velocity on y axis
 
-    std::vector<float> Vx0; ///< velocity on x axis at previous step
-    std::vector<float> Vy0; ///< velocity on y axis at previous step
+    std::vector<double> Vx0; ///< velocity on x axis at previous step
+    std::vector<double> Vy0; ///< velocity on y axis at previous step
 
-    FluidMatrix(int size, float diffusion, float viscosity, float dt);
+    FluidMatrix(int size, double diffusion, double viscosity, double dt);
 
     ~FluidMatrix();
 
@@ -66,7 +66,7 @@ public:
      * @param y coordinate y
      * @param amount amount of density to add
      */
-    void addDensity(int x, int y, float amount);
+    void addDensity(int x, int y, double amount);
 
     /**
      * Add velocity to the matrix at the given position
@@ -75,7 +75,7 @@ public:
      * @param amountX amount of velocity to add on x axis
      * @param amountY amount of velocity to add on y axis
      */
-    void addVelocity(int x, int y, float amountX, float amountY);
+    void addVelocity(int x, int y, double amountX, double amountY);
 
 private:
     /**
@@ -86,7 +86,7 @@ private:
      * @param diffusion diffusion
      * @param dt delta time
      */
-    void diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
+    void diffuse(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt) const;
 
     /**
      * OpenMP version of diffuse
@@ -96,7 +96,7 @@ private:
      * @param diffusion diffusion
      * @param dt delta time
      */
-    void omp_diffuse(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt) const;
+    void omp_diffuse(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt) const;
 
     /**
      * Advect the matrix
@@ -107,7 +107,7 @@ private:
      * @param vY velocity on y axis
      * @param dt delta time
      */
-    void advect(Axis mode, std::vector<float> &d, std::vector<float> &d0, std::vector<float> &vX, std::vector<float> &vY, float dt) const;
+    void advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
 
     /**
      * Project the matrix
@@ -116,14 +116,14 @@ private:
      * @param p
      * @param div
      */
-    void project(std::vector<float> &vX, std::vector<float> &vY, std::vector<float> &p, std::vector<float> &div) const;
+    void project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
 
     /**
      * Set the boundary of the matrix
      * @param mode x or y axis
      * @param attr attribute to set
      */
-    void set_bnd(Axis mode, std::vector<float> &attr) const;
+    void set_bnd(Axis mode, std::vector<double> &attr) const;
 
     /**
      * Solve the linear equation
@@ -132,10 +132,14 @@ private:
      * @param oldValue value at previous step
      * @param diffusionRate diffusion rate
      */
-    void lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
+    void lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 
 
-    void omp_lin_solve(Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusionRate) const;
+    void omp_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
+
+
+
+    void fadeDensity(std::vector<double> &density) const;
 };
 
 

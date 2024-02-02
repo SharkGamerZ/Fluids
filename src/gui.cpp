@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 100;
-const int scalingFactor = 6;
+const int matrixSize = 70;
+const int scalingFactor = 9;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -35,7 +35,7 @@ int openGUI()
 
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-    FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
+    FluidMatrix matrix = FluidMatrix(matrixSize, 0.0f, 0.0000001f, 0.2f);
 
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
@@ -55,8 +55,6 @@ int openGUI()
         deltaX = xpos - xpos0;
         deltaY = ypos - ypos0;
         mouseTime0 = mouseTime;
-        xpos0 = xpos;
-        ypos0 = ypos;
 
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -74,25 +72,27 @@ int openGUI()
 
                     //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
 
-                    matrix.addDensity(xposScaled, yposScaled, 100.0f);
+                    matrix.addDensity(xposScaled, yposScaled, 20.0f);
 
 
                 }
 
             // Calcola la velocità
-            deltaX *= 10;
-            deltaY *= 10;
+            deltaX /= scalingFactor * 2;
+            deltaY /= scalingFactor * 2;
             // Aggiunge velocità
-            matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
+            matrix.addVelocity(xposScaled, yposScaled, deltaY, deltaX);
         }
 
+        xpos0 = xpos;
+        ypos0 = ypos;
 
 
-//         // Aggiunta effetto macchina del vento
-//         for (int i = 0; i < matrixSize; i++)
-//         {
-//             matrix.addVelocity(2, i, 1000.0, 0.0);
-//         }
+        // // Aggiunta effetto macchina del vento
+        // for (int i = 0; i < matrixSize; i++)
+        // {
+        //     matrix.addVelocity(2, i, 0.0, 0.5);
+        // }
 
 //         int tenth = 0.1 * matrixSize;
 //
@@ -360,14 +360,14 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
     {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-        static float diffusione = 0.01f;
+        static float diffusione = 0.0f;
         static float deltaTime = 0.2f;
-        static float temperatura = 0.0f;
+        static float viscosita = 0.0000001f;
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
-        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f, "%.3f",ImGuiSliderFlags_Logarithmic);
-        matrix->diff = diffusione;
 
+        ImGui::SliderFloat("Viscosità", &viscosita, 0.0f, 0.0001f, "%.7f",ImGuiSliderFlags_Logarithmic);
+        matrix->visc = viscosita;
 
         ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
         matrix->dt = deltaTime;
@@ -450,9 +450,11 @@ float *getDensityVertices(FluidMatrix *matrix) {
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            vertices[3 * (IX(i, j))]       = i;
-            vertices[3 * (IX(i, j)) + 1]   = j;
-            vertices[3 * (IX(i, j)) + 2]   = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+            vertices[3 * (IX(i, j))]       = j; // La prima è la X, quindi j
+            vertices[3 * (IX(i, j)) + 1]   = i; // La seconda è la Y, quindi i
+
+            int index = (i/scalingFactor)*matrixSize + (j/scalingFactor);
+            vertices[3 * (IX(i, j)) + 2]   = matrix->density[index];
         }
     }
 
@@ -477,8 +479,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     for(int i = 0; i < N; i++) {
         viewPortJ = (chunkSize - 1)/2;
         for(int j = 0; j < N; j++) {
-            vertices[4 * (IX(i, j))]       = viewPortI;
-            vertices[4 * (IX(i, j)) + 1]   = viewPortJ;
+            vertices[4 * (IX(i, j))]       = viewPortJ; // La prima è la X, quindi j
+            vertices[4 * (IX(i, j)) + 1]   = viewPortI; // La seconda è la Y, quindi i
 
             // Calcolo media velocità
             float vx = 0;
@@ -499,12 +501,13 @@ float *getVelocityVertices(FluidMatrix *matrix) {
             }
             vx /= count;
             vy /= count;
-            vertices[4 * (IX(i, j)) + 2]   = viewPortI + vx + 1;
-            vertices[4 * (IX(i, j)) + 3]   = viewPortJ + vy + 1;
 
+            // Moltiplichiamo per 100 per renderlo visibile
+            vx *= 100;
+            vy *= 100;
 
-            // vertices[4 * (IX(i, j)) + 2]   = viewPortI + matrix->Vx[(viewPortI/scalingFactor)*matrixSize + (viewPortJ/scalingFactor)] + 1;
-            // vertices[4 * (IX(i, j)) + 3]   = viewPortJ + matrix->Vy[(viewPortI/scalingFactor)*matrixSize + (viewPortJ/scalingFactor)] + 1;
+            vertices[4 * (IX(i, j)) + 2]   = viewPortJ + vx + 1; // La prima è la X del secondo vertice, quindi j
+            vertices[4 * (IX(i, j)) + 3]   = viewPortI + vy + 1; // La seconda è la Y del primo vertice, quindi i
 
 
             viewPortJ +=chunkSize;
@@ -562,7 +565,7 @@ void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
             vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * IX(i, j) + 1]    = 1-(vertices[3 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+            vertices[3 * IX(i, j) + 1]    = 1 - (vertices[3 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
 
         }
     }
@@ -573,10 +576,10 @@ void normalizeSpeedVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
             vertices[4 * IX(i, j)]        = (vertices[4 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * IX(i, j) + 1]    = 1-(vertices[4 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * IX(i, j) + 1]    = 1 - (vertices[4 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
 
             vertices[4 * IX(i, j) + 2]    = (vertices[4 * IX(i, j) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * IX(i, j) + 3]    = 1-(vertices[4 * IX(i, j) + 3] / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * IX(i, j) + 3]    = 1 - (vertices[4 * IX(i, j) + 3] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 
