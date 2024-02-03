@@ -2,11 +2,12 @@
 La fantastica repo per il progetto di Multicore 2023/24
 
 ## Necessari
-- OpenGL
 - GLFW
+- OpenGL
+- glut
 - glew
 - nvcc
-- glut
+- openMP
 
 ## Fisica
 Per iniziare, questa simulazione si basa su una griglia di Eulero, per rappresentare dei fluidi non comprimibili.
@@ -43,46 +44,3 @@ OpenGL è la nostra libreria usata per andare a renderizzare a schermo i nostri 
 Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [Vertex Shader](https://www.khronos.org/opengl/wiki/Vertex_Shader): la Vertex Shader processa i singoli vertici, andando a restituire in output altri vertici.
 - [Fragment Shader](https://www.khronos.org/opengl/wiki/Fragment_Shader): la Fragment Shader processa i frammenti che gli vengono passati, che sono un'insieme di pixel, per assegnargli dei colori.
-
-
-
-# TODO
-## OpenGL
-
-- [x] Mostrare la matrice del fluido a schermo come una serie di vertici
-- [x] Usare la densità della matrice per determinare il colore di ogni pixel
-- [x] Modificare `drawMatrix()` per mostrare la velocità
-- [x] Scrivere le shader in dei file e caricarli da lì 
-- [x] Rendere la finestra non resizable
-- [x] Implementare uno scaling factor
-- [x] Fare la visualizzazione della velocità tramite linee
-    - [ ] Modificare la visualizzazione del campo delle velocità rendendo la lunghezza delle linee la metà della distanza tra le origini di due linee adiacenti nella griglia e rappresentare la magnitudine tramite range di colori (es. verde - rosso).
-- [ ] Cambiare glUseProgram per non eseguirlo ogni volta
-- [ ] Usare glBufferSubData per efficienza
-- [ ] Normalizzare i vertici nelle shader
-- [ ] Fixare pixel morto al centro della finestra
-
-
-### ImGui
-- [x] **Da rivedere**(Non sicuro che venga aggiunta la giusta velocità alla matrice) Usare l'accellerazione del mouse per aggiungere velocità al fluido
-- [x] Aggiungere una scelta per visualizzare densità o velocità
-- [x] Aggiungere timestep alle variabili
-- [x] Rendere i controlli di ImGui legati alle proprie variabili
-- [x] Aggiungere possibilità di resettare la matrice premendo il pulsante **R**
-
-
-
-## Simulazione
-- [x] Cambiare nome ad s in density0
-- [x] Debuggare Advect (va in seg Fault)
-- [x] **PRIORITA-THOMAS'** Far funzionare la `diffuse()`
-- [x] Far funzionare la advect
-- [ ] **MATTEO** Parallelizzare la linear solve con openMP
-- [ ] Far funzionare la project (assicurare la continuità nel campo delle velcoità)
-- [ ] Implementare la "**gravità**" tramite un flow laminare di velocità generato dalla prima riga verso il basso.
-
-# Bibliografia
-Gran parte di questo lavoro è basato su vari paper/risorse:
-- [Real-Time Fluid Dynamics for Games](https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf) by Jos Stam
-- [Fluid Simulation for Dummies](https://mikeash.com/pyblog/fluid-simulation-for-dummies.html) by Mike Ash
-- [But How DO Fluid Simulations Work?](https://www.youtube.com/watch?v=qsYE1wMEMPA) by Gonkee
