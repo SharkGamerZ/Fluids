@@ -30,11 +30,12 @@
 - [x] Debuggare Advect (va in seg Fault)
 - [x] **PRIORITA-THOMAS'** Far funzionare la `diffuse()`
 - [x] Far funzionare la advect
-- [ ] **MATTEO** Parallelizzare la linear solve con openMP
 - [ ] Far funzionare la project (assicurare la continuità nel campo delle velocità) ((appare densità dal nulla e sparisce nel nulla))
+- [ ] Vedere altri metodi per fare la linear solve
 
 ## Parallelizzazione
-- [ ]**Matteo** Fare foglio con le statistiche della diffuse in openMP
+- [x] **MATTEO** Parallelizzare la linear solve con openMP
+- [x]**Matteo** Fare foglio con le statistiche della diffuse in openMP
 - [ ] OMP della Advect
 - [ ] OMP della Project
 - [ ] Aggiustare la CUDA diffuse
