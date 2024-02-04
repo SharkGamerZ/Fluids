@@ -5,6 +5,7 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
+int executionMode = SERIAL;
 const int matrixSize = 200;
 const int scalingFactor = 5;
 const int viewportSize = matrixSize * scalingFactor;
@@ -403,11 +404,11 @@ float *getDensityVertices(FluidMatrix *matrix) {
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            vertices[3 * (IX(i, j))]       = j; // La prima è la X, quindi j
-            vertices[3 * (IX(i, j)) + 1]   = i; // La seconda è la Y, quindi i
+            vertices[3 * (FluidMatrix::index(i, j, N))]       = j; // La prima è la X, quindi j
+            vertices[3 * (FluidMatrix::index(i, j, N)) + 1]   = i; // La seconda è la Y, quindi i
 
             int index = (i/scalingFactor)*matrixSize + (j/scalingFactor);
-            vertices[3 * (IX(i, j)) + 2]   = matrix->density[index];
+            vertices[3 * (FluidMatrix::index(i, j, N)) + 2]   = matrix->density[index];
         }
     }
 
@@ -432,8 +433,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     for(int i = 0; i < N; i++) {
         viewPortJ = (chunkSize - 1)/2;
         for(int j = 0; j < N; j++) {
-            vertices[4 * (IX(i, j))]       = viewPortJ; // La prima è la X, quindi j
-            vertices[4 * (IX(i, j)) + 1]   = viewPortI; // La seconda è la Y, quindi i
+            vertices[4 * (FluidMatrix::index(i, j, N))]       = viewPortJ; // La prima è la X, quindi j
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 1]   = viewPortI; // La seconda è la Y, quindi i
 
             // Calcolo media velocità
             float vx = 0;
@@ -459,8 +460,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
             vx *= 100;
             vy *= 100;
 
-            vertices[4 * (IX(i, j)) + 2]   = viewPortJ + vy + 1; // La prima è la X del secondo vertice, quindi j
-            vertices[4 * (IX(i, j)) + 3]   = viewPortI + vx + 1; // La seconda è la Y del primo vertice, quindi i
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 2]   = viewPortJ + vy + 1; // La prima è la X del secondo vertice, quindi j
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 3]   = viewPortI + vx + 1; // La seconda è la Y del primo vertice, quindi i
 
 
             viewPortJ +=chunkSize;
@@ -474,7 +475,7 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     normalizeSpeedVertices(vertices, N);
 
 
-    
+
     return vertices;
 }
 
@@ -517,8 +518,8 @@ void setupBufferAndArray(uint32_t* VBO, uint32_t* VAO) {
 void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
-            vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * IX(i, j) + 1]    = 1 - (vertices[3 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+            vertices[3 * FluidMatrix::index(i, j, N)]        = (vertices[3 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[3 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
 
         }
     }
@@ -528,11 +529,11 @@ void normalizeSpeedVertices(float *vertices, int N) {
 
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
-            vertices[4 * IX(i, j)]        = (vertices[4 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * IX(i, j) + 1]    = 1 - (vertices[4 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * FluidMatrix::index(i, j, N)]        = (vertices[4 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
 
-            vertices[4 * IX(i, j) + 2]    = (vertices[4 * IX(i, j) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * IX(i, j) + 3]    = 1 - (vertices[4 * IX(i, j) + 3] / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * FluidMatrix::index(i, j, N) + 2]    = (vertices[4 * FluidMatrix::index(i, j, N) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * FluidMatrix::index(i, j, N) + 3]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 3] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 

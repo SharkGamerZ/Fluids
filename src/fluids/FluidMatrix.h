@@ -13,10 +13,7 @@
 #define SERIAL 0
 #define OPENMP 1
 #define CUDA 2
-inline int executionMode = SERIAL;
-
-
-#define IX(i, j) ((j) + (i) * N) ///< index of the matrix
+extern int executionMode;
 
 const int ITERATIONS = 10; ///< number of iterations
 enum Axis {
@@ -25,7 +22,7 @@ enum Axis {
 
 class FluidMatrix {
 public:
-    int size; ///< size of the matrix
+    uint32_t size; ///< size of the matrix
     double dt; ///< delta time
     double diff; ///< diffusion
     double visc; ///< viscosity
@@ -39,7 +36,7 @@ public:
     std::vector<double> Vx0; ///< velocity on x axis at previous step
     std::vector<double> Vy0; ///< velocity on y axis at previous step
 
-    FluidMatrix(int size, double diffusion, double viscosity, double dt);
+    FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
 
     ~FluidMatrix();
 
@@ -48,6 +45,15 @@ public:
      */
     friend std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix);
 
+
+    /**
+     * Get the index of the matrix
+     * @param i coordinate x
+     * @param j coordinate y
+     * @param matrix_size size of the matrix
+     * @return index
+     */
+    [[nodiscard]] static inline uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size) ;
 
     /**
      * Reset the matrix
@@ -71,7 +77,7 @@ public:
      * @param y coordinate y
      * @param amount amount of density to add
      */
-    void addDensity(int x, int y, double amount);
+    void addDensity(uint32_t x, uint32_t y, double amount);
 
     /**
      * Add velocity to the matrix at the given position
@@ -80,7 +86,7 @@ public:
      * @param amountX amount of velocity to add on x axis
      * @param amountY amount of velocity to add on y axis
      */
-    void addVelocity(int x, int y, double amountX, double amountY);
+    void addVelocity(uint32_t x, uint32_t y, double amountX, double amountY);
 
 private:
     /**
