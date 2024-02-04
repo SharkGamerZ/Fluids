@@ -219,7 +219,7 @@ uint32_t getShaderProgram() {
     if(!success)
     {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        errorPrint("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + std::string(infoLog));
         return 0;
     }
 
@@ -234,7 +234,7 @@ uint32_t getShaderProgram() {
     if(!success)
     {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+        errorPrint("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + std::string(infoLog));
         return 0;
     }
 

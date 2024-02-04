@@ -11,11 +11,11 @@ FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, doub
         Vy(std::vector<double>(size * size)),
         Vx0(std::vector<double>(size * size)),
         Vy0(std::vector<double>(size * size)) {
-    std::cout << "DEBUG: FluidMatrix created" << std::endl;
+    debugPrint("FluidMatrix created");
 }
 
 FluidMatrix::~FluidMatrix() {
-    std::cout << "DEBUG: FluidMatrix destroyed" << std::endl;
+    debugPrint("FluidMatrix destroyed");
 }
 
 std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix) {
@@ -76,7 +76,7 @@ void FluidMatrix::step() {
     fadeDensity(density);
 
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << BOLD YELLOW "Total time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
+    debugPrint("Total time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 }
 
 
@@ -107,7 +107,7 @@ void FluidMatrix::OMPstep() {
     fadeDensity(density);
 
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << BOLD YELLOW "Total time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
+    debugPrint("Total time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
 }
 

@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <vector>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 #include <ctime>
 #include <chrono>
 #include <omp.h>
