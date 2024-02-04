@@ -47,20 +47,15 @@ void FluidMatrix::reset() {
 
 void FluidMatrix::step() {
     auto begin = std::chrono::high_resolution_clock::now();
-    
-    void (FluidMatrix::*diffuse)(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt) const;
-
-    if (executionMode == SERIAL) diffuse = &FluidMatrix::diffuse;
-    else if (executionMode == OPENMP) diffuse = &FluidMatrix::omp_diffuse;
-
 
     // velocity step
     {
-        this->diffuse(Axis::X, Vx0, Vx, visc, dt);
-        this->diffuse(Axis::Y, Vy0, Vy, visc, dt);
+        diffuse(Axis::X, Vx0, Vx, visc, dt);
+        diffuse(Axis::Y, Vy0, Vy, visc, dt);
         
         project(Vx0, Vy0, Vx, Vy);
- 
+        
+
         advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
         advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
 
@@ -70,15 +65,43 @@ void FluidMatrix::step() {
 
         // density step
     {
-        this->diffuse(Axis::ZERO, density0, density, diff, dt);
+        diffuse(Axis::ZERO, density0, density, diff, dt);
 
         advect(Axis::ZERO, density, density0, Vx, Vy, dt);
     }
 
+    fadeDensity(density);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << BOLD YELLOW "Total time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
+}
 
 
-    // fadeDensity(density);
+void FluidMatrix::OMPstep() {
+    auto begin = std::chrono::high_resolution_clock::now();
 
+    // velocity step
+    {
+        omp_diffuse(Axis::X, Vx0, Vx, visc, dt);
+        omp_diffuse(Axis::Y, Vy0, Vy, visc, dt);
+        
+        project(Vx0, Vy0, Vx, Vy);
+        
+
+        advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
+        advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
+
+        project(Vx, Vy, Vx0, Vy0);
+    }
+
+        // density step
+    {
+        omp_diffuse(Axis::ZERO, density0, density, diff, dt);
+
+        advect(Axis::ZERO, density, density0, Vx, Vy, dt);
+    }
+
+    fadeDensity(density);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << BOLD YELLOW "Total time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
@@ -97,8 +120,6 @@ void FluidMatrix::addVelocity(int x, int y, double amountX, double amountY) {
 
     this->Vx[index] += amountX;
     this->Vy[index] += amountY;
-//     this->Vx0[index] += amountX;
-//     this->Vy0[index] += amountY;
 }
 
 void FluidMatrix::diffuse(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt) const {
@@ -168,8 +189,7 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &value, std::vector<doub
     int N =this->size;
     double i0, i1, j0, j1;
     
-	double dtx = dt * (N - 2);
-	double dty = dt * (N - 2);
+    double dt0 = dt * (N - 2);
 
 	double s0, s1, t0, t1;
 	double tmp1, tmp2, x, y;
@@ -183,8 +203,8 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &value, std::vector<doub
 		for(i = 1, idouble = 1; i < N - 1; i++, idouble++) {
             double v1 = vX[IX(i, j)];
             double v2 = vY[IX(i, j)];
-            tmp1 = dtx * v1;
-            tmp2 = dty * v2;
+            tmp1 = dt0 * v1;
+            tmp2 = dt0 * v2;
             x = idouble - tmp1; 
             y = jdouble - tmp2;
         
@@ -213,10 +233,6 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &value, std::vector<doub
             	}
         }
 	set_bnd(mode, value);
-
-
-
-
 
 }
 
@@ -299,7 +315,7 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
     double cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++)
     {
-        #pragma omp parallel for collapse(2) default(shared)
+        #pragma omp parallel for collapse(2) default(shared) schedule(static,1)
         for (int j = 1; j < N - 1; j++)
         {
             for (int i = 1; i < N - 1; i++)
@@ -324,7 +340,7 @@ void FluidMatrix::fadeDensity(std::vector<double> &density) const {
     int N = this->size;
     for (int i = 0; i < N * N; i++) {
         double d = this->density[i];
-        density[i] = (d - 0.05f < 0) ? 0 : d - 0.05f; 
+        density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f; 
     }
 }
 

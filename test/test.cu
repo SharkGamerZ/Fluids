@@ -7,7 +7,13 @@ int max_cells;
 int64_t serialTimeMean = 0, ompTimeMean = 0, cudaTimeMean = 0;
 
 int main() {
-    const int maxSize = 100;
+    std::ofstream file;
+
+    file.open("results.csv");
+    file << "Matrix size,Serial,OMP,Speedup,Efficiency\n";
+
+    const int iterations = 15;
+    const int maxSize = 800;
     
     for (int matrixSize = 100; matrixSize <= maxSize; matrixSize+= 50)
     {
@@ -36,7 +42,7 @@ int main() {
 
         // SERIAL ----------------------------------------------------------------------------------------------
         std::cout << BOLD BLUE "Matrix size: " << RESET << matrixSize << std::endl;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < iterations; i++) {
             auto serialBegin = std::chrono::high_resolution_clock::now();
             diffuse(matrixSize, Axis::ZERO, value, oldValue, diff, dt);
             auto serialEnd = std::chrono::high_resolution_clock::now();
@@ -47,9 +53,10 @@ int main() {
 
         }
 
-        serialTimeMean /= 10;
+        serialTimeMean /= iterations;
         std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " millis "<<std::endl<<std::endl;
 
+        file << matrixSize << "," << serialTimeMean << ",";
 
 
         // OMP ----------------------------------------------------------------------------------------------
@@ -62,7 +69,7 @@ int main() {
 
         int64_t ompTimeMean = 0;
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < iterations; i++) {
             auto ompBegin = std::chrono::high_resolution_clock::now();
             omp_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
             auto ompEnd = std::chrono::high_resolution_clock::now();
@@ -70,7 +77,7 @@ int main() {
 
             ompTimeMean += ompTime;
         }
-        ompTimeMean /= 10;
+        ompTimeMean /= iterations;
         
         std::cout << BOLD RED "OMP Diffuse: " << ompTimeMean << RESET " millis" << std::endl;
 
@@ -79,23 +86,27 @@ int main() {
         std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " ";
         std::cout << BOLD GREEN "Efficiency: " << RESET << efficiency << std::endl << std::endl;
 
-
-        // CUDA ----------------------------------------------------------------------------------------------
-        for (int i = 0; i < 10; i++) {
-            cuda_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
-        }
-
-        cudaTimeMean /= 10;
+        speedup = (double) serialTimeMean / (double) ompTimeMean;
+        efficiency = speedup / max_threads;
+        file << std::fixed << std::setprecision(2) << ompTimeMean << "," << std::setprecision(2) << speedup << "," << std::setprecision(2) << efficiency << "\n";
         
-        std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " millis" << std::endl;
+        printf("Speedup: %f\n", speedup);
+        // // CUDA ----------------------------------------------------------------------------------------------
+        // for (int i = 0; i < iterations; i++) {
+        //     cuda_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
+        // }
 
-        speedup = (double) serialTimeMean / (double) cudaTimeMean;
-        std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " "<<std::endl<<std::endl;
+        // cudaTimeMean /= iterations;
+        
+        // std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " millis" << std::endl;
+
+        // speedup = (double) serialTimeMean / (double) cudaTimeMean;
+        // std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " "<<std::endl<<std::endl;
 
 
 
 
-        std::cout << std::endl << std::endl;
+        // std::cout << std::endl << std::endl;
     }
 
 
@@ -193,7 +204,7 @@ void omp_lin_solve(int N, Axis mode, std::vector<float> &nextValue, std::vector<
     float cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++)
     {
-        #pragma omp parallel for default(shared) schedule(static, max_cells) collapse(2)
+        #pragma omp parallel for default(shared) schedule(guided) collapse(2)
             for (int j = 1; j < N - 1; j++)
             {
                 for (int i = 1; i < N - 1; i++)

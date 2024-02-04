@@ -5,6 +5,8 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <vector>
 #include <algorithm>
 #include <math.h>

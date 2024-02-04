@@ -61,6 +61,11 @@ public:
     void step();
 
     /**
+     * Simulate a time-step using OpenMP
+     */
+    void OMPstep();
+
+    /**
      * Add density to the matrix at the given position
      * @param x coordinate x
      * @param y coordinate y

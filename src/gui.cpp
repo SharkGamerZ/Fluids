@@ -5,8 +5,8 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 70;
-const int scalingFactor = 9;
+const int matrixSize = 200;
+const int scalingFactor = 5;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -15,6 +15,7 @@ const ImVec4 clear_color = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 bool frameSimulation = false;
 bool simulazioneIsRunning = false;
 bool resetSimulation = false;
+bool windMachine = false;
 
 int simulationAttribute = DENSITY_ATTRIBUTE;
 int display_w, display_h;
@@ -88,69 +89,14 @@ int openGUI()
         ypos0 = ypos;
 
 
-        // // Aggiunta effetto macchina del vento
-        // for (int i = 0; i < matrixSize; i++)
-        // {
-        //     matrix.addVelocity(2, i, 0.0, 0.5);
-        // }
-
-//         int tenth = 0.1 * matrixSize;
-//
-//         for (int i = tenth; i < matrixSize - tenth; i++ )
-//         {
-//             matrix.addVelocity(i, tenth, matrixSize * 10.0, 0);
-//             matrix.addVelocity(i, i, -matrixSize * 10.0, -matrixSize * 10.0);
-//             matrix.addVelocity(i, matrixSize - tenth, matrixSize * 10.0, 0);
-//             matrix.addVelocity(matrixSize-i, i, -matrixSize * 10.0, matrixSize * 10.0);
-//         }
-/*  Runna se ha coraggio ;)
- *
-        int seventh = ((1.0f/7.0f) * matrixSize);
-        int space = (seventh / 7);
-
-        for (int i = space; i < space + seventh; i++)
+        // Aggiunta effetto macchina del vento
+        if (windMachine)
         {
-            matrix.addVelocity(i, space, matrixSize * 100.0, 0);
-            if (i < (2.0f/3.0f) * seventh + space )
+            for (int i = 0; i < matrixSize; i++)
             {
-                matrix.addVelocity(i, matrixSize / 2, matrixSize * 100.0, 0);
+                matrix.addVelocity(2, i, 0.0, 0.5);
             }
-
-            matrix.addVelocity(i + space + seventh, space, matrixSize * 100.0, 0);
-            matrix.addVelocity(i + space + seventh, matrixSize / 2, -matrixSize * 100.0, 0);
-            matrix.addVelocity(i + space + seventh, matrixSize / 2 + i, matrixSize * 100.0, matrixSize * 100.0);
-
-            matrix.addVelocity(i + (space*2) + (seventh*2), space, matrixSize * 100.0, 0);
-            matrix.addVelocity(i + (space*2) + (seventh*2), matrixSize - space, -matrixSize * 100.0, 0);
-
-            matrix.addVelocity(i + (space*3) + (seventh*3), space, matrixSize * 100.0,0);
-
-            matrix.addVelocity(i + (space*3) + (seventh*3), matrixSize - space, -matrixSize * 100.0, 0);
-
-            matrix.addVelocity(i + (space*5) + (seventh*5), space, -matrixSize * 100.0, 0);
-            matrix.addVelocity(i + (space*5) + (seventh*5), matrixSize - space, matrixSize * 100.0, 0);
         }
-
-        for(int i = space; i < matrixSize - space; i++)
-        {
-            matrix.addVelocity(space, i, 0, -matrixSize * 100.0);
-
-            matrix.addVelocity(space*2 + seventh, i, 0, -matrixSize * 100.0);
-            if(i < matrixSize/2)
-            {
-                matrix.addVelocity(space*2 + seventh*2, i, 0, matrixSize * 100.0);
-            }
-
-            matrix.addVelocity(space*3 + seventh*2, i, 0, -matrixSize * 100.0);
-            matrix.addVelocity(space*3 + seventh*3, i, 0, matrixSize * 100.0);
-
-            matrix.addVelocity(space*4 + seventh*3, i, 0, -matrixSize * 100.0);
-
-            matrix.addVelocity(space*5 + seventh*4 + seventh/2, i, 0, matrixSize * 10.0);
-
-            matrix.addVelocity(space*6 + seventh*5, i, 0, matrixSize * 100.0);
-            matrix.addVelocity(space*6 + seventh*6, i, 0, -matrixSize * 100.0);
-        }*/
 
 
         // Controlla se la simulazione vada resettata
@@ -163,7 +109,10 @@ int openGUI()
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
         {
-            matrix.step();
+            if (executionMode == SERIAL)
+                matrix.step();
+            else if (executionMode == OPENMP)
+                matrix.OMPstep();
             frameSimulation = false;
         }
 
@@ -228,6 +177,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     // Se l'utente preme il tasto V, cambia l'attributo della simulazione
     if (key == GLFW_KEY_V && action == GLFW_PRESS)
         simulationAttribute = (simulationAttribute + 1) % 2;
+
+    // Se l'utente preme il tasto W, attiva/disattiva la macchina del vento
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)
+        windMachine = !windMachine;
 
 }
 
@@ -506,8 +459,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
             vx *= 100;
             vy *= 100;
 
-            vertices[4 * (IX(i, j)) + 2]   = viewPortJ + vx + 1; // La prima è la X del secondo vertice, quindi j
-            vertices[4 * (IX(i, j)) + 3]   = viewPortI + vy + 1; // La seconda è la Y del primo vertice, quindi i
+            vertices[4 * (IX(i, j)) + 2]   = viewPortJ + vy + 1; // La prima è la X del secondo vertice, quindi j
+            vertices[4 * (IX(i, j)) + 3]   = viewPortI + vx + 1; // La seconda è la Y del primo vertice, quindi i
 
 
             viewPortJ +=chunkSize;
