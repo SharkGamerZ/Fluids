@@ -80,6 +80,7 @@ int openGUI()
                     //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
 
                     matrix.addDensity(xposScaled, yposScaled, 100.0f);
+                }
 //                     Calcola la velocità
                     deltaX *= matrixSize * 1000;
                     deltaY *= matrixSize * 1000;
@@ -87,7 +88,6 @@ int openGUI()
 
 //                     Aggiunge velocità
                     matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
-                }
 
         }
 

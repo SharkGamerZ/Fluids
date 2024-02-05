@@ -105,8 +105,8 @@ void FluidMatrix::diffuse(Axis mode, std::vector<float> &value, std::vector<floa
 
     int N = this->size;
     float diffusionRate = dt * diffusion * N * N;
-    lin_solve(mode, value, oldValue, diffusionRate);
-//     parallel_lin_solve(mode, value, oldValue, diffusionRate);
+//     lin_solve(mode, value, oldValue, diffusionRate);
+    parallel_lin_solve(mode, value, oldValue, diffusionRate);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << BOLD YELLOW "diffuse: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << RESET " micros" << std::endl;
