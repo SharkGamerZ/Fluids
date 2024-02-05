@@ -5,8 +5,9 @@
 #define VELOCITY_ATTRIBUTE 1
 
 // Golbal variables
-const int matrixSize = 300;
-const int scalingFactor = 2;
+int executionMode = SERIAL;
+const int matrixSize = 200;
+const int scalingFactor = 5;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -15,6 +16,7 @@ const ImVec4 clear_color = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 bool frameSimulation = false;
 bool simulazioneIsRunning = false;
 bool resetSimulation = false;
+bool windMachine = false;
 
 int simulationAttribute = DENSITY_ATTRIBUTE;
 int display_w, display_h;
@@ -35,12 +37,7 @@ int openGUI()
 
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-    FluidMatrix matrix = FluidMatrix(matrixSize, 1.0f, 1.0f, 0.2f);
-
-    // for (int i = 0; i < matrixSize; i++)
-    // {
-    //     matrix.addVelocity(1, i, 1000.0, 0.0);
-    // }
+    FluidMatrix matrix = FluidMatrix(matrixSize, 0.0f, 0.0000001f, 0.2f);
 
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
@@ -60,8 +57,6 @@ int openGUI()
         deltaX = xpos - xpos0;
         deltaY = ypos - ypos0;
         mouseTime0 = mouseTime;
-        xpos0 = xpos;
-        ypos0 = ypos;
 
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -71,91 +66,38 @@ int openGUI()
             // Aggiunge densità
             if (mouseLeftButtonState == GLFW_PRESS)
                 {
-//                     Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
-//                     matrix.addDensity(2, 2, 1.0f);
-//
-//                     matrix.addVelocity(2, 2, 10000000.0f, 0);
+                    // Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
+                    // matrix.addDensity(2, 2, 1.0f);
+
+                    // matrix.addVelocity(2, 2, 10000000.0f, 0);
 
 
                     //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
 
-                    matrix.addDensity(xposScaled, yposScaled, 100.0f);
+                    matrix.addDensity(xposScaled, yposScaled, 20.0f);
+
+
                 }
-//                     Calcola la velocità
-                    deltaX *= matrixSize * 1000;
-                    deltaY *= matrixSize * 1000;
 
-
-//                     Aggiunge velocità
-                    matrix.addVelocity(xposScaled, yposScaled, deltaX, deltaY);
-
+            // Calcola la velocità
+            deltaX /= scalingFactor * 2;
+            deltaY /= scalingFactor * 2;
+            // Aggiunge velocità
+            matrix.addVelocity(xposScaled, yposScaled, deltaY, deltaX);
         }
 
+        xpos0 = xpos;
+        ypos0 = ypos;
 
 
-//         // Aggiunta effetto macchina del vento
-//         for (int i = 0; i < matrixSize; i++)
-//         {
-//             matrix.addVelocity(2, i, 1000.0, 0.0);
-//         }
-
-//         int tenth = 0.1 * matrixSize;
-//
-//         for (int i = tenth; i < matrixSize - tenth; i++ )
-//         {
-//             matrix.addVelocity(i, tenth, matrixSize * 10.0, 0);
-//             matrix.addVelocity(i, i, -matrixSize * 10.0, -matrixSize * 10.0);
-//             matrix.addVelocity(i, matrixSize - tenth, matrixSize * 10.0, 0);
-//             matrix.addVelocity(matrixSize-i, i, -matrixSize * 10.0, matrixSize * 10.0);
-//         }
-/*  Runna se ha coraggio ;)
- *
-        int seventh = ((1.0f/7.0f) * matrixSize);
-        int space = (seventh / 7);
-
-        for (int i = space; i < space + seventh; i++)
+        // Aggiunta effetto macchina del vento
+        if (windMachine)
         {
-            matrix.addVelocity(i, space, matrixSize * 100.0, 0);
-            if (i < (2.0f/3.0f) * seventh + space )
+            for (int i = 0; i < matrixSize; i++)
             {
-                matrix.addVelocity(i, matrixSize / 2, matrixSize * 100.0, 0);
+                matrix.addVelocity(2, i, 0.0, 0.5);
             }
-
-            matrix.addVelocity(i + space + seventh, space, matrixSize * 100.0, 0);
-            matrix.addVelocity(i + space + seventh, matrixSize / 2, -matrixSize * 100.0, 0);
-            matrix.addVelocity(i + space + seventh, matrixSize / 2 + i, matrixSize * 100.0, matrixSize * 100.0);
-
-            matrix.addVelocity(i + (space*2) + (seventh*2), space, matrixSize * 100.0, 0);
-            matrix.addVelocity(i + (space*2) + (seventh*2), matrixSize - space, -matrixSize * 100.0, 0);
-
-            matrix.addVelocity(i + (space*3) + (seventh*3), space, matrixSize * 100.0,0);
-
-            matrix.addVelocity(i + (space*3) + (seventh*3), matrixSize - space, -matrixSize * 100.0, 0);
-
-            matrix.addVelocity(i + (space*5) + (seventh*5), space, -matrixSize * 100.0, 0);
-            matrix.addVelocity(i + (space*5) + (seventh*5), matrixSize - space, matrixSize * 100.0, 0);
         }
-
-        for(int i = space; i < matrixSize - space; i++)
-        {
-            matrix.addVelocity(space, i, 0, -matrixSize * 100.0);
-
-            matrix.addVelocity(space*2 + seventh, i, 0, -matrixSize * 100.0);
-            if(i < matrixSize/2)
-            {
-                matrix.addVelocity(space*2 + seventh*2, i, 0, matrixSize * 100.0);
-            }
-
-            matrix.addVelocity(space*3 + seventh*2, i, 0, -matrixSize * 100.0);
-            matrix.addVelocity(space*3 + seventh*3, i, 0, matrixSize * 100.0);
-
-            matrix.addVelocity(space*4 + seventh*3, i, 0, -matrixSize * 100.0);
-
-            matrix.addVelocity(space*5 + seventh*4 + seventh/2, i, 0, matrixSize * 10.0);
-
-            matrix.addVelocity(space*6 + seventh*5, i, 0, matrixSize * 100.0);
-            matrix.addVelocity(space*6 + seventh*6, i, 0, -matrixSize * 100.0);
-        }*/
 
 
         // Controlla se la simulazione vada resettata
@@ -168,7 +110,10 @@ int openGUI()
         // Simulazione
         if (simulazioneIsRunning || frameSimulation)
         {
-            matrix.step();
+            if (executionMode == SERIAL)
+                matrix.step();
+            else if (executionMode == OPENMP)
+                matrix.OMPstep();
             frameSimulation = false;
         }
 
@@ -176,11 +121,11 @@ int openGUI()
 
 
 
-        // In caso di resize della finestra, aggiorna le dimensioni del viewport
+        // Setta le dimensioni del viewport
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
 
-
+        // Imposta il colore di sfondo
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -234,6 +179,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_V && action == GLFW_PRESS)
         simulationAttribute = (simulationAttribute + 1) % 2;
 
+    // Se l'utente preme il tasto W, attiva/disattiva la macchina del vento
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)
+        windMachine = !windMachine;
+
 }
 
 
@@ -270,7 +219,7 @@ uint32_t getShaderProgram() {
     if(!success)
     {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        errorPrint("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + std::string(infoLog));
         return 0;
     }
 
@@ -285,7 +234,7 @@ uint32_t getShaderProgram() {
     if(!success)
     {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+        errorPrint("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + std::string(infoLog));
         return 0;
     }
 
@@ -365,21 +314,26 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
     {
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
         ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-        static float diffusione = 0.01f;
+        static float diffusione = 0.0f;
         static float deltaTime = 0.2f;
-        static float temperatura = 0.0f;
+        static float viscosita = 0.0000001f;
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
-        ImGui::SliderFloat("Diffusione", &diffusione, 0.0f, 1.0f, "%.3f",ImGuiSliderFlags_Logarithmic);
-        matrix->diff = diffusione;
 
+        ImGui::SliderFloat("Viscosità", &viscosita, 0.0f, 0.0001f, "%.7f",ImGuiSliderFlags_Logarithmic);
+        matrix->visc = viscosita;
 
         ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
         matrix->dt = deltaTime;
 
-
+        ImGui::Text("Visualizzazione");
         ImGui::RadioButton("Densità", &simulationAttribute, DENSITY_ATTRIBUTE); ImGui::SameLine();
-        ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE); ImGui::SameLine();
+        ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE);
+
+        ImGui::Text("Esecuzione");
+        ImGui::RadioButton("Seriale", &executionMode, SERIAL); ImGui::SameLine();
+        ImGui::RadioButton("OpenMP", &executionMode, OPENMP); ImGui::SameLine();
+        ImGui::RadioButton("CUDA", &executionMode, CUDA);
 
         // Buttons return true when clicked (most widgets return true when edited/activated)
         if (ImGui::Button("Avvio simulazione")) simulazioneIsRunning = !simulazioneIsRunning;
@@ -450,9 +404,11 @@ float *getDensityVertices(FluidMatrix *matrix) {
     float* vertices = (float*) calloc(sizeof(float), N * N * 3);
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
-            vertices[3 * (IX(i, j))]       = i;
-            vertices[3 * (IX(i, j)) + 1]   = j;
-            vertices[3 * (IX(i, j)) + 2]   = matrix->density[(i/scalingFactor)*matrixSize + (j/scalingFactor)];
+            vertices[3 * (FluidMatrix::index(i, j, N))]       = j; // La prima è la X, quindi j
+            vertices[3 * (FluidMatrix::index(i, j, N)) + 1]   = i; // La seconda è la Y, quindi i
+
+            int index = (i/scalingFactor)*matrixSize + (j/scalingFactor);
+            vertices[3 * (FluidMatrix::index(i, j, N)) + 2]   = matrix->density[index];
         }
     }
 
@@ -477,8 +433,8 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     for(int i = 0; i < N; i++) {
         viewPortJ = (chunkSize - 1)/2;
         for(int j = 0; j < N; j++) {
-            vertices[4 * (IX(i, j))]       = viewPortI;
-            vertices[4 * (IX(i, j)) + 1]   = viewPortJ;
+            vertices[4 * (FluidMatrix::index(i, j, N))]       = viewPortJ; // La prima è la X, quindi j
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 1]   = viewPortI; // La seconda è la Y, quindi i
 
             // Calcolo media velocità
             float vx = 0;
@@ -499,12 +455,13 @@ float *getVelocityVertices(FluidMatrix *matrix) {
             }
             vx /= count;
             vy /= count;
-            vertices[4 * (IX(i, j)) + 2]   = viewPortI + vx + 1;
-            vertices[4 * (IX(i, j)) + 3]   = viewPortJ + vy + 1;
 
+            // Moltiplichiamo per 100 per renderlo visibile
+            vx *= 100;
+            vy *= 100;
 
-            // vertices[4 * (IX(i, j)) + 2]   = viewPortI + matrix->Vx[(viewPortI/scalingFactor)*matrixSize + (viewPortJ/scalingFactor)] + 1;
-            // vertices[4 * (IX(i, j)) + 3]   = viewPortJ + matrix->Vy[(viewPortI/scalingFactor)*matrixSize + (viewPortJ/scalingFactor)] + 1;
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 2]   = viewPortJ + vy + 1; // La prima è la X del secondo vertice, quindi j
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 3]   = viewPortI + vx + 1; // La seconda è la Y del primo vertice, quindi i
 
 
             viewPortJ +=chunkSize;
@@ -518,7 +475,7 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     normalizeSpeedVertices(vertices, N);
 
 
-    
+
     return vertices;
 }
 
@@ -556,18 +513,13 @@ void setupBufferAndArray(uint32_t* VBO, uint32_t* VAO) {
 }
 
 
-
-// --------------------------------------------------------------
-// Funzioni DEBUG
-// --------------------------------------------------------------
-
 // TODO DA AGGIUSTARE, LA NORMALIZZAZIONE NON FUNZIONA
 // SPECCHIA ASSE X
 void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
-            vertices[3 * IX(i, j)]        = (vertices[3 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * IX(i, j) + 1]    = 1-(vertices[3 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+            vertices[3 * FluidMatrix::index(i, j, N)]        = (vertices[3 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[3 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
 
         }
     }
@@ -577,11 +529,11 @@ void normalizeSpeedVertices(float *vertices, int N) {
 
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){
-            vertices[4 * IX(i, j)]        = (vertices[4 * IX(i, j)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * IX(i, j) + 1]    = 1-(vertices[4 * IX(i, j) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * FluidMatrix::index(i, j, N)]        = (vertices[4 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
 
-            vertices[4 * IX(i, j) + 2]    = (vertices[4 * IX(i, j) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * IX(i, j) + 3]    = 1-(vertices[4 * IX(i, j) + 3] / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * FluidMatrix::index(i, j, N) + 2]    = (vertices[4 * FluidMatrix::index(i, j, N) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * FluidMatrix::index(i, j, N) + 3]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 3] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 

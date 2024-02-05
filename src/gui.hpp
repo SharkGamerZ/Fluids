@@ -8,13 +8,10 @@
 #include <iostream>
 #include <cmath>
 
-#if FM_OLD
-#include "fluid2d.hpp"
-#else
-#include "FluidMatrix.h"
-#endif
 
-#include "utils.h"
+#include "fluids/FluidMatrix.h"
+
+#include "utils.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
