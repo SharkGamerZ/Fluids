@@ -65,6 +65,8 @@ void FluidMatrix::step() {
         project(Vx, Vy, Vx0, Vy0);
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    debugPrint("Vel time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
         // density step
     {
@@ -75,8 +77,6 @@ void FluidMatrix::step() {
 
     fadeDensity(density);
 
-    auto end = std::chrono::high_resolution_clock::now();
-    debugPrint("Total time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 }
 
 
@@ -96,6 +96,8 @@ void FluidMatrix::OMPstep() {
 
         project(Vx, Vy, Vx0, Vy0);
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    debugPrint("Vel time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
         // density step
     {
@@ -106,8 +108,6 @@ void FluidMatrix::OMPstep() {
 
     fadeDensity(density);
 
-    auto end = std::chrono::high_resolution_clock::now();
-    debugPrint("Total time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
 }
 
@@ -193,18 +193,15 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &value, std::vector<doub
 	double tmp1, tmp2, x, y;
 
 	double Ndouble = this->size - 2;
-	double idouble, jdouble;
 
-	uint32_t i, j;
-
-	for(j = 1, jdouble = 1; j < this->size - 1; j++, jdouble++) {
-		for(i = 1, idouble = 1; i < this->size - 1; i++, idouble++) {
+	for(uint32_t j = 1; j < this->size - 1; j++) {
+		for(uint32_t i = 1; i < this->size - 1; i++) {
             double v1 = vX[index(i, j, this->size)];
             double v2 = vY[index(i, j, this->size)];
             tmp1 = dt0 * v1;
             tmp2 = dt0 * v2;
-            x = idouble - tmp1;
-            y = jdouble - tmp2;
+            x = (double) i - tmp1;
+            y = (double) j - tmp2;
 
             if(x < 0.5f) x = 0.5f;
             if(x > Ndouble + 0.5f) x = Ndouble + 0.5f;
@@ -309,7 +306,7 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
     double cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++)
     {
-        #pragma omp parallel for collapse(2) default(shared) schedule(static,1)
+        #pragma omp parallel for collapse(2) default(shared) schedule(static,1) num_threads(4)
         for (uint32_t j = 1; j < this->size - 1; j++)
         {
             for (uint32_t i = 1; i < this->size - 1; i++)

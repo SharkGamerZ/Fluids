@@ -16,27 +16,39 @@
 
 #define IX(i, j) ((j) + (i) * N) ///< index of the matrix
 
+uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size) {
+    return j + i * matrix_size;
+}
+
 enum Axis {
     X, Y, ZERO
 }; ///< axis of the matrix
 
 #define ITERATIONS 10 ///< number of iterations
 
-
-float randFloat();
-bool float_equals(float a, float b, float epsilon = 0.0001);
-
-
-void diffuse(int N, Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt);
-void omp_diffuse(int N, Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt);
-void cuda_diffuse(int N, Axis mode, std::vector<float> &value, std::vector<float> &oldValue, float diffusion, float dt);
-
-void lin_solve(int N, Axis mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate);
-void omp_lin_solve(int N, Axis mode, std::vector<float> &nextValue, std::vector<float> &value, float diffusionRate);
-__global__ void kernel_lin_solve(int N, Axis mode, float* nextValue, float* value, float diffusionRate);
+void testDiffuse(int maxSize, int iterations);
+void testAdvect(int maxSize, int iterations);
 
 
-void set_bnd(int N, Axis mode, std::vector<float> &attr);
-__device__ void kernel_set_bnd(int N, Axis mode, float *attr);
+double randdouble();
+bool double_equals(double a, double b, double epsilon = 0.0001);
+
+
+void diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
+void omp_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
+void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
+
+void advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt);
+void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt);
+
+
+
+void lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate);
+void omp_lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate);
+__global__ void kernel_lin_solve(int N, Axis mode, double* nextValue, double* value, double diffusionRate);
+
+
+void set_bnd(int N, Axis mode, std::vector<double> &attr);
+__device__ void kernel_set_bnd(int N, Axis mode, double *attr);
 
 #endif
