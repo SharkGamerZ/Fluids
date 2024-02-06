@@ -9,7 +9,7 @@
 - [x] Implementare uno scaling factor
 - [x] Fare la visualizzazione della velocità tramite linee
     - [ ] Modificare la visualizzazione del campo delle velocità rendendo la lunghezza delle linee la metà della distanza tra le origini di due linee adiacenti nella griglia e rappresentare la magnitudine tramite range di colori (es. verde - rosso).
-    - [ ] Fare la visualizzazione della velocità tramite i colori
+    - [x] Fare la visualizzazione della velocità tramite i colori
 - [ ] Cambiare glUseProgram per non eseguirlo ogni volta
 - [ ] Usare glBufferSubData per efficienza
 - [ ] Normalizzare i vertici nelle shader
