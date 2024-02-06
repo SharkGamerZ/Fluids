@@ -101,22 +101,22 @@ void testDiffuse(int maxSize, int iterations) {
         file << std::fixed << std::setprecision(2) << ompTimeMean << "," << std::setprecision(2) << speedup << "," << std::setprecision(2) << efficiency << "\n";
         
         printf("Speedup: %f\n", speedup);
-        // // CUDA ----------------------------------------------------------------------------------------------
-        // for (int i = 0; i < iterations; i++) {
-        //     cuda_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
-        // }
+        // CUDA ----------------------------------------------------------------------------------------------
+        for (int i = 0; i < iterations; i++) {
+            cuda_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
+        }
 
-        // cudaTimeMean /= iterations;
+        cudaTimeMean /= iterations;
         
-        // std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " millis" << std::endl;
+        std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " millis" << std::endl;
 
-        // speedup = (double) serialTimeMean / (double) cudaTimeMean;
-        // std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " "<<std::endl<<std::endl;
-
-
+        speedup = (double) serialTimeMean / (double) cudaTimeMean;
+        std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " "<<std::endl<<std::endl;
 
 
-        // std::cout << std::endl << std::endl;
+
+
+        std::cout << std::endl << std::endl;
     }
 }
 
@@ -319,7 +319,10 @@ void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<doub
     std::cout<<"Hello from host"<<std::endl;
 
     cudaEventRecord(cudaStart);    
-    kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &value[0], &oldValue[0], diffusionRate);
+    
+    for (int i = 0; i < ITERATIONS; i++) 
+        kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &value[0], &oldValue[0], diffusionRate);
+
     cudaEventRecord(cudaStop);
 
     cudaMemcpy(&value[0], d_value, N * N * sizeof(double), cudaMemcpyDeviceToHost);
@@ -494,20 +497,19 @@ __global__ void kernel_lin_solve(int N, Axis mode, double* nextValue, double* va
 
     printf("Hello from col: %d row: %d\n", col, row);
 
-    for (int k = 0; k < ITERATIONS; k++) {
-        nextValue[IX(row, col)] = (value[IX(row,col)]
-                            + diffusionRate * (
-                nextValue[IX(row + 1, col)]
-                + nextValue[IX(row - 1, col)]
-                + nextValue[IX(row, col + 1)]
-                + nextValue[IX(row, col - 1)]
-        )) * cRecip;
+    nextValue[IX(row, col)] = (value[IX(row,col)]
+                        + diffusionRate * (
+            nextValue[IX(row + 1, col)]
+            + nextValue[IX(row - 1, col)]
+            + nextValue[IX(row, col + 1)]
+            + nextValue[IX(row, col - 1)]
+    )) * cRecip;
 
         // __syncthreads();
         // if (col == 1 && row == 1)
         //     kernel_set_bnd(N, mode, nextValue);
         // __syncthreads();
-    }
+
 }
 
 // Set Bnd ----------------------------------------------------------------------------------------------

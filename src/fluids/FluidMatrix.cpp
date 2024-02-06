@@ -49,26 +49,29 @@ void FluidMatrix::reset() {
 }
 
 void FluidMatrix::step() {
-    auto begin = std::chrono::high_resolution_clock::now();
 
-    // velocity step
+    auto begin = std::chrono::high_resolution_clock::now();
+    
+    // velocity step 22ms
     {
+        // 15 ms
         diffuse(Axis::X, Vx0, Vx, visc, dt);
         diffuse(Axis::Y, Vy0, Vy, visc, dt);
 
         project(Vx0, Vy0, Vx, Vy);
 
 
+
+        // 7 ms
         advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
         advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
 
         project(Vx, Vy, Vx0, Vy0);
+
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    debugPrint("Vel time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
-        // density step
+        // density step 7ms
     {
         diffuse(Axis::ZERO, density0, density, diff, dt);
 
@@ -76,7 +79,9 @@ void FluidMatrix::step() {
     }
 
     fadeDensity(density);
-
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    debugPrint("Time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 }
 
 
@@ -96,8 +101,6 @@ void FluidMatrix::OMPstep() {
 
         project(Vx, Vy, Vx0, Vy0);
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    debugPrint("Vel time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
         // density step
     {
@@ -108,6 +111,8 @@ void FluidMatrix::OMPstep() {
 
     fadeDensity(density);
 
+    auto end = std::chrono::high_resolution_clock::now();
+    debugPrint("Time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
 
 }
 
