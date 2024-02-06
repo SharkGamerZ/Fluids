@@ -15,7 +15,7 @@
 #define CUDA 2
 extern int executionMode;
 
-const int ITERATIONS = 10; ///< number of iterations
+const int ITERATIONS = 6; ///< number of iterations
 enum Axis {
     X, Y, ZERO
 }; ///< axis of the matrix
