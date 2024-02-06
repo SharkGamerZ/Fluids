@@ -12,7 +12,7 @@ int main() {
     const int iterations = 15;
     const int maxSize = 800;
 
-    testAdvect(maxSize, iterations);
+    testDiffuse(maxSize, iterations);
 
 
 

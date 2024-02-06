@@ -68,7 +68,7 @@ void linkLinesToBuffer(float *vertices, int len);
 
 float *getDensityVertices(FluidMatrix *matrix);
 float *getVelocityVertices(FluidMatrix *matrix);
-
+float *getVelocityVertices2(FluidMatrix *matrix);
 /**
  *  Funzione per il rendering della matrice
  * @param matrix La matrice da renderizzare
@@ -83,17 +83,6 @@ void printVertices(float *vertices, int len);
 void normalizeVertices(float *vertices, int N);
 
 void normalizeSpeedVertices(float *vertices, int N);
-
-// OpenGL shaders
-
-// inline const char *vertexShaderSourceNorm = "#version 330 core\n"
-//     "layout (location = 0) in vec3 aPos;\n"
-//     "uniform vec2 viewPort;\n"
-//     "void main()\n"
-//     "{\n"
-//     "   float x = (aPos.x / (viewPort.x / 2)) - 1;\n"
-//     "   float y = (aPos.y / (viewPort.y / 2)) - 1;\n"
-//     "   gl_Position = vec4(x, y, 0.0, aPos.z);\n"
-//     "}\0";
+void normalizeSpeedVertices2(float *vertices, int N);
 
 #endif

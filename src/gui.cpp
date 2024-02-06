@@ -6,8 +6,8 @@
 
 // Golbal variables
 int executionMode = SERIAL;
-const int matrixSize = 70;
-const int scalingFactor = 8;
+const int matrixSize = 80;
+const int scalingFactor = 7;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 
@@ -373,7 +373,7 @@ void drawMatrix(FluidMatrix *matrix) {
     if (simulationAttribute == DENSITY_ATTRIBUTE)
         vertices = getDensityVertices(matrix);
     else
-        vertices = getVelocityVertices(matrix);
+        vertices = getVelocityVertices2(matrix);
 
     // Linka i vertici al Vertex Array
     if (simulationAttribute == DENSITY_ATTRIBUTE)
@@ -384,10 +384,9 @@ void drawMatrix(FluidMatrix *matrix) {
     }
     else
     {
-        N /= chunkSize;
         glBindVertexArray(VAO);
         linkLinesToBuffer(vertices, N * N * 4);
-        glDrawArrays(GL_LINES, 0, N*N*4);
+        glDrawArrays(GL_POINTS, 0, N*N*4);
     }
 
     free(vertices);
@@ -479,6 +478,29 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     return vertices;
 }
 
+float *getVelocityVertices2(FluidMatrix *matrix) {
+    int N = viewportSize;
+    // Creiamo un vettore di vertici per la matrice, grande N*N * 4 visto che ho 2 coordinate e vX,vY per ogni vertice
+    float* vertices = (float*) calloc(sizeof(float), N * N * 4);
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            vertices[4 * (FluidMatrix::index(i, j, N))]       = j; // La prima è la X, quindi j
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 1]   = i; // La seconda è la Y, quindi i
+
+            int index = (i/scalingFactor)*matrixSize + (j/scalingFactor);
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 2]   = matrix->Vx[index];
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 3]   = matrix->Vy[index];
+        }
+    }
+
+    // Normalizziamo i vertici da un sistema di coordinate pixel
+    // A quello di coordinate OpenGL, detto NDC, che va da -1 a 1
+    // TODO da far fare nella shader
+    normalizeSpeedVertices2(vertices, N);
+
+    return vertices;
+}
+
 
 void linkVerticestoBuffer(float *vertices, int len) {
     // Copia i dati dei vertici nel Vertex Buffer
@@ -496,7 +518,7 @@ void linkLinesToBuffer(float *vertices, int len) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,2 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE,4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 }
 
@@ -534,6 +556,17 @@ void normalizeSpeedVertices(float *vertices, int N) {
 
             vertices[4 * FluidMatrix::index(i, j, N) + 2]    = (vertices[4 * FluidMatrix::index(i, j, N) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
             vertices[4 * FluidMatrix::index(i, j, N) + 3]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 3] / ((float) (viewportSize - 1) / 2.0f));
+        }
+    }
+
+}
+
+void normalizeSpeedVertices2(float *vertices, int N) {
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++){
+            vertices[4 * FluidMatrix::index(i, j, N)]        = (vertices[4 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 
