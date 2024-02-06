@@ -373,19 +373,19 @@ void drawMatrix(FluidMatrix *matrix) {
     if (simulationAttribute == DENSITY_ATTRIBUTE)
         vertices = getDensityVertices(matrix);
     else
-        vertices = getVelocityVertices2(matrix);
+        vertices = getVelocityVertices(matrix);
 
     // Linka i vertici al Vertex Array
     if (simulationAttribute == DENSITY_ATTRIBUTE)
     {
         glBindVertexArray(VAO);
-        linkVerticestoBuffer(vertices, N * N * 3);
+        linkDensityVerticestoBuffer(vertices, N * N * 3);
         glDrawArrays(GL_POINTS, 0, N * N * 3);
     }
     else
     {
         glBindVertexArray(VAO);
-        linkLinesToBuffer(vertices, N * N * 4);
+        linkVelocityVerticestoBuffer(vertices, N * N * 4);
         glDrawArrays(GL_POINTS, 0, N*N*4);
     }
 
@@ -419,66 +419,8 @@ float *getDensityVertices(FluidMatrix *matrix) {
     return vertices;
 }
 
+
 float *getVelocityVertices(FluidMatrix *matrix) {
-    int N = viewportSize / chunkSize;
-    // Creiamo un vettore di vertici per la matrice, grande N*N come la matrice
-    //          *4 visto che ho 2 coordinate per il primo punto e 2 per il secondo
-    //          /9 per mettere una linea ogni 9 pixel
-    float* vertices = (float*) calloc(sizeof(float), (N*N * 4));
-
-    int viewPortI = (chunkSize - 1)/2;
-    int viewPortJ = (chunkSize - 1)/2;
-
-    for(int i = 0; i < N; i++) {
-        viewPortJ = (chunkSize - 1)/2;
-        for(int j = 0; j < N; j++) {
-            vertices[4 * (FluidMatrix::index(i, j, N))]       = viewPortJ; // La prima è la X, quindi j
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 1]   = viewPortI; // La seconda è la Y, quindi i
-
-            // Calcolo media velocità
-            float vx = 0;
-            float vy = 0;
-            int newI, newJ;
-            int count = 0;
-            for (int k = -(chunkSize - 1)/2; k <= (chunkSize - 1)/2; k++) {
-                for (int l = -(chunkSize - 1)/2; l <= (chunkSize - 1)/2; l++) {
-                    newI = (viewPortI + k)/scalingFactor;
-                    newJ = (viewPortJ + l)/scalingFactor;
-                    if (newI >=0 && newI < matrixSize && newJ >=0 && newJ < matrixSize)
-                    {
-                        vx += matrix->Vx[newI*matrixSize + newJ];
-                        vy += matrix->Vy[newI*matrixSize + newJ];
-                        count++;
-                    }
-                }
-            }
-            vx /= count;
-            vy /= count;
-
-            // Moltiplichiamo per 100 per renderlo visibile
-            vx *= 100;
-            vy *= 100;
-
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 2]   = viewPortJ + vy + 1; // La prima è la X del secondo vertice, quindi j
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 3]   = viewPortI + vx + 1; // La seconda è la Y del primo vertice, quindi i
-
-
-            viewPortJ +=chunkSize;
-        }
-        viewPortI +=chunkSize;
-    }
-
-    // Normalizziamo i vertici da un sistema di coordinate pixel
-    // A quello di coordinate OpenGL, detto NDC, che va da -1 a 1
-    // TODO da far fare nella shader
-    normalizeSpeedVertices(vertices, N);
-
-
-
-    return vertices;
-}
-
-float *getVelocityVertices2(FluidMatrix *matrix) {
     int N = viewportSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N * 4 visto che ho 2 coordinate e vX,vY per ogni vertice
     float* vertices = (float*) calloc(sizeof(float), N * N * 4);
@@ -496,13 +438,13 @@ float *getVelocityVertices2(FluidMatrix *matrix) {
     // Normalizziamo i vertici da un sistema di coordinate pixel
     // A quello di coordinate OpenGL, detto NDC, che va da -1 a 1
     // TODO da far fare nella shader
-    normalizeSpeedVertices2(vertices, N);
+    normalizeSpeedVertices(vertices, N);
 
     return vertices;
 }
 
 
-void linkVerticestoBuffer(float *vertices, int len) {
+void linkDensityVerticestoBuffer(float *vertices, int len) {
     // Copia i dati dei vertici nel Vertex Buffer
     // TODO dovrei sostituirlo con glBurfersubData, per evitare di allocare memoria ogni volta
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
@@ -512,7 +454,7 @@ void linkVerticestoBuffer(float *vertices, int len) {
     glEnableVertexAttribArray(0);
 }
 
-void linkLinesToBuffer(float *vertices, int len) {
+void linkVelocityVerticestoBuffer(float *vertices, int len) {
     // Copia i dati dei vertici nel Vertex Buffer
     // TODO dovrei sostituirlo con glBurfersubData, per evitare di allocare memoria ogni volta
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
@@ -548,20 +490,6 @@ void normalizeVertices(float *vertices, int N) {
 }
 
 void normalizeSpeedVertices(float *vertices, int N) {
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++){
-            vertices[4 * FluidMatrix::index(i, j, N)]        = (vertices[4 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
-
-            vertices[4 * FluidMatrix::index(i, j, N) + 2]    = (vertices[4 * FluidMatrix::index(i, j, N) + 2] / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * FluidMatrix::index(i, j, N) + 3]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 3] / ((float) (viewportSize - 1) / 2.0f));
-        }
-    }
-
-}
-
-void normalizeSpeedVertices2(float *vertices, int N) {
 
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++){

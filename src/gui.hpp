@@ -43,6 +43,14 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
  */
 void renderImGui(ImGuiIO *io, FluidMatrix *matrix);
 
+
+/**
+ *  Funzione per il rendering della matrice
+ * @param matrix La matrice da renderizzare
+ */
+void drawMatrix(FluidMatrix *matrix);
+
+
 /**
  * Funzione per la creazione del programma di shader
  * @return L'ID del programma di shader o 0 se c'è stato un errore
@@ -61,28 +69,16 @@ void setupBufferAndArray(uint *VBO, uint *VAO);
  * @param vertices I vertici da linkare
  * @param len La lunghezza del vettore di vertici
  */
-void linkVerticestoBuffer(float *vertices, int len);
+void linkDensityVerticestoBuffer(float *vertices, int len);
 
 
-void linkLinesToBuffer(float *vertices, int len);
+void linkVelocityVerticestoBuffer(float *vertices, int len);
 
 float *getDensityVertices(FluidMatrix *matrix);
 float *getVelocityVertices(FluidMatrix *matrix);
-float *getVelocityVertices2(FluidMatrix *matrix);
-/**
- *  Funzione per il rendering della matrice
- * @param matrix La matrice da renderizzare
- */
-void drawMatrix(FluidMatrix *matrix);
 
-
-void printMatrix(FluidMatrix *matrix, int N);
-
-void printVertices(float *vertices, int len);
 
 void normalizeVertices(float *vertices, int N);
-
 void normalizeSpeedVertices(float *vertices, int N);
-void normalizeSpeedVertices2(float *vertices, int N);
 
 #endif
