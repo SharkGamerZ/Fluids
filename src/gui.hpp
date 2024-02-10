@@ -43,6 +43,14 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
  */
 void renderImGui(ImGuiIO *io, FluidMatrix *matrix);
 
+
+/**
+ *  Funzione per il rendering della matrice
+ * @param matrix La matrice da renderizzare
+ */
+void drawMatrix(FluidMatrix *matrix);
+
+
 /**
  * Funzione per la creazione del programma di shader
  * @return L'ID del programma di shader o 0 se c'è stato un errore
@@ -61,39 +69,16 @@ void setupBufferAndArray(uint *VBO, uint *VAO);
  * @param vertices I vertici da linkare
  * @param len La lunghezza del vettore di vertici
  */
-void linkVerticestoBuffer(float *vertices, int len);
+void linkDensityVerticestoBuffer(float *vertices, int len);
 
 
-void linkLinesToBuffer(float *vertices, int len);
+void linkVelocityVerticestoBuffer(float *vertices, int len);
 
 float *getDensityVertices(FluidMatrix *matrix);
 float *getVelocityVertices(FluidMatrix *matrix);
 
-/**
- *  Funzione per il rendering della matrice
- * @param matrix La matrice da renderizzare
- */
-void drawMatrix(FluidMatrix *matrix);
-
-
-void printMatrix(FluidMatrix *matrix, int N);
-
-void printVertices(float *vertices, int len);
 
 void normalizeVertices(float *vertices, int N);
-
 void normalizeSpeedVertices(float *vertices, int N);
-
-// OpenGL shaders
-
-// inline const char *vertexShaderSourceNorm = "#version 330 core\n"
-//     "layout (location = 0) in vec3 aPos;\n"
-//     "uniform vec2 viewPort;\n"
-//     "void main()\n"
-//     "{\n"
-//     "   float x = (aPos.x / (viewPort.x / 2)) - 1;\n"
-//     "   float y = (aPos.y / (viewPort.y / 2)) - 1;\n"
-//     "   gl_Position = vec4(x, y, 0.0, aPos.z);\n"
-//     "}\0";
 
 #endif
