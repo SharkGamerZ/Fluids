@@ -121,6 +121,17 @@ private:
     void advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
 
     /**
+     * Advect the matrix
+     * @param mode x or y axis
+     * @param d value to advect
+     * @param d0 value at previous step
+     * @param vX velocity on x axis
+     * @param vY velocity on y axis
+     * @param dt delta time
+     */
+    void omp_advect(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
+    
+    /**
      * Project the matrix
      * @param vX velocity on x axis
      * @param vY velocity on y axis

@@ -10,9 +10,9 @@ int main() {
     std::ofstream file;
 
     const int iterations = 15;
-    const int maxSize = 800;
+    const int maxSize = 1200;
 
-    testDiffuse(maxSize, iterations);
+    testAdvect(maxSize, iterations);
 
 
 
@@ -122,10 +122,10 @@ void testDiffuse(int maxSize, int iterations) {
 
 void testAdvect(int maxSize, int iterations) {    
     std::ofstream file;
-    file.open("diffuse_results.csv");
+    file.open("advect_results.csv");
     file << "Matrix size,Serial,OMP,Speedup,Efficiency\n";
 
-    for (int matrixSize = 100; matrixSize <= maxSize; matrixSize+= 50)
+    for (int matrixSize = 75; matrixSize <= maxSize; matrixSize+= 75)
     {
         // SETUP ----------------------------------------------------------------------------------------------
         std::cout<<"------------------------------------------------------------------"<<std::endl;
@@ -137,7 +137,7 @@ void testAdvect(int maxSize, int iterations) {
 
         std::srand(unsigned(std::time(nullptr)));
 
-
+        
         // ------- Serial --------
         // Value
         std::vector<double> value(matrixSize * matrixSize);
@@ -145,7 +145,6 @@ void testAdvect(int maxSize, int iterations) {
 
         // OldValue
         std::vector<double> oldValue(matrixSize * matrixSize);
-        std::generate(oldValue.begin(), oldValue.end(), randdouble);
         std::fill(oldValue.begin(), oldValue.end(), 0);
         
 
@@ -155,7 +154,6 @@ void testAdvect(int maxSize, int iterations) {
 
         // vX0
         std::vector<double> vX0(matrixSize * matrixSize);
-        std::generate(vX0.begin(), vX0.end(), randdouble);
         std::fill(vX0.begin(), vX0.end(), 0);
         
         // vY
@@ -164,7 +162,6 @@ void testAdvect(int maxSize, int iterations) {
 
         // vY0
         std::vector<double> vY0(matrixSize * matrixSize);
-        std::generate(vY0.begin(), vY0.end(), randdouble);
         std::fill(vY0.begin(), vY0.end(), 0);
         
 
@@ -180,20 +177,18 @@ void testAdvect(int maxSize, int iterations) {
         
         // vX
         std::vector<double> vXOmp(matrixSize * matrixSize);
-        std::generate(vXOmp.begin(), vXOmp.end(), randdouble);
+        std::copy(vX.begin(), vX.end(), vXOmp.begin());
 
         // vX0
         std::vector<double> vX0Omp(matrixSize * matrixSize);
-        std::generate(vX0Omp.begin(), vX0Omp.end(), randdouble);
         std::fill(vX0Omp.begin(), vX0Omp.end(), 0);
         
         // vY
         std::vector<double> vYOmp(matrixSize * matrixSize);
-        std::generate(vYOmp.begin(), vYOmp.end(), randdouble);
+        std::copy(vY.begin(), vY.end(), vYOmp.begin());
 
         // vY0
         std::vector<double> vY0Omp(matrixSize * matrixSize);
-        std::generate(vY0Omp.begin(), vY0Omp.end(), randdouble);
         std::fill(vY0Omp.begin(), vY0Omp.end(), 0);
 
         // SERIAL ----------------------------------------------------------------------------------------------
@@ -207,8 +202,6 @@ void testAdvect(int maxSize, int iterations) {
             auto serialTime = std::chrono::duration_cast<std::chrono::milliseconds>(serialEnd - serialBegin).count();
 
             serialTimeMean += serialTime;
-
-
         }
 
         serialTimeMean /= iterations;
@@ -219,7 +212,7 @@ void testAdvect(int maxSize, int iterations) {
 
         // OMP ----------------------------------------------------------------------------------------------
         int num_threads = omp_get_max_threads();
-        omp_set_num_threads(4);
+        omp_set_num_threads(num_threads);
 
         // Calculate how many cells as maximum per thread
         const int max_rows = (int)(ceil((matrixSize-2) / num_threads) + 2);
