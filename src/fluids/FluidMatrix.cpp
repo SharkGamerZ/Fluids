@@ -199,8 +199,8 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &value, std::vector<doub
 
 	double Ndouble = this->size - 2;
 
-	for(uint32_t j = 1; j < this->size - 1; j++) {
-		for(uint32_t i = 1; i < this->size - 1; i++) {
+	for(uint32_t i = 1; i < this->size - 1; i++) {
+		for(uint32_t j = 1; j < this->size - 1; j++) {
             double v1 = vX[index(i, j, this->size)];
             double v2 = vY[index(i, j, this->size)];
             tmp1 = dt0 * v1;
@@ -237,48 +237,49 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &value, std::vector<doub
 }
 
 void FluidMatrix::omp_advect(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
-    double i0, i1, j0, j1;
-
     double dt0 = dt * (this->size - 2);
-
-	double s0, s1, t0, t1;
-	double tmp1, tmp2, x, y;
-
 	double Ndouble = this->size - 2;
+    
+    #pragma omp parallel
+    {
+        double i0, i1, j0, j1;
+        double s0, s1, t0, t1;
+        double tmp1, tmp2, x, y;
 
-    #pragma omp parallel for default(shared) collapse(2)
-	for(int j = 1; j < this->size - 1; j++) {
-		for(int i = 1; i < this->size - 1; i++) {
-            double v1 = vX[index(i, j, this->size)];
-            double v2 = vY[index(i, j, this->size)];
-            tmp1 = dt0 * v1;
-            tmp2 = dt0 * v2;
-            x = (double) i - tmp1;
-            y = (double) j - tmp2;
+        #pragma omp for
+        for(int i = 1; i < this->size - 1; i++) {
+            for(int j = 1; j < this->size - 1; j++) {
+                double v1 = vX[index(i, j, this->size)];
+                double v2 = vY[index(i, j, this->size)];
+                tmp1 = dt0 * v1;
+                tmp2 = dt0 * v2;
+                x = (double) i - tmp1;
+                y = (double) j - tmp2;
 
-            if(x < 0.5f) x = 0.5f;
-            if(x > Ndouble + 0.5f) x = Ndouble + 0.5f;
-            i0 = floor(x);
-            i1 = i0 + 1.0f;
-            if(y < 0.5f) y = 0.5f;
-            if(y > Ndouble + 0.5f) y = Ndouble + 0.5f;
-            j0 = floor(y);
-            j1 = j0 + 1.0f;
+                if(x < 0.5f) x = 0.5f;
+                if(x > Ndouble + 0.5f) x = Ndouble + 0.5f;
+                i0 = floor(x);
+                i1 = i0 + 1.0f;
+                if(y < 0.5f) y = 0.5f;
+                if(y > Ndouble + 0.5f) y = Ndouble + 0.5f;
+                j0 = floor(y);
+                j1 = j0 + 1.0f;
 
-            s1 = x - i0;
-            s0 = 1.0f - s1;
-            t1 = y - j0;
-            t0 = 1.0f - t1;
+                s1 = x - i0;
+                s0 = 1.0f - s1;
+                t1 = y - j0;
+                t0 = 1.0f - t1;
 
-            int i0i = i0;
-            int i1i = i1;
-            int j0i = j0;
-            int j1i = j1;
+                int i0i = i0;
+                int i1i = i1;
+                int j0i = j0;
+                int j1i = j1;
 
-			value[index(i, j, this->size)] =
-				s0 * (t0 * oldValue[index(i0i, j0i, this->size)] + t1 * oldValue[index(i0i, j1i, this->size)]) +
-				s1 * (t0 * oldValue[index(i1i, j0i, this->size)] + t1 * oldValue[index(i1i, j1i, this->size)]);
+                value[index(i, j, this->size)] =
+                    s0 * (t0 * oldValue[index(i0i, j0i, this->size)] + t1 * oldValue[index(i0i, j1i, this->size)]) +
+                    s1 * (t0 * oldValue[index(i1i, j0i, this->size)] + t1 * oldValue[index(i1i, j1i, this->size)]);
             }
+        }
     }
 	set_bnd(mode, value);
 

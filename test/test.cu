@@ -123,7 +123,7 @@ void testDiffuse(int maxSize, int iterations) {
 void testAdvect(int maxSize, int iterations) {    
     std::ofstream file;
     file.open("advect_results.csv");
-    file << "Matrix size,Serial,OMP,Speedup,Efficiency\n";
+    file << "Matrix size,Serial,OMP,Speedup,Efficiency,Thread number\n";
 
     for (int matrixSize = 75; matrixSize <= maxSize; matrixSize+= 75)
     {
@@ -212,6 +212,7 @@ void testAdvect(int maxSize, int iterations) {
 
         // OMP ----------------------------------------------------------------------------------------------
         int num_threads = omp_get_max_threads();
+        int realThreadNum = 0;
         omp_set_num_threads(num_threads);
 
         // Calculate how many cells as maximum per thread
@@ -219,29 +220,31 @@ void testAdvect(int maxSize, int iterations) {
         max_cells = max_rows * (matrixSize-2);        
 
         int64_t ompTimeMean = 0;
-
+        int threadNumMean = 0;
         for (int i = 0; i < iterations; i++) {
             auto ompBegin = std::chrono::high_resolution_clock::now();
 
-            omp_advect(matrixSize, Axis::ZERO, vXOmp, vX0Omp, vX0Omp, vY0Omp, dt);
+            omp_advect(matrixSize, Axis::ZERO, vXOmp, vX0Omp, vX0Omp, vY0Omp, dt, &realThreadNum);
 
             auto ompEnd = std::chrono::high_resolution_clock::now();
             auto ompTime = std::chrono::duration_cast<std::chrono::milliseconds>(ompEnd - ompBegin).count();
-
+            
+            threadNumMean += realThreadNum;
             ompTimeMean += ompTime;
         }
+        threadNumMean /= iterations;
         ompTimeMean /= iterations;
         
         std::cout << BOLD RED "OMP Advect: " << ompTimeMean << RESET " millis" << std::endl;
 
+        std::cout << BOLD PURPLE "Average team's threads number: " << threadNumMean << RESET << std::endl;
+
         speedup = (double) serialTimeMean / (double) ompTimeMean;
-        efficiency = speedup / num_threads;
+        efficiency = speedup / threadNumMean;
         std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " ";
         std::cout << BOLD GREEN "Efficiency: " << RESET << efficiency << std::endl << std::endl;
 
-        speedup = (double) serialTimeMean / (double) ompTimeMean;
-        efficiency = speedup / num_threads;
-        file << std::fixed << std::setprecision(2) << ompTimeMean << "," << std::setprecision(2) << speedup << "," << std::setprecision(2) << efficiency << "\n";
+        file << std::fixed << std::setprecision(2) << ompTimeMean << "," << std::setprecision(2) << speedup << "," << std::setprecision(2) << efficiency << "," << threadNumMean << "\n";
         
         printf("Speedup: %f\n", speedup);
         // // CUDA ----------------------------------------------------------------------------------------------
@@ -346,8 +349,8 @@ void advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &o
 
 	double Ndouble = N - 2;
 
-	for(int j = 1; j < N - 1; j++) {
-		for(int i = 1; i < N - 1; i++) {
+	for(int i = 1; i < N - 1; i++) {
+		for(int j = 1; j < N - 1; j++) {
             double v1 = vX[index(i, j, N)];
             double v2 = vY[index(i, j, N)];
             tmp1 = dt0 * v1;
@@ -384,49 +387,54 @@ void advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &o
 }
 
 
-void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt) {
-    double i0, i1, j0, j1;
-
+void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt, int * trdN) {
+    double Ndouble = N - 2;
     double dt0 = dt * (N - 2);
 
-	double s0, s1, t0, t1;
-	double tmp1, tmp2, x, y;
+    #pragma omp parallel
+    {
+        *trdN = omp_get_num_threads();
 
-	double Ndouble = N - 2;
+        double i0, i1, j0, j1;
+        double s0, s1, t0, t1;
+        double tmp1, tmp2, x, y;
 
-    #pragma omp parallel for default(shared) collapse(2)
-	for(int j = 1; j < N - 1; j++) {
-		for(int i = 1; i < N - 1; i++) {
-            double v1 = vX[index(i, j, N)];
-            double v2 = vY[index(i, j, N)];
-            tmp1 = dt0 * v1;
-            tmp2 = dt0 * v2;
-            x = (double) i - tmp1;
-            y = (double) j - tmp2;
+        /* #pragma omp parallel for default(shared) collapse(2)
+        non funge perché non devono essere tutte shared*/
+        #pragma omp for
+        for(int i = 1; i < N - 1; i++) {
+            for(int j = 1; j < N - 1; j++) {
+                double v1 = vX[index(i, j, N)];
+                double v2 = vY[index(i, j, N)];
+                tmp1 = dt0 * v1;
+                tmp2 = dt0 * v2;
+                x = (double) i - tmp1;
+                y = (double) j - tmp2;
 
-            if(x < 0.5f) x = 0.5f;
-            if(x > Ndouble + 0.5f) x = Ndouble + 0.5f;
-            i0 = floor(x);
-            i1 = i0 + 1.0f;
-            if(y < 0.5f) y = 0.5f;
-            if(y > Ndouble + 0.5f) y = Ndouble + 0.5f;
-            j0 = floor(y);
-            j1 = j0 + 1.0f;
+                if(x < 0.5f) x = 0.5f;
+                if(x > Ndouble + 0.5f) x = Ndouble + 0.5f;
+                i0 = floor(x);
+                i1 = i0 + 1.0f;
+                if(y < 0.5f) y = 0.5f;
+                if(y > Ndouble + 0.5f) y = Ndouble + 0.5f;
+                j0 = floor(y);
+                j1 = j0 + 1.0f;
 
-            s1 = x - i0;
-            s0 = 1.0f - s1;
-            t1 = y - j0;
-            t0 = 1.0f - t1;
+                s1 = x - i0;
+                s0 = 1.0f - s1;
+                t1 = y - j0;
+                t0 = 1.0f - t1;
 
-            int i0i = i0;
-            int i1i = i1;
-            int j0i = j0;
-            int j1i = j1;
+                int i0i = i0;
+                int i1i = i1;
+                int j0i = j0;
+                int j1i = j1;
 
-			value[index(i, j, N)] =
-				s0 * (t0 * oldValue[index(i0i, j0i, N)] + t1 * oldValue[index(i0i, j1i, N)]) +
-				s1 * (t0 * oldValue[index(i1i, j0i, N)] + t1 * oldValue[index(i1i, j1i, N)]);
+                value[index(i, j, N)] =
+                    s0 * (t0 * oldValue[index(i0i, j0i, N)] + t1 * oldValue[index(i0i, j1i, N)]) +
+                    s1 * (t0 * oldValue[index(i1i, j0i, N)] + t1 * oldValue[index(i1i, j1i, N)]);
             }
+        }
     }
 	set_bnd(N, mode, value);
 
