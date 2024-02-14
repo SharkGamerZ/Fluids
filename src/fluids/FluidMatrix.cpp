@@ -240,6 +240,8 @@ void FluidMatrix::omp_advect(Axis mode, std::vector<double> &value, std::vector<
     double dt0 = dt * (this->size - 2);
 	double Ndouble = this->size - 2;
     
+    omp_set_num_threads(omp_get_max_threads());
+
     #pragma omp parallel
     {
         double i0, i1, j0, j1;
@@ -280,9 +282,8 @@ void FluidMatrix::omp_advect(Axis mode, std::vector<double> &value, std::vector<
                     s1 * (t0 * oldValue[index(i1i, j0i, this->size)] + t1 * oldValue[index(i1i, j1i, this->size)]);
             }
         }
+	omp_set_bnd(mode, value);
     }
-	set_bnd(mode, value);
-
 }
 
 
@@ -332,6 +333,29 @@ void FluidMatrix::set_bnd(Axis mode, std::vector<double> &attr) const {
     attr[index(this->size - 1, 0, this->size)] = 0.5f * (attr[index(this->size - 2, 0, this->size)] + attr[index(this->size - 1, 1, this->size)]);
     attr[index(this->size - 1, this->size - 1, this->size)] = 0.5f * (attr[index(this->size - 2, this->size - 1, this->size)] + attr[index(this->size - 1, this->size - 2, this->size)]);
 }
+
+void FluidMatrix::omp_set_bnd(Axis mode, std::vector<double> &attr) const {
+    #pragma omp for
+    for (uint32_t i = 1; i < this->size - 1; i++) {
+        attr[index(i, 0, this->size)] = mode == Axis::Y ? -attr[index(i, 1, this->size)] : attr[index(i, 1, this->size)];
+        attr[index(i, this->size - 1, this->size)] = mode == Axis::Y ? -attr[index(i, this->size - 2, this->size)] : attr[index(i, this->size - 2, this->size)];
+    }
+    #pragma omp for
+    for (uint32_t j = 1; j < this->size - 1; j++) {
+        attr[index(0, j, this->size)] = mode == Axis::X ? -attr[index(1, j, this->size)] : attr[index(1, j, this->size)];
+        attr[index(this->size - 1, j, this->size)] = mode == Axis::X ? -attr[index(this->size - 2, j, this->size)] : attr[index(this->size - 2, j, this->size)];
+    }
+
+    #pragma omp master
+    {
+        attr[index(0, 0, this->size)] = 0.5f * (attr[index(1, 0, this->size)] + attr[index(0, 1, this->size)]);
+        attr[index(0, this->size - 1, this->size)] = 0.5f * (attr[index(1, this->size - 1, this->size)] + attr[index(0, this->size - 2, this->size)]);
+
+        attr[index(this->size - 1, 0, this->size)] = 0.5f * (attr[index(this->size - 2, 0, this->size)] + attr[index(this->size - 1, 1, this->size)]);
+        attr[index(this->size - 1, this->size - 1, this->size)] = 0.5f * (attr[index(this->size - 2, this->size - 1, this->size)] + attr[index(this->size - 1, this->size - 2, this->size)]);
+    }
+}
+
 
 // GIUSTA
 void FluidMatrix::lin_solve(Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate) const {

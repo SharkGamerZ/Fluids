@@ -199,13 +199,13 @@ void testAdvect(int maxSize, int iterations) {
             advect(matrixSize, Axis::ZERO, vX, vX0, vX0, vY0, dt);
 
             auto serialEnd = std::chrono::high_resolution_clock::now();
-            auto serialTime = std::chrono::duration_cast<std::chrono::milliseconds>(serialEnd - serialBegin).count();
+            auto serialTime = std::chrono::duration_cast<std::chrono::microseconds>(serialEnd - serialBegin).count();
 
             serialTimeMean += serialTime;
         }
 
         serialTimeMean /= iterations;
-        std::cout << BOLD YELLOW "Advect: " << serialTimeMean << RESET " millis "<<std::endl<<std::endl;
+        std::cout << BOLD YELLOW "Advect: " << serialTimeMean << RESET " micros "<<std::endl<<std::endl;
 
         file << matrixSize << "," << serialTimeMean << ",";
 
@@ -227,7 +227,7 @@ void testAdvect(int maxSize, int iterations) {
             omp_advect(matrixSize, Axis::ZERO, vXOmp, vX0Omp, vX0Omp, vY0Omp, dt, &realThreadNum);
 
             auto ompEnd = std::chrono::high_resolution_clock::now();
-            auto ompTime = std::chrono::duration_cast<std::chrono::milliseconds>(ompEnd - ompBegin).count();
+            auto ompTime = std::chrono::duration_cast<std::chrono::microseconds>(ompEnd - ompBegin).count();
             
             threadNumMean += realThreadNum;
             ompTimeMean += ompTime;
@@ -235,7 +235,7 @@ void testAdvect(int maxSize, int iterations) {
         threadNumMean /= iterations;
         ompTimeMean /= iterations;
         
-        std::cout << BOLD RED "OMP Advect: " << ompTimeMean << RESET " millis" << std::endl;
+        std::cout << BOLD RED "OMP Advect: " << ompTimeMean << RESET " micros" << std::endl;
 
         std::cout << BOLD PURPLE "Average team's threads number: " << threadNumMean << RESET << std::endl;
 
@@ -435,9 +435,9 @@ void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double
                     s1 * (t0 * oldValue[index(i1i, j0i, N)] + t1 * oldValue[index(i1i, j1i, N)]);
             }
         }
+    
+        omp_set_bnd(N, mode, value);
     }
-	set_bnd(N, mode, value);
-
 }
 
 
@@ -531,6 +531,29 @@ void set_bnd(int N, Axis mode, std::vector<double> &attr) {
 
     attr[IX(N - 1, 0    )] = 0.5f * (attr[IX(N - 2, 0)] + attr[IX(N - 1, 1)]);
     attr[IX(N - 1, N - 1)] = 0.5f * (attr[IX(N - 2, N - 1)] + attr[IX(N - 1, N - 2)]);
+}
+
+/*i thread in omp_set_bound sono quelli utilizzati dalla funzione omp che la chiama (cioè non crea i suoi threads)*/
+void omp_set_bnd(int N, Axis mode, std::vector<double> &attr) {
+    #pragma omp for
+    for (int i = 1; i < N - 1; i++) {
+        attr[IX(i, 0    )] = mode == Axis::Y ? -attr[IX(i, 1)] : attr[IX(i, 1)];
+        attr[IX(i, N - 1)] = mode == Axis::Y ? -attr[IX(i, N - 2)] : attr[IX(i, N - 2)];
+    }
+    #pragma omp for
+    for (int j = 1; j < N - 1; j++) {
+        attr[IX(0, j    )] = mode == Axis::X ? -attr[IX(1, j)] : attr[IX(1, j)];
+        attr[IX(N - 1, j)] = mode == Axis::X ? -attr[IX(N - 2, j)] : attr[IX(N - 2, j)];
+    }
+
+    #pragma omp master
+    {
+        attr[IX(0    , 0    )] = 0.5f * (attr[IX(1, 0)] + attr[IX(0, 1)]);
+        attr[IX(0    , N - 1)] = 0.5f * (attr[IX(1, N - 1)] + attr[IX(0, N - 2)]);
+
+        attr[IX(N - 1, 0    )] = 0.5f * (attr[IX(N - 2, 0)] + attr[IX(N - 1, 1)]);
+        attr[IX(N - 1, N - 1)] = 0.5f * (attr[IX(N - 2, N - 1)] + attr[IX(N - 1, N - 2)]);
+    }
 }
 
 __device__ void kernel_set_bnd(int N, Axis mode, double *attr) {

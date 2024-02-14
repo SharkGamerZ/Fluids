@@ -148,6 +148,13 @@ private:
     void set_bnd(Axis mode, std::vector<double> &attr) const;
 
     /**
+     * Set the boundary of the matrix
+     * @param mode x or y axis
+     * @param attr attribute to set
+     */
+    void omp_set_bnd(Axis mode, std::vector<double> &attr) const;
+
+    /**
      * Solve the linear equation
      * @param mode x or y axis
      * @param value value to solve
