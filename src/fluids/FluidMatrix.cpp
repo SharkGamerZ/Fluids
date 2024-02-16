@@ -289,8 +289,8 @@ void FluidMatrix::omp_advect(Axis mode, std::vector<double> &value, std::vector<
 
 
 void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
-    for (uint32_t j = 1; j < this->size - 1; j++) {
-        for (uint32_t i = 1; i < this->size - 1; i++) {
+    for (uint32_t i = 1; i < this->size - 1; i++) {
+        for (uint32_t j = 1; j < this->size - 1; j++) {
             div[index(i, j, this->size)] = -0.5f * (
                                 vX[index(i + 1, j, this->size)]
                               - vX[index(i - 1, j, this->size)]
@@ -304,8 +304,8 @@ void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std:
     set_bnd(Axis::ZERO, p);
     lin_solve(Axis::ZERO, p, div, 1);
 
-    for (uint32_t j = 1; j < this->size - 1; j++) {
-        for (uint32_t i = 1; i < this->size - 1; i++) {
+    for (uint32_t i = 1; i < this->size - 1; i++) {
+        for (uint32_t j = 1; j < this->size - 1; j++) {
             vX[index(i, j, this->size)] -= 0.5f * (p[index(i + 1, j, this->size)] - p[index(i - 1, j, this->size)]) * this->size;
             vY[index(i, j, this->size)] -= 0.5f * (p[index(i, j + 1, this->size)] - p[index(i, j - 1, this->size)]) * this->size;
         }
@@ -362,8 +362,8 @@ void FluidMatrix::lin_solve(Axis mode, std::vector<double> &nextValue, std::vect
     double c = 1 + 6 * diffusionRate;
     double cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++) {
-        for (uint32_t j = 1; j < this->size - 1; j++) {
-            for (uint32_t i = 1; i < this->size - 1; i++) {
+        for (uint32_t i = 1; i < this->size - 1; i++) {
+            for (uint32_t j = 1; j < this->size - 1; j++) {
                 nextValue[index(i, j, this->size)] = (value[index(i, j, this->size)]
                                                       + diffusionRate * (
                         nextValue[index(i + 1, j, this->size)]
@@ -383,9 +383,9 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
     for (int k = 0; k < ITERATIONS; k++)
     {
         #pragma omp parallel for collapse(2) default(shared) schedule(static,1) num_threads(4)
-        for (uint32_t j = 1; j < this->size - 1; j++)
+        for (uint32_t i = 1; i < this->size - 1; i++)
         {
-            for (uint32_t i = 1; i < this->size - 1; i++)
+            for (uint32_t j = 1; j < this->size - 1; j++)
             {
                 nextValue[index(i, j, this->size)] = (value[index(i, j, this->size)]
                                                       + diffusionRate * (
@@ -396,7 +396,7 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
                 )) * cRecip;
             }
         }
-        set_bnd(mode, nextValue);
+        omp_set_bnd(mode, nextValue);
     }
 
 }
