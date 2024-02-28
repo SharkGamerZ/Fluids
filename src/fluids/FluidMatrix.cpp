@@ -282,7 +282,7 @@ void FluidMatrix::omp_advect(Axis mode, std::vector<double> &value, std::vector<
                     s1 * (t0 * oldValue[index(i1i, j0i, this->size)] + t1 * oldValue[index(i1i, j1i, this->size)]);
             }
         }
-	omp_set_bnd(mode, value);
+	    omp_set_bnd(mode, value);
     }
 }
 
@@ -346,7 +346,7 @@ void FluidMatrix::omp_set_bnd(Axis mode, std::vector<double> &attr) const {
         attr[index(this->size - 1, j, this->size)] = mode == Axis::X ? -attr[index(this->size - 2, j, this->size)] : attr[index(this->size - 2, j, this->size)];
     }
 
-    #pragma omp master
+    #pragma omp single
     {
         attr[index(0, 0, this->size)] = 0.5f * (attr[index(1, 0, this->size)] + attr[index(0, 1, this->size)]);
         attr[index(0, this->size - 1, this->size)] = 0.5f * (attr[index(1, this->size - 1, this->size)] + attr[index(0, this->size - 2, this->size)]);

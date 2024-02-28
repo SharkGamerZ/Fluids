@@ -35,7 +35,7 @@ bool double_equals(double a, double b, double epsilon = 0.0001);
 
 
 void diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
-void omp_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
+void omp_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt, int * trdN);
 void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
 
 void advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt);
@@ -44,7 +44,7 @@ void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double
 
 
 void lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate);
-void omp_lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate);
+void omp_lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate, int * trdN);
 __global__ void kernel_lin_solve(int N, Axis mode, double* nextValue, double* value, double diffusionRate);
 
 
