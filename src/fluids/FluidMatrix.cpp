@@ -448,7 +448,6 @@ void FluidMatrix::fadeDensity(std::vector<double> &density) const {
     for (uint32_t i = 0; i < size * size; i++) {
         double d = density[i];
         density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
-==== BASE ====
     }
 }
 
