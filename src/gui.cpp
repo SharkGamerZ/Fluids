@@ -9,7 +9,7 @@ int executionMode = SERIAL;
 const int matrixSize = 200;
 const int scalingFactor = 4;
 const int viewportSize = matrixSize * scalingFactor;
-const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
+const int chunkSize = 9; // Variabile usata quando si va a mostrare la velocità
 
 const ImVec4 clear_color = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 
@@ -26,8 +26,7 @@ double xpos, ypos, xpos0, ypos0, deltaX, deltaY;
 double xposScaled, yposScaled;
 double mouseTime, mouseTime0, mouseDeltaTime;
 
-int openGUI()
-{
+int openGUI() {
     // Setup della finestra e del context di IMGui
     GLFWwindow *window = setupWindow(viewportSize, viewportSize);
     ImGuiIO *io = setupImGui(window);
@@ -61,23 +60,19 @@ int openGUI()
         // Aggiunge densità e velocità con il mouse
         int mouseLeftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
 
-        if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize)
-        {
+        if (xposScaled >= 0 && xposScaled < matrixSize && yposScaled >= 0 && yposScaled < matrixSize) {
             // Aggiunge densità
-            if (mouseLeftButtonState == GLFW_PRESS)
-                {
-                    // Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
-                    // matrix.addDensity(2, 2, 1.0f);
+            if (mouseLeftButtonState == GLFW_PRESS) {
+                // Situazione di crash/esplosione dei valori tipo: (fixata nell'advection)
+                // matrix.addDensity(2, 2, 1.0f);
 
-                    // matrix.addVelocity(2, 2, 10000000.0f, 0);
-
-
-                    //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
-
-                    matrix.addDensity(xposScaled, yposScaled, 20.0f);
+                // matrix.addVelocity(2, 2, 10000000.0f, 0);
 
 
-                }
+                //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
+
+                matrix.addDensity(xposScaled, yposScaled, 20.0f);
+            }
 
             // Calcola la velocità
             deltaX /= scalingFactor * 2;
@@ -91,34 +86,27 @@ int openGUI()
 
 
         // Aggiunta effetto macchina del vento
-        if (windMachine)
-        {
-            for (int i = 0; i < matrixSize; i++)
-            {
+        if (windMachine) {
+            for (int i = 0; i < matrixSize; i++) {
                 matrix.addVelocity(2, i, 0.0, 0.5);
             }
         }
 
 
         // Controlla se la simulazione vada resettata
-        if(resetSimulation)
-        {
+        if (resetSimulation) {
             matrix.reset();
             resetSimulation = false;
         }
 
         // Simulazione
-        if (simulazioneIsRunning || frameSimulation)
-        {
-            if (executionMode == SERIAL)
-                matrix.step();
-            else if (executionMode == OPENMP)
-                matrix.OMPstep();
+        if (simulazioneIsRunning || frameSimulation) {
+            if (executionMode == SERIAL) matrix.step();
+            else if (executionMode == OPENMP) matrix.OMPstep();
             frameSimulation = false;
         }
 
         // --------------------------------------------------------------
-
 
 
         // Setta le dimensioni del viewport
@@ -154,58 +142,45 @@ int openGUI()
 }
 
 
-
-
 // Funzione per la gestione degli input
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     // Se l'utente preme il tasto ESC, chiude la finestra
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
 
     // Se l'utente preme il tasto SPACE, inverte lo stato della simulazione
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-        simulazioneIsRunning = !simulazioneIsRunning;
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) simulazioneIsRunning = !simulazioneIsRunning;
 
     // Se l'utente preme il tasto RIGHT, fa avanzare la simulazione di un frame
-    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-        frameSimulation = true;
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) frameSimulation = true;
 
     // Se l'utente preme il tasto R, resetta la simulazione
-    if (key == GLFW_KEY_R && action == GLFW_PRESS)
-        resetSimulation = true;
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) resetSimulation = true;
 
     // Se l'utente preme il tasto V, cambia l'attributo della simulazione
-    if (key == GLFW_KEY_V && action == GLFW_PRESS)
-        simulationAttribute = (simulationAttribute + 1) % 2;
+    if (key == GLFW_KEY_V && action == GLFW_PRESS) simulationAttribute = (simulationAttribute + 1) % 2;
 
     // Se l'utente preme il tasto W, attiva/disattiva la macchina del vento
-    if (key == GLFW_KEY_W && action == GLFW_PRESS)
-        windMachine = !windMachine;
-
+    if (key == GLFW_KEY_W && action == GLFW_PRESS) windMachine = !windMachine;
 }
 
 
 uint32_t getShaderProgram() {
-    int  success;
+    int success;
     char infoLog[512];
 
     // Get the shader source code from the GLSL files
     std::string vertexShaderSource;
     std::string fragmentShaderSource;
-    if (simulationAttribute == DENSITY_ATTRIBUTE)
-    {
+    if (simulationAttribute == DENSITY_ATTRIBUTE) {
         vertexShaderSource = readFile("../src/shaders/density.vert");
         fragmentShaderSource = readFile("../src/shaders/density.frag");
-    }
-    else
-    {
+    } else {
         vertexShaderSource = readFile("../src/shaders/velocity.vert");
         fragmentShaderSource = readFile("../src/shaders/velocity.frag");
     }
 
-    const char* vertexShaderSourceCStr = vertexShaderSource.c_str();
-    const char* fragmentShaderSourceCStr = fragmentShaderSource.c_str();
+    const char *vertexShaderSourceCStr = vertexShaderSource.c_str();
+    const char *fragmentShaderSourceCStr = fragmentShaderSource.c_str();
 
 
     // Creiamo l'id della vertexShader
@@ -216,8 +191,7 @@ uint32_t getShaderProgram() {
     glCompileShader(vertexShader);
 
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
+    if (!success) {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
         errorPrint("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + std::string(infoLog));
         return 0;
@@ -231,8 +205,7 @@ uint32_t getShaderProgram() {
     glCompileShader(fragmentShader);
 
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
+    if (!success) {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
         errorPrint("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + std::string(infoLog));
         return 0;
@@ -249,7 +222,7 @@ uint32_t getShaderProgram() {
 
     // Verifichiamo che il programma di shader sia stato creato correttamente
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if(!success) {
+    if (!success) {
         glGetProgramInfoLog(shaderProgram, sizeof(infoLog), nullptr, infoLog);
         return 0;
     }
@@ -257,7 +230,6 @@ uint32_t getShaderProgram() {
 
     // Usiamo il programma di shader
     glUseProgram(shaderProgram);
-
 
 
     // Eliminiamo le shader
@@ -320,19 +292,22 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
 
         ImGui::Begin("Parametri di simulazione", nullptr, ImGuiWindowFlags_NoResize);
 
-        ImGui::SliderFloat("Viscosità", &viscosita, 0.0f, 0.0001f, "%.7f",ImGuiSliderFlags_Logarithmic);
+        ImGui::SliderFloat("Viscosità", &viscosita, 0.0f, 0.0001f, "%.7f", ImGuiSliderFlags_Logarithmic);
         matrix->visc = viscosita;
 
         ImGui::SliderFloat("TimeStep", &deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
         matrix->dt = deltaTime;
 
         ImGui::Text("Visualizzazione");
-        ImGui::RadioButton("Densità", &simulationAttribute, DENSITY_ATTRIBUTE); ImGui::SameLine();
+        ImGui::RadioButton("Densità", &simulationAttribute, DENSITY_ATTRIBUTE);
+        ImGui::SameLine();
         ImGui::RadioButton("Velocità", &simulationAttribute, VELOCITY_ATTRIBUTE);
 
         ImGui::Text("Esecuzione");
-        ImGui::RadioButton("Seriale", &executionMode, SERIAL); ImGui::SameLine();
-        ImGui::RadioButton("OpenMP", &executionMode, OPENMP); ImGui::SameLine();
+        ImGui::RadioButton("Seriale", &executionMode, SERIAL);
+        ImGui::SameLine();
+        ImGui::RadioButton("OpenMP", &executionMode, OPENMP);
+        ImGui::SameLine();
         ImGui::RadioButton("CUDA", &executionMode, CUDA);
 
         // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -346,8 +321,6 @@ void renderImGui(ImGuiIO *io, FluidMatrix *matrix) {
         ImGui::End();
     }
 }
-
-
 
 
 void drawMatrix(FluidMatrix *matrix) {
@@ -369,24 +342,17 @@ void drawMatrix(FluidMatrix *matrix) {
 
     int N = viewportSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
-    float* vertices;
-    if (simulationAttribute == DENSITY_ATTRIBUTE)
-        vertices = getDensityVertices(matrix);
-    else
-        vertices = getVelocityVertices(matrix);
+    float *vertices = simulationAttribute == DENSITY_ATTRIBUTE ? getDensityVertices(matrix) : getVelocityVertices(matrix);
 
     // Linka i vertici al Vertex Array
-    if (simulationAttribute == DENSITY_ATTRIBUTE)
-    {
+    if (simulationAttribute == DENSITY_ATTRIBUTE) {
         glBindVertexArray(VAO);
         linkDensityVerticestoBuffer(vertices, N * N * 3);
         glDrawArrays(GL_POINTS, 0, N * N * 3);
-    }
-    else
-    {
+    } else {
         glBindVertexArray(VAO);
         linkVelocityVerticestoBuffer(vertices, N * N * 4);
-        glDrawArrays(GL_POINTS, 0, N*N*4);
+        glDrawArrays(GL_POINTS, 0, N * N * 4);
     }
 
     free(vertices);
@@ -394,20 +360,19 @@ void drawMatrix(FluidMatrix *matrix) {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteProgram(shaderProgram);
-
 }
 
 float *getDensityVertices(FluidMatrix *matrix) {
     int N = viewportSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N * 3 visto che ho 2 coordinate e 1 colore per ogni vertice
-    float* vertices = (float*) calloc(sizeof(float), N * N * 3);
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            vertices[3 * (FluidMatrix::index(i, j, N))]       = j; // La prima è la X, quindi j
-            vertices[3 * (FluidMatrix::index(i, j, N)) + 1]   = i; // La seconda è la Y, quindi i
+    float *vertices = (float *) calloc(sizeof(float), N * N * 3);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            vertices[3 * (FluidMatrix::index(i, j, N))] = j;     // La prima è la X, quindi j
+            vertices[3 * (FluidMatrix::index(i, j, N)) + 1] = i; // La seconda è la Y, quindi i
 
-            int index = (i/scalingFactor)*matrixSize + (j/scalingFactor);
-            vertices[3 * (FluidMatrix::index(i, j, N)) + 2]   = matrix->density[index];
+            int index = (i / scalingFactor) * matrixSize + (j / scalingFactor);
+            vertices[3 * (FluidMatrix::index(i, j, N)) + 2] = matrix->density[index];
         }
     }
 
@@ -423,15 +388,15 @@ float *getDensityVertices(FluidMatrix *matrix) {
 float *getVelocityVertices(FluidMatrix *matrix) {
     int N = viewportSize;
     // Creiamo un vettore di vertici per la matrice, grande N*N * 4 visto che ho 2 coordinate e vX,vY per ogni vertice
-    float* vertices = (float*) calloc(sizeof(float), N * N * 4);
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            vertices[4 * (FluidMatrix::index(i, j, N))]       = j; // La prima è la X, quindi j
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 1]   = i; // La seconda è la Y, quindi i
+    float *vertices = (float *) calloc(sizeof(float), N * N * 4);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            vertices[4 * (FluidMatrix::index(i, j, N))] = j;     // La prima è la X, quindi j
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 1] = i; // La seconda è la Y, quindi i
 
-            int index = (i/scalingFactor)*matrixSize + (j/scalingFactor);
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 2]   = matrix->Vx[index];
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 3]   = matrix->Vy[index];
+            int index = (i / scalingFactor) * matrixSize + (j / scalingFactor);
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 2] = matrix->Vx[index];
+            vertices[4 * (FluidMatrix::index(i, j, N)) + 3] = matrix->Vy[index];
         }
     }
 
@@ -450,7 +415,7 @@ void linkDensityVerticestoBuffer(float *vertices, int len) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
 }
 
@@ -460,11 +425,11 @@ void linkVelocityVerticestoBuffer(float *vertices, int len) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * len, vertices, GL_DYNAMIC_DRAW);
 
     // Attacca il Vertex Buffer all'attuale Vertex Array
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE,4 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
 }
 
-void setupBufferAndArray(uint32_t* VBO, uint32_t* VAO) {
+void setupBufferAndArray(uint32_t *VBO, uint32_t *VAO) {
     // Setup del Vertex Array
     glGenVertexArrays(1, VAO);
     // Rende il Vertex Array attivo, creandolo se necessario
@@ -481,10 +446,9 @@ void setupBufferAndArray(uint32_t* VBO, uint32_t* VAO) {
 // SPECCHIA ASSE X
 void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++){
-            vertices[3 * FluidMatrix::index(i, j, N)]        = (vertices[3 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[3 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
-
+        for (int j = 0; j < N; j++) {
+            vertices[3 * FluidMatrix::index(i, j, N)] = (vertices[3 * FluidMatrix::index(i, j, N)] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * FluidMatrix::index(i, j, N) + 1] = 1 - (vertices[3 * FluidMatrix::index(i, j, N) + 1] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 }
@@ -492,10 +456,9 @@ void normalizeVertices(float *vertices, int N) {
 void normalizeSpeedVertices(float *vertices, int N) {
 
     for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++){
-            vertices[4 * FluidMatrix::index(i, j, N)]        = (vertices[4 * FluidMatrix::index(i, j, N)]         / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * FluidMatrix::index(i, j, N) + 1]    = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1]     / ((float) (viewportSize - 1) / 2.0f));
+        for (int j = 0; j < N; j++) {
+            vertices[4 * FluidMatrix::index(i, j, N)] = (vertices[4 * FluidMatrix::index(i, j, N)] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * FluidMatrix::index(i, j, N) + 1] = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
-
 }

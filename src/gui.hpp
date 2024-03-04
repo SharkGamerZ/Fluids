@@ -1,20 +1,18 @@
 #ifndef GUI_HPP_
 #define GUI_HPP_
 
-#define FM_OLD 0 ///< Set to 1 to use the C version, 0 to use the C++ version
-
-#include <cstdlib>
-#include <cstdio>
-#include <iostream>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 
 
 #include "fluids/FluidMatrix.h"
 
-#include "utils.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "utils.hpp"
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
@@ -75,10 +73,12 @@ void linkDensityVerticestoBuffer(float *vertices, int len);
 void linkVelocityVerticestoBuffer(float *vertices, int len);
 
 float *getDensityVertices(FluidMatrix *matrix);
+
 float *getVelocityVertices(FluidMatrix *matrix);
 
 
 void normalizeVertices(float *vertices, int N);
+
 void normalizeSpeedVertices(float *vertices, int N);
 
 #endif
