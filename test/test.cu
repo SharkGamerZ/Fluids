@@ -12,7 +12,7 @@ int main() {
     const int iterations = 15;
     const int maxSize = 1200;
 
-    testDiffuse(maxSize, iterations);
+    testProject(maxSize, iterations);
 
 
 
@@ -63,7 +63,7 @@ void testDiffuse(int maxSize, int iterations) {
         }
 
         serialTimeMean /= iterations;
-        std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " millis "<<std::endl<<std::endl;
+        std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " micros "<<std::endl<<std::endl;
 
         file << matrixSize << "," << serialTimeMean << ",";
 
@@ -139,15 +139,6 @@ void testAdvect(int maxSize, int iterations) {
 
         
         // ------- Serial --------
-        // Value
-        std::vector<double> value(matrixSize * matrixSize);
-        std::generate(value.begin(), value.end(), randdouble);
-
-        // OldValue
-        std::vector<double> oldValue(matrixSize * matrixSize);
-        std::fill(oldValue.begin(), oldValue.end(), 0);
-        
-
         // vX
         std::vector<double> vX(matrixSize * matrixSize);
         std::generate(vX.begin(), vX.end(), randdouble);
@@ -166,15 +157,6 @@ void testAdvect(int maxSize, int iterations) {
         
 
         // ------- OMP -------- 
-        // Value
-        std::vector<double> valueOmp(matrixSize * matrixSize);
-        std::copy(value.begin(), value.end(), valueOmp.begin());
-
-        // OldValue
-        std::vector<double> oldValueOmp(matrixSize * matrixSize);
-        std::copy(oldValue.begin(), oldValue.end(), oldValueOmp.begin());
-
-        
         // vX
         std::vector<double> vXOmp(matrixSize * matrixSize);
         std::copy(vX.begin(), vX.end(), vXOmp.begin());
@@ -199,13 +181,13 @@ void testAdvect(int maxSize, int iterations) {
             advect(matrixSize, Axis::ZERO, vX, vX0, vX0, vY0, dt);
 
             auto serialEnd = std::chrono::high_resolution_clock::now();
-            auto serialTime = std::chrono::duration_cast<std::chrono::microseconds>(serialEnd - serialBegin).count();
+            auto serialTime = std::chrono::duration_cast<std::chrono::nanoseconds>(serialEnd - serialBegin).count();
 
             serialTimeMean += serialTime;
         }
 
         serialTimeMean /= iterations;
-        std::cout << BOLD YELLOW "Advect: " << serialTimeMean << RESET " micros "<<std::endl<<std::endl;
+        std::cout << BOLD YELLOW "Advect: " << serialTimeMean << RESET " nanos "<<std::endl<<std::endl;
 
         file << matrixSize << "," << serialTimeMean << ",";
 
@@ -227,7 +209,7 @@ void testAdvect(int maxSize, int iterations) {
             omp_advect(matrixSize, Axis::ZERO, vXOmp, vX0Omp, vX0Omp, vY0Omp, dt, &realThreadNum);
 
             auto ompEnd = std::chrono::high_resolution_clock::now();
-            auto ompTime = std::chrono::duration_cast<std::chrono::microseconds>(ompEnd - ompBegin).count();
+            auto ompTime = std::chrono::duration_cast<std::chrono::nanoseconds>(ompEnd - ompBegin).count();
             
             threadNumMean += realThreadNum;
             ompTimeMean += ompTime;
@@ -235,7 +217,7 @@ void testAdvect(int maxSize, int iterations) {
         threadNumMean /= iterations;
         ompTimeMean /= iterations;
         
-        std::cout << BOLD RED "OMP Advect: " << ompTimeMean << RESET " micros" << std::endl;
+        std::cout << BOLD RED "OMP Advect: " << ompTimeMean << RESET " nanos" << std::endl;
 
         std::cout << BOLD PURPLE "Average team's threads number: " << threadNumMean << RESET << std::endl;
 
@@ -283,24 +265,47 @@ void testProject(int maxSize, int iterations) {
 
         std::srand(unsigned(std::time(nullptr)));
 
-        std::vector<double> value(matrixSize * matrixSize);
-        std::generate(value.begin(), value.end(), randdouble);
+        
+        // ------- Serial --------
+        // vX
+        std::vector<double> vX(matrixSize * matrixSize);
+        std::generate(vX.begin(), vX.end(), randdouble);
 
-        std::vector<double> oldValue(matrixSize * matrixSize);
-        std::fill(oldValue.begin(), oldValue.end(), 0);
+        // vX0
+        std::vector<double> vX0(matrixSize * matrixSize);
+        std::fill(vX0.begin(), vX0.end(), 0);
+        
+        // vY
+        std::vector<double> vY(matrixSize * matrixSize);
+        std::generate(vY.begin(), vY.end(), randdouble);
 
+        // vY0
+        std::vector<double> vY0(matrixSize * matrixSize);
+        std::fill(vY0.begin(), vY0.end(), 0);
+        
 
-        std::vector<double> valueOmp(matrixSize * matrixSize);
-        std::copy(value.begin(), value.end(), valueOmp.begin());
+        // ------- OMP -------- 
+        // vX
+        std::vector<double> vXOmp(matrixSize * matrixSize);
+        std::copy(vX.begin(), vX.end(), vXOmp.begin());
 
-        std::vector<double> oldValueOmp(matrixSize * matrixSize);
-        std::copy(oldValue.begin(), oldValue.end(), oldValueOmp.begin());
+        // vX0
+        std::vector<double> vX0Omp(matrixSize * matrixSize);
+        std::fill(vX0Omp.begin(), vX0Omp.end(), 0);
+        
+        // vY
+        std::vector<double> vYOmp(matrixSize * matrixSize);
+        std::copy(vY.begin(), vY.end(), vYOmp.begin());
+
+        // vY0
+        std::vector<double> vY0Omp(matrixSize * matrixSize);
+        std::fill(vY0Omp.begin(), vY0Omp.end(), 0);
 
         // SERIAL ----------------------------------------------------------------------------------------------
         std::cout << BOLD BLUE "Matrix size: " << RESET << matrixSize << std::endl;
         for (int i = 0; i < iterations; i++) {
             auto serialBegin = std::chrono::high_resolution_clock::now();
-            diffuse(matrixSize, Axis::ZERO, value, oldValue, diff, dt);
+            project(matrixSize, vX, vY, vX0, vY0);
             auto serialEnd = std::chrono::high_resolution_clock::now();
             auto serialTime = std::chrono::duration_cast<std::chrono::microseconds>(serialEnd - serialBegin).count();
 
@@ -310,7 +315,7 @@ void testProject(int maxSize, int iterations) {
         }
 
         serialTimeMean /= iterations;
-        std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " millis "<<std::endl<<std::endl;
+        std::cout << BOLD YELLOW "Project: " << serialTimeMean << RESET " micros "<<std::endl<<std::endl;
 
         file << matrixSize << "," << serialTimeMean << ",";
 
@@ -329,7 +334,7 @@ void testProject(int maxSize, int iterations) {
 
         for (int i = 0; i < iterations; i++) {    
             auto ompBegin = std::chrono::high_resolution_clock::now();
-            omp_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt, &realThreadNumber);
+            omp_project(matrixSize, vXOmp, vYOmp, vX0Omp, vY0Omp, &realThreadNumber);
             auto ompEnd = std::chrono::high_resolution_clock::now();
             auto ompTime = std::chrono::duration_cast<std::chrono::microseconds>(ompEnd - ompBegin).count();
             threadMean += realThreadNumber;
@@ -338,7 +343,9 @@ void testProject(int maxSize, int iterations) {
         threadMean /= iterations;
         ompTimeMean /= iterations;
         
-        std::cout << BOLD RED "OMP Diffuse: " << ompTimeMean << RESET " micros" << std::endl;
+        std::cout << BOLD RED "OMP Project: " << ompTimeMean << RESET " micros" << std::endl;
+
+        std::cout << BOLD PURPLE "Average team's threads number: " << threadMean << RESET << std::endl;
 
         speedup = (double) serialTimeMean / (double) ompTimeMean;
         efficiency = speedup / num_threads;
@@ -550,6 +557,42 @@ void project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vecto
     }
     set_bnd(N, Axis::X, vX);
     set_bnd(N, Axis::Y, vY);
+}
+
+
+void omp_project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div, int * trdN) {
+    #pragma omp parallel default(shared)
+    {
+        #pragma omp for schedule(guided) collapse(2)
+        for (uint32_t i = 1; i < N - 1; i++) {
+            for (uint32_t j = 1; j < N - 1; j++) {
+                div[index(i, j, N)] = -0.5f * (
+                                    vX[index(i + 1, j, N)]
+                                - vX[index(i - 1, j, N)]
+                                + vY[index(i, j + 1, N)]
+                                - vY[index(i, j - 1, N)]
+                            ) / N;
+                p[index(i, j, N)] = 0;
+            }
+        }
+        omp_set_bnd(N, Axis::ZERO, div);
+        omp_set_bnd(N, Axis::ZERO, p);
+        #pragma omp single
+        {
+            omp_set_nested(1);
+            omp_lin_solve(N, Axis::ZERO, p, div, 1, trdN);
+        }
+
+        #pragma omp for schedule(guided) collapse(2)
+        for (uint32_t i = 1; i < N - 1; i++) {
+            for (uint32_t j = 1; j < N - 1; j++) {
+                vX[index(i, j, N)] -= 0.5f * (p[index(i + 1, j, N)] - p[index(i - 1, j, N)]) * N;
+                vY[index(i, j, N)] -= 0.5f * (p[index(i, j + 1, N)] - p[index(i, j - 1, N)]) * N;
+            }
+        }
+        omp_set_bnd(N, Axis::X, vX);
+        omp_set_bnd(N, Axis::Y, vY);
+    }
 }
 
 

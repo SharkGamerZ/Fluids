@@ -6,8 +6,8 @@
 
 // Golbal variables
 int executionMode = SERIAL;
-const int matrixSize = 200;
-const int scalingFactor = 4;
+const int matrixSize = 1200;
+const int scalingFactor = 1;
 const int viewportSize = matrixSize * scalingFactor;
 const int chunkSize = 9;    // Variabile usata quando si va a mostrare la velocità
 

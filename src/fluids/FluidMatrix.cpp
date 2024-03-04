@@ -93,13 +93,13 @@ void FluidMatrix::OMPstep() {
         omp_diffuse(Axis::X, Vx0, Vx, visc, dt);
         omp_diffuse(Axis::Y, Vy0, Vy, visc, dt);
 
-        project(Vx0, Vy0, Vx, Vy);
+        omp_project(Vx0, Vy0, Vx, Vy);
 
 
         omp_advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
         omp_advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
 
-        project(Vx, Vy, Vx0, Vy0);
+        omp_project(Vx, Vy, Vx0, Vy0);
     }
 
         // density step
@@ -109,7 +109,7 @@ void FluidMatrix::OMPstep() {
         omp_advect(Axis::ZERO, density, density0, Vx, Vy, dt);
     }
 
-    fadeDensity(density);
+    omp_fadeDensity(density);
 
     auto end = std::chrono::high_resolution_clock::now();
     debugPrint("Time: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()) + " micros");
@@ -313,6 +313,42 @@ void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std:
     set_bnd(Axis::Y, vY);
 }
 
+void FluidMatrix::omp_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
+    #pragma omp parallel default(shared) num_threads(numThreads)
+    {
+        #pragma omp for schedule(guided) collapse(2)
+        for (uint32_t i = 1; i < this->size - 1; i++) {
+            for (uint32_t j = 1; j < this->size - 1; j++) {
+                div[index(i, j, this->size)] = -0.5f * (
+                                    vX[index(i + 1, j, this->size)]
+                                - vX[index(i - 1, j, this->size)]
+                                + vY[index(i, j + 1, this->size)]
+                                - vY[index(i, j - 1, this->size)]
+                            ) / this->size;
+                p[index(i, j, this->size)] = 0;
+            }
+        }
+        omp_set_bnd(Axis::ZERO, div);
+        omp_set_bnd(Axis::ZERO, p);
+        #pragma omp single
+        {
+            omp_set_nested(1);
+            omp_lin_solve(Axis::ZERO, p, div, 1);
+        }
+
+        #pragma omp for schedule(guided) collapse(2)
+        for (uint32_t i = 1; i < this->size - 1; i++) {
+            for (uint32_t j = 1; j < this->size - 1; j++) {
+                vX[index(i, j, this->size)] -= 0.5f * (p[index(i + 1, j, this->size)] - p[index(i - 1, j, this->size)]) * this->size;
+                vY[index(i, j, this->size)] -= 0.5f * (p[index(i, j + 1, this->size)] - p[index(i, j - 1, this->size)]) * this->size;
+            }
+        }
+        omp_set_bnd(Axis::X, vX);
+        omp_set_bnd(Axis::Y, vY);
+    }
+}
+
+
 
 // IN TEORIA GIUSTA
 void FluidMatrix::set_bnd(Axis mode, std::vector<double> &attr) const {
@@ -411,7 +447,15 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
 void FluidMatrix::fadeDensity(std::vector<double> &density) const {
     for (uint32_t i = 0; i < this->size * this->size; i++) {
         double d = this->density[i];
-        density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
+        density[i] = (d - 0.0005f < 0) ? 0 : d - 0.0005f;
     }
 }
 
+
+void FluidMatrix::omp_fadeDensity(std::vector<double> &density) const {
+    #pragma omp parallel for num_threads(numThreads) default(shared)
+    for (uint32_t i = 0; i < this->size * this->size; i++) {
+        double d = this->density[i];
+        density[i] = (d - 0.0005f < 0) ? 0 : d - 0.0005f;
+    }
+}

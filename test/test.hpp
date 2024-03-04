@@ -28,6 +28,7 @@ enum Axis {
 
 void testDiffuse(int maxSize, int iterations);
 void testAdvect(int maxSize, int iterations);
+void testProject(int maxSize, int iterations);
 
 
 double randdouble();
@@ -41,6 +42,23 @@ void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<doub
 void advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt);
 void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt, int * trdN);
 
+/**
+     * Project the matrix
+     * @param vX velocity on x axis
+     * @param vY velocity on y axis
+     * @param p
+     * @param div
+     */
+void project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div);
+
+/**
+     * Project the matrix
+     * @param vX velocity on x axis
+     * @param vY velocity on y axis
+     * @param p
+     * @param div
+     */
+    void omp_project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div, int * trdN);
 
 
 void lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate);

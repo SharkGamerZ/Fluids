@@ -122,7 +122,7 @@ private:
     void advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
 
     /**
-     * Advect the matrix
+     * Advect the matrixm using openMP
      * @param mode x or y axis
      * @param d value to advect
      * @param d0 value at previous step
@@ -140,6 +140,15 @@ private:
      * @param div
      */
     void project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
+
+    /**
+     * Project the matrix using openMP
+     * @param vX velocity on x axis
+     * @param vY velocity on y axis
+     * @param p
+     * @param div
+     */
+    void omp_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
 
     /**
      * Set the boundary of the matrix
@@ -170,6 +179,8 @@ private:
 
 
     void fadeDensity(std::vector<double> &density) const;
+
+    void omp_fadeDensity(std::vector<double> &density) const;
 };
 
 
