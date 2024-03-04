@@ -422,16 +422,16 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
         #pragma omp parallel default(shared) num_threads(numThreads)
         {    
             #pragma omp for schedule(guided) collapse(2) 
-            for (uint32_t i = 1; i < this->size - 1; i++)
+            for (uint32_t i = 1; i < size - 1; i++)
             {
-                for (uint32_t j = 1; j < this->size - 1; j++)
+                for (uint32_t j = 1; j < size - 1; j++)
                 {
-                    nextValue[index(i, j, this->size)] = (value[index(i, j, this->size)]
+                    nextValue[index(i, j, size)] = (value[index(i, j, size)]
                                                         + diffusionRate * (
-                            nextValue[index(i + 1, j, this->size)]
-                            + nextValue[index(i - 1, j, this->size)]
-                            + nextValue[index(i, j + 1, this->size)]
-                            + nextValue[index(i, j - 1, this->size)]
+                            nextValue[index(i + 1, j, size)]
+                            + nextValue[index(i - 1, j, size)]
+                            + nextValue[index(i, j + 1, size)]
+                            + nextValue[index(i, j - 1, size)]
                     )) * cRecip;
                 }
             }
@@ -445,9 +445,10 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
 
 
 void FluidMatrix::fadeDensity(std::vector<double> &density) const {
-    for (uint32_t i = 0; i < this->size * this->size; i++) {
-        double d = this->density[i];
-        density[i] = (d - 0.0005f < 0) ? 0 : d - 0.0005f;
+    for (uint32_t i = 0; i < size * size; i++) {
+        double d = density[i];
+        density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
+==== BASE ====
     }
 }
 

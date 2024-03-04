@@ -3,11 +3,11 @@
 
 #include "../utils.hpp"
 
-#include <vector>
-#include <ostream>
-#include <iostream>
 #include <cmath>
+#include <iostream>
 #include <omp.h>
+#include <ostream>
+#include <vector>
 
 
 #define SERIAL 0
@@ -17,18 +17,16 @@ extern int executionMode;
 
 const int ITERATIONS = 15; ///< number of iterations
 const int numThreads = omp_get_max_threads();
-enum Axis {
-    X, Y, ZERO
-}; ///< axis of the matrix
+enum Axis { X, Y, ZERO };  ///< axis of the matrix
 
 class FluidMatrix {
 public:
     uint32_t size; ///< size of the matrix
-    double dt; ///< delta time
-    double diff; ///< diffusion
-    double visc; ///< viscosity
+    double dt;     ///< delta time
+    double diff;   ///< diffusion
+    double visc;   ///< viscosity
 
-    std::vector<double> density; ///< density
+    std::vector<double> density;  ///< density
     std::vector<double> density0; ///< density at previous step
 
     std::vector<double> Vx; ///< velocity on x axis
@@ -41,11 +39,6 @@ public:
 
     ~FluidMatrix();
 
-    /**
-     * Print the matrix using the output operator
-     */
-    friend std::ostream &operator<<(std::ostream &os, const FluidMatrix &matrix);
-
 
     /**
      * Get the index of the matrix
@@ -54,7 +47,7 @@ public:
      * @param matrix_size size of the matrix
      * @return index
      */
-    [[nodiscard]] static inline uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size) ;
+    [[nodiscard]] static inline uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size);
 
     /**
      * Reset the matrix
@@ -131,7 +124,7 @@ private:
      * @param dt delta time
      */
     void omp_advect(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
-    
+
     /**
      * Project the matrix
      * @param vX velocity on x axis
@@ -175,7 +168,6 @@ private:
 
 
     void omp_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
-
 
 
     void fadeDensity(std::vector<double> &density) const;
