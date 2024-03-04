@@ -16,6 +16,7 @@
 extern int executionMode;
 
 const int ITERATIONS = 15; ///< number of iterations
+const int numThreads = omp_get_max_threads();
 enum Axis {
     X, Y, ZERO
 }; ///< axis of the matrix

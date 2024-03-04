@@ -240,14 +240,13 @@ void FluidMatrix::omp_advect(Axis mode, std::vector<double> &value, std::vector<
     double dt0 = dt * (this->size - 2);
 	double Ndouble = this->size - 2;
     
-    omp_set_num_threads(omp_get_max_threads());
 
-    #pragma omp parallel
+    #pragma omp parallel num_threads(numThreads)
     {
         double i0, i1, j0, j1;
         double s0, s1, t0, t1;
         double tmp1, tmp2, x, y;
-
+    
         #pragma omp for
         for(int i = 1; i < this->size - 1; i++) {
             for(int j = 1; j < this->size - 1; j++) {
@@ -380,23 +379,29 @@ void FluidMatrix::lin_solve(Axis mode, std::vector<double> &nextValue, std::vect
 void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate) const {
     double c = 1 + 4 * diffusionRate;
     double cRecip = 1.0 / c;
+    
     for (int k = 0; k < ITERATIONS; k++)
     {
-        #pragma omp parallel for collapse(2) default(shared) schedule(static,1) num_threads(4)
-        for (uint32_t i = 1; i < this->size - 1; i++)
-        {
-            for (uint32_t j = 1; j < this->size - 1; j++)
+             
+        #pragma omp parallel default(shared) num_threads(numThreads)
+        {    
+            #pragma omp for schedule(guided) collapse(2) 
+            for (uint32_t i = 1; i < this->size - 1; i++)
             {
-                nextValue[index(i, j, this->size)] = (value[index(i, j, this->size)]
-                                                      + diffusionRate * (
-                        nextValue[index(i + 1, j, this->size)]
-                        + nextValue[index(i - 1, j, this->size)]
-                        + nextValue[index(i, j + 1, this->size)]
-                        + nextValue[index(i, j - 1, this->size)]
-                )) * cRecip;
+                for (uint32_t j = 1; j < this->size - 1; j++)
+                {
+                    nextValue[index(i, j, this->size)] = (value[index(i, j, this->size)]
+                                                        + diffusionRate * (
+                            nextValue[index(i + 1, j, this->size)]
+                            + nextValue[index(i - 1, j, this->size)]
+                            + nextValue[index(i, j + 1, this->size)]
+                            + nextValue[index(i, j - 1, this->size)]
+                    )) * cRecip;
+                }
             }
+            omp_set_bnd(mode, nextValue);
         }
-        omp_set_bnd(mode, nextValue);
+    
     }
 
 }

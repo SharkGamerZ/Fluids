@@ -85,7 +85,6 @@ void testDiffuse(int maxSize, int iterations) {
             omp_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt, &realThreadNumber);
             auto ompEnd = std::chrono::high_resolution_clock::now();
             auto ompTime = std::chrono::duration_cast<std::chrono::microseconds>(ompEnd - ompBegin).count();
-            std::cout << "Numero thread nel team: " << realThreadNumber << std::endl;
             threadMean += realThreadNumber;
             ompTimeMean += ompTime;
         }
@@ -267,7 +266,90 @@ void testAdvect(int maxSize, int iterations) {
     }
 }
 
+void testProject(int maxSize, int iterations) {
+    std::ofstream file;
+    file.open("project_results.csv");
+    file << "Matrix size,Serial,OMP,Speedup,Efficiency,Thread number\n";
 
+    for (int matrixSize = 75; matrixSize <= maxSize; matrixSize+= 75)
+    {
+        // SETUP ----------------------------------------------------------------------------------------------
+        std::cout<<"------------------------------------------------------------------"<<std::endl;
+        double dt = 0.2;
+        double diff = 0.0;
+        double visc =  0.0000001f;
+
+        double speedup, efficiency;
+
+        std::srand(unsigned(std::time(nullptr)));
+
+        std::vector<double> value(matrixSize * matrixSize);
+        std::generate(value.begin(), value.end(), randdouble);
+
+        std::vector<double> oldValue(matrixSize * matrixSize);
+        std::fill(oldValue.begin(), oldValue.end(), 0);
+
+
+        std::vector<double> valueOmp(matrixSize * matrixSize);
+        std::copy(value.begin(), value.end(), valueOmp.begin());
+
+        std::vector<double> oldValueOmp(matrixSize * matrixSize);
+        std::copy(oldValue.begin(), oldValue.end(), oldValueOmp.begin());
+
+        // SERIAL ----------------------------------------------------------------------------------------------
+        std::cout << BOLD BLUE "Matrix size: " << RESET << matrixSize << std::endl;
+        for (int i = 0; i < iterations; i++) {
+            auto serialBegin = std::chrono::high_resolution_clock::now();
+            diffuse(matrixSize, Axis::ZERO, value, oldValue, diff, dt);
+            auto serialEnd = std::chrono::high_resolution_clock::now();
+            auto serialTime = std::chrono::duration_cast<std::chrono::microseconds>(serialEnd - serialBegin).count();
+
+            serialTimeMean += serialTime;
+
+
+        }
+
+        serialTimeMean /= iterations;
+        std::cout << BOLD YELLOW "Diffuse: " << serialTimeMean << RESET " millis "<<std::endl<<std::endl;
+
+        file << matrixSize << "," << serialTimeMean << ",";
+
+
+        // OMP ----------------------------------------------------------------------------------------------
+        int num_threads = omp_get_max_threads();
+        omp_set_num_threads(num_threads);
+        int threadMean = 0;
+        int realThreadNumber = 0;
+
+        // Calculate how many cells as maximum per thread
+        const int max_rows = (int)(ceil((matrixSize-2) / num_threads) + 2);
+        max_cells = max_rows * (matrixSize-2);        
+
+        int64_t ompTimeMean = 0;
+
+        for (int i = 0; i < iterations; i++) {    
+            auto ompBegin = std::chrono::high_resolution_clock::now();
+            omp_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt, &realThreadNumber);
+            auto ompEnd = std::chrono::high_resolution_clock::now();
+            auto ompTime = std::chrono::duration_cast<std::chrono::microseconds>(ompEnd - ompBegin).count();
+            threadMean += realThreadNumber;
+            ompTimeMean += ompTime;
+        }
+        threadMean /= iterations;
+        ompTimeMean /= iterations;
+        
+        std::cout << BOLD RED "OMP Diffuse: " << ompTimeMean << RESET " micros" << std::endl;
+
+        speedup = (double) serialTimeMean / (double) ompTimeMean;
+        efficiency = speedup / num_threads;
+        std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " ";
+        std::cout << BOLD GREEN "Efficiency: " << RESET << efficiency << std::endl << std::endl;
+
+        file << std::fixed << std::setprecision(2) << ompTimeMean << "," << std::setprecision(2) << speedup << "," << std::setprecision(2) << efficiency << "," << threadMean << "\n";
+        
+        printf("Speedup: %f\n", speedup);
+    }
+}
 
 double randdouble() {
     return ((double) rand() / (RAND_MAX));
@@ -442,6 +524,34 @@ void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double
     }
 }
 
+// Project ----------------------------------------------------------------------------------------------
+
+void project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) {
+    for (uint32_t i = 1; i < N - 1; i++) {
+        for (uint32_t j = 1; j < N - 1; j++) {
+            div[index(i, j, N)] = -0.5f * (
+                                vX[index(i + 1, j, N)]
+                              - vX[index(i - 1, j, N)]
+                              + vY[index(i, j + 1, N)]
+                              - vY[index(i, j - 1, N)]
+                        ) / N;
+            p[index(i, j, N)] = 0;
+        }
+    }
+    set_bnd(N, Axis::ZERO, div);
+    set_bnd(N, Axis::ZERO, p);
+    lin_solve(N, Axis::ZERO, p, div, 1);
+
+    for (uint32_t i = 1; i < N - 1; i++) {
+        for (uint32_t j = 1; j < N - 1; j++) {
+            vX[index(i, j, N)] -= 0.5f * (p[index(i + 1, j, N)] - p[index(i - 1, j, N)]) * N;
+            vY[index(i, j, N)] -= 0.5f * (p[index(i, j + 1, N)] - p[index(i, j - 1, N)]) * N;
+        }
+    }
+    set_bnd(N, Axis::X, vX);
+    set_bnd(N, Axis::Y, vY);
+}
+
 
 // Lin Solve ----------------------------------------------------------------------------------------------
 
@@ -449,8 +559,8 @@ void lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector<dou
     double c = 1 + 4 * diffusionRate;
     double cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++) {
-        for (int j = 1; j < N - 1; j++) {
-            for (int i = 1; i < N - 1; i++) {
+        for (int i = 1; i < N - 1; i++) {
+            for (int j = 1; j < N - 1; j++) {
                 nextValue[IX(i, j)] = (value[IX(i, j)]
                                    + diffusionRate * (
                         nextValue[IX(i + 1, j)]
@@ -469,14 +579,16 @@ void omp_lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector
     double cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++)
     {
-        #pragma parallel default(shared) num_threads(6)
+        
+        #pragma omp parallel default(shared)
         {
             *trdN = omp_get_num_threads();
-            #pragma omp for schedule(guided) collapse(2)
-            for (int j = 1; j < N - 1; j++)
+            #pragma omp for schedule(guided) collapse(2) 
+            for (int i = 1; i < N - 1; i++)
             {
-                for (int i = 1; i < N - 1; i++)
+                for (int j = 1; j < N - 1; j++)
                 {
+                    
                     nextValue[IX(i, j)] = (value[IX(i, j)]
                                     + diffusionRate * (
                             nextValue[IX(i + 1, j)]
@@ -486,8 +598,9 @@ void omp_lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector
                     )) * cRecip;
                 }
             }
+            omp_set_bnd(N, mode, nextValue);
         }
-        omp_set_bnd(N, mode, nextValue);
+        
     }
 }
 
