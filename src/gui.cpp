@@ -172,11 +172,11 @@ uint32_t getShaderProgram() {
     std::string vertexShaderSource;
     std::string fragmentShaderSource;
     if (simulationAttribute == DENSITY_ATTRIBUTE) {
-        vertexShaderSource = readFile("../src/shaders/density.vert");
-        fragmentShaderSource = readFile("../src/shaders/density.frag");
+        vertexShaderSource = Utils::readFile("../src/shaders/density.vert");
+        fragmentShaderSource = Utils::readFile("../src/shaders/density.frag");
     } else {
-        vertexShaderSource = readFile("../src/shaders/velocity.vert");
-        fragmentShaderSource = readFile("../src/shaders/velocity.frag");
+        vertexShaderSource = Utils::readFile("../src/shaders/velocity.vert");
+        fragmentShaderSource = Utils::readFile("../src/shaders/velocity.frag");
     }
 
     const char *vertexShaderSourceCStr = vertexShaderSource.c_str();
@@ -193,7 +193,7 @@ uint32_t getShaderProgram() {
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
-        errorPrint("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + std::string(infoLog));
+        Utils::log(Utils::LogLevel::ERROR, std::cerr, "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n", infoLog);
         return 0;
     }
 
@@ -207,7 +207,7 @@ uint32_t getShaderProgram() {
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(vertexShader, sizeof(infoLog), nullptr, infoLog);
-        errorPrint("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + std::string(infoLog));
+        Utils::log(Utils::LogLevel::ERROR, std::cerr, "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n", infoLog);
         return 0;
     }
 

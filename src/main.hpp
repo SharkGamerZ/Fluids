@@ -1,5 +1,4 @@
-#ifndef MAIN_HPP
-#define MAIN_HPP
+#pragma once
 
 #include <algorithm>
 #include <cstdlib>
@@ -8,6 +7,3 @@
 #include <vector>
 
 #include "gui.hpp"
-
-
-#endif

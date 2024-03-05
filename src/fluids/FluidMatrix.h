@@ -1,12 +1,10 @@
-#ifndef FLUIDS_FLUIDMATRIX_H
-#define FLUIDS_FLUIDMATRIX_H
+#pragma once
 
-#include "../utils.hpp"
+#include "../Utils.hpp"
 
+#include <chrono>
 #include <cmath>
-#include <iostream>
 #include <omp.h>
-#include <ostream>
 #include <vector>
 
 
@@ -17,7 +15,7 @@ extern int executionMode;
 
 const int ITERATIONS = 15; ///< number of iterations
 const int numThreads = omp_get_max_threads();
-enum Axis { X, Y, ZERO };  ///< axis of the matrix
+enum Axis { X, Y, ZERO }; ///< axis of the matrix
 
 class FluidMatrix {
 public:
@@ -47,7 +45,7 @@ public:
      * @param matrix_size size of the matrix
      * @return index
      */
-    [[nodiscard]] static inline uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size);
+    [[nodiscard]] static inline uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size) { return j + i * matrix_size; }
 
     /**
      * Reset the matrix
@@ -166,14 +164,9 @@ private:
      */
     void lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 
-
     void omp_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
-
 
     void fadeDensity(std::vector<double> &density) const;
 
     void omp_fadeDensity(std::vector<double> &density) const;
 };
-
-
-#endif //FLUIDS_FLUIDMATRIX_H

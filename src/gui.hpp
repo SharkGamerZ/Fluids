@@ -1,18 +1,11 @@
-#ifndef GUI_HPP_
-#define GUI_HPP_
-
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-
+#pragma once
 
 #include "fluids/FluidMatrix.h"
 
+// Rendering
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "utils.hpp"
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
@@ -80,5 +73,3 @@ float *getVelocityVertices(FluidMatrix *matrix);
 void normalizeVertices(float *vertices, int N);
 
 void normalizeSpeedVertices(float *vertices, int N);
-
-#endif
