@@ -9,9 +9,9 @@ find_package(OpenMP REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic") #-Werror
 
 set(SOURCE_FILES
-        src/gui.cpp
+        src/gui.cu
         src/main.cpp
-        src/fluids/FluidMatrix.cpp
+        src/fluids/FluidMatrix.cu
         src/Utils.cpp
 )
 

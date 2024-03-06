@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fluids/FluidMatrix.h"
+#include "fluids/FluidMatrix.hu"
 
 // Rendering
 #include "imgui.h"

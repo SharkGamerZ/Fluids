@@ -17,6 +17,7 @@ const int ITERATIONS = 15; ///< number of iterations
 const int numThreads = omp_get_max_threads();
 enum Axis { X, Y, ZERO }; ///< axis of the matrix
 
+
 class FluidMatrix {
 public:
     uint32_t size; ///< size of the matrix
@@ -63,6 +64,11 @@ public:
      */
     void OMPstep();
 
+     /**
+     * Simulate a time-step using OpenMP
+     */
+    void CUDAstep();
+
     /**
      * Add density to the matrix at the given position
      * @param x coordinate x
@@ -100,6 +106,17 @@ private:
      * @param dt delta time
      */
     void omp_diffuse(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt) const;
+
+    /**
+     * CUDA version of diffuse
+     * @param mode x or y axis
+     * @param value value to diffuse
+     * @param oldValue value at previous step
+     * @param diffusion diffusion
+     * @param dt delta time
+     */
+    void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt);
+
 
     /**
      * Advect the matrix
@@ -155,6 +172,11 @@ private:
      */
     void omp_set_bnd(Axis mode, std::vector<double> &attr) const;
 
+
+
+
+
+
     /**
      * Solve the linear equation
      * @param mode x or y axis
@@ -166,7 +188,13 @@ private:
 
     void omp_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 
+
     void fadeDensity(std::vector<double> &density) const;
 
     void omp_fadeDensity(std::vector<double> &density) const;
 };
+
+
+    __global__ void kernel_set_bnd(int N, Axis mode, double *attr);
+    __global__ void kernel_lin_solve(int N, Axis mode, double *nextValue, double *value, double diffusionRate);
+

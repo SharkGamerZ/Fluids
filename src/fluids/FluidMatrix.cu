@@ -1,4 +1,5 @@
-#include "FluidMatrix.h"
+#include "FluidMatrix.hu"
+
 
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
     : size(size), dt(dt), diff(diffusion), visc(viscosity), density(std::vector<double>(size * size)), density0(std::vector<double>(size * size)),
@@ -84,6 +85,37 @@ void FluidMatrix::OMPstep() {
 }
 
 
+void FluidMatrix::CUDAstep() {
+    auto begin = std::chrono::high_resolution_clock::now();
+
+    // velocity step
+    {
+        cuda_diffuse(Axis::X, Vx0, Vx, visc, dt);
+        cuda_diffuse(Axis::Y, Vy0, Vy, visc, dt);
+
+        project(Vx0, Vy0, Vx, Vy);
+
+
+        advect(Axis::X, Vx, Vx0, Vx0, Vy0, dt);
+        advect(Axis::Y, Vy, Vy0, Vx0, Vy0, dt);
+
+        project(Vx, Vy, Vx0, Vy0);
+    }
+
+    // density step
+    {
+        cuda_diffuse(Axis::ZERO, density0, density, diff, dt);
+
+        advect(Axis::ZERO, density, density0, Vx, Vy, dt);
+    }
+
+    fadeDensity(density);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    Utils::log(Utils::LogLevel::DEBUG, std::cout, "Time: ", std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count(), " micros");
+}
+
+
 void FluidMatrix::addDensity(uint32_t x, uint32_t y, double amount) { this->density[index(y, x, this->size)] += amount; }
 
 void FluidMatrix::addVelocity(uint32_t x, uint32_t y, double amountX, double amountY) {
@@ -103,6 +135,38 @@ void FluidMatrix::omp_diffuse(Axis mode, std::vector<double> &value, std::vector
     double diffusionRate = dt * diffusion * this->size * this->size;
 
     omp_lin_solve(mode, value, oldValue, diffusionRate);
+}
+
+void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusion, double dt) {
+    double diffusionRate = dt * diffusion * N * N;
+
+    dim3 BlockSize(16, 16, 1);
+    dim3 GridSize((N + 15) / 16, (N + 15) / 16, 1);
+
+
+    double *d_value;
+    double *d_oldValue;
+
+    cudaMalloc(&d_value, N * N * sizeof(double));
+    cudaMalloc(&d_oldValue, N * N * sizeof(double));
+
+    cudaMemcpy(d_value, &value[0], N * N * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_oldValue, &oldValue[0], N * N * sizeof(double), cudaMemcpyHostToDevice);
+
+
+    for (int i = 0; i < ITERATIONS; i++) 
+    {
+        kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &d_value[0], &d_oldValue[0], diffusionRate);
+        kernel_set_bnd<<<1,1>>>(N, mode, &d_value[0]);
+    }
+
+    cudaMemcpy(&value[0], d_value, N * N * sizeof(double), cudaMemcpyDeviceToHost);
+
+
+
+
+    cudaFree(d_value);
+    cudaFree(d_oldValue);
 }
 
 /*
@@ -346,6 +410,25 @@ void FluidMatrix::omp_set_bnd(Axis mode, std::vector<double> &attr) const {
     }
 }
 
+__global__ void FluidMatrix::kernel_set_bnd(int N, Axis mode, double *attr) {
+    for (int i = 1; i < N - 1; i++) {
+        attr[index(i, 0, N)] = mode == Axis::Y ? -attr[index(i, 1, N)] : attr[index(i, 1, N)];
+        attr[index(i, N - 1, N)] = mode == Axis::Y ? -attr[index(i, N - 2, N)] : attr[index(i, N - 2, N)];
+    }
+    for (int j = 1; j < N - 1; j++) {
+        attr[index(0, j, N)] = mode == Axis::X ? -attr[index(1, j, N)] : attr[index(1, j, N)];
+        attr[index(N - 1, j, N)] = mode == Axis::X ? -attr[index(N - 2, j, N)] : attr[index(N - 2, j, N)];
+    }
+
+
+    attr[index(0, 0, N)] = 0.5f * (attr[index(1, 0, N)] + attr[index(0, 1, N)]);
+    attr[index(0, N - 1, N)] = 0.5f * (attr[index(1, N - 1, N)] + attr[index(0, N - 2, N)]);
+
+    attr[index(N - 1, 0, N)] = 0.5f * (attr[index(N - 2, 0, N)] + attr[index(N - 1, 1, N)]);
+    attr[index(N - 1, N - 1, N)] = 0.5f * (attr[index(N - 2, N - 1, N)] + attr[index(N - 1, N - 2, N)]);
+}
+
+
 
 // GIUSTA
 void FluidMatrix::lin_solve(Axis mode, std::vector<double> &nextValue, std::vector<double> &value, double diffusionRate) const {
@@ -383,6 +466,28 @@ void FluidMatrix::omp_lin_solve(Axis mode, std::vector<double> &nextValue, std::
             omp_set_bnd(mode, nextValue);
         }
     }
+}
+
+__global__ void FluidMatrix::kernel_lin_solve(int N, Axis mode, double *nextValue, double *value, double diffusionRate) {
+
+
+    double c = 1 + 4 * diffusionRate;
+    double cRecip = 1.0 / c;
+
+    int col = threadIdx.x + blockIdx.x * blockDim.x;
+    int row = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if (col == 0 || col >= N - 1 || row == 0 || row >= N - 1) return;
+
+
+    nextValue[index(row, col, N)] =
+            (value[index(row, col, N)] + diffusionRate * (nextValue[index(row + 1, col, N)] + nextValue[index(row - 1, col, N)] + nextValue[index(row, col + 1, N)] + nextValue[index(row, col - 1, N])) *
+            cRecip;
+
+    // __syncthreads();
+    // if (col == 1 && row == 1)
+    //     kernel_set_bnd(N, mode, nextValue);
+    // __syncthreads();
 }
 
 

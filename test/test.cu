@@ -92,21 +92,26 @@ void testDiffuse(int maxSize, int iterations) {
         file << std::fixed << std::setprecision(2) << ompTimeMean << "," << std::setprecision(2) << speedup << "," << std::setprecision(2) << efficiency << "," << threadMean
              << "\n";
         // CUDA ----------------------------------------------------------------------------------------------
-        /*for (int i = 0; i < iterations; i++) {
+        for (int i = 0; i < iterations; i++) {
+            auto cudaBegin = std::chrono::high_resolution_clock::now();
             cuda_diffuse(matrixSize, Axis::ZERO, valueOmp, oldValueOmp, diff, dt);
+            auto cudaEnd = std::chrono::high_resolution_clock::now();
+            auto cudaTime = std::chrono::duration_cast<std::chrono::microseconds>(cudaEnd - cudaBegin).count();
+
+            cudaTimeMean += cudaTime;
         }
 
         cudaTimeMean /= iterations;
 
-        std::cout << BOLD GREEN "CUDA Diffuse: " << cudaTimeMean << RESET " millis" << std::endl;
+        std::cout << "CUDA Diffuse: " << cudaTimeMean << " micros" << std::endl;
 
         speedup = (double) serialTimeMean / (double) cudaTimeMean;
-        std::cout << BOLD BLUE "Speedup: " << RESET << speedup << " "<<std::endl<<std::endl;
+        std::cout << "Speedup: " << speedup << " "<<std::endl<<std::endl;
 
 
 
 
-        std::cout << std::endl << std::endl;*/
+        std::cout << std::endl << std::endl;
     }
 }
 
@@ -354,11 +359,6 @@ void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<doub
     dim3 BlockSize(16, 16, 1);
     dim3 GridSize((N + 15) / 16, (N + 15) / 16, 1);
 
-    cudaEvent_t cudaStart, cudaStop;
-    float milliseconds = 0;
-
-    cudaEventCreate(&cudaStart);
-    cudaEventCreate(&cudaStop);
 
     double *d_value;
     double *d_oldValue;
@@ -369,28 +369,20 @@ void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<doub
     cudaMemcpy(d_value, &value[0], N * N * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(d_oldValue, &oldValue[0], N * N * sizeof(double), cudaMemcpyHostToDevice);
 
-    std::cout << "Hello from host" << std::endl;
 
-    cudaEventRecord(cudaStart);
-
-    for (int i = 0; i < ITERATIONS; i++) kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &value[0], &oldValue[0], diffusionRate);
-
-    cudaEventRecord(cudaStop);
+    for (int i = 0; i < ITERATIONS; i++) 
+    {
+        kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &d_value[0], &d_oldValue[0], diffusionRate);
+        kernel_set_bnd<<<1,1>>>(N, mode, &d_value[0]);
+    }
 
     cudaMemcpy(&value[0], d_value, N * N * sizeof(double), cudaMemcpyDeviceToHost);
 
-    cudaEventSynchronize(cudaStop);
-    cudaEventElapsedTime(&milliseconds, cudaStart, cudaStop);
 
-    printf("Time for the kernel: %f ms\n", milliseconds);
-    cudaTimeMean += milliseconds;
 
 
     cudaFree(d_value);
     cudaFree(d_oldValue);
-
-    cudaEventDestroy(cudaStart);
-    cudaEventDestroy(cudaStop);
 }
 
 
@@ -597,7 +589,6 @@ __global__ void kernel_lin_solve(int N, Axis mode, double *nextValue, double *va
 
     if (col == 0 || col >= N - 1 || row == 0 || row >= N - 1) return;
 
-    printf("Hello from col: %d row: %d\n", col, row);
 
     nextValue[IX(row, col)] =
             (value[IX(row, col)] + diffusionRate * (nextValue[IX(row + 1, col)] + nextValue[IX(row - 1, col)] + nextValue[IX(row, col + 1)] + nextValue[IX(row, col - 1)])) *
@@ -652,7 +643,7 @@ void omp_set_bnd(int N, Axis mode, std::vector<double> &attr) {
     }
 }
 
-__device__ void kernel_set_bnd(int N, Axis mode, double *attr) {
+__global__ void kernel_set_bnd(int N, Axis mode, double *attr) {
     for (int i = 1; i < N - 1; i++) {
         attr[IX(i, 0)] = mode == Axis::Y ? -attr[IX(i, 1)] : attr[IX(i, 1)];
         attr[IX(i, N - 1)] = mode == Axis::Y ? -attr[IX(i, N - 2)] : attr[IX(i, N - 2)];

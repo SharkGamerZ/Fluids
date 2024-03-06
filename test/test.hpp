@@ -57,7 +57,6 @@ __global__ void kernel_lin_solve(int N, Axis mode, double *nextValue, double *va
 
 
 void set_bnd(int N, Axis mode, std::vector<double> &attr);
-__device__ void kernel_set_bnd(int N, Axis mode, double *attr);
-
 void omp_set_bnd(int N, Axis mode, std::vector<double> &attr);
-__device__ void kernel_set_bnd(int N, Axis mode, double *attr);
+__global__ void kernel_set_bnd(int N, Axis mode, double *attr);
+
