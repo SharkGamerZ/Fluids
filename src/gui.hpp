@@ -1,7 +1,10 @@
 #pragma once
 
-#include "fluids/FluidMatrix.hu"
+#include "Utils.hpp"
 
+extern "C" {
+#include "fluids/FluidMatrix.h"
+}
 // Rendering
 #include "imgui.h"
 #include "imgui_impl_glfw.h"

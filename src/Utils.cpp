@@ -2,14 +2,15 @@
 
 std::string Utils::color(Utils::Color color) {
     switch (color) {
-        case Color::RED: return "\033[1;31m";
-        case Color::GRN: return "\033[1;32m";
-        case Color::YLW: return "\033[1;33m";
-        case Color::BLU: return "\033[1;34m";
-        case Color::MAG: return "\033[1;35m";
-        case Color::CYN: return "\033[1;36m";
-        case Color::WHT: return "\033[1;37m";
-        case Color::RST: return "\033[0m";
+        using enum Utils::Color;
+        case RED: return "\033[1;31m";
+        case GRN: return "\033[1;32m";
+        case YLW: return "\033[1;33m";
+        case BLU: return "\033[1;34m";
+        case MAG: return "\033[1;35m";
+        case CYN: return "\033[1;36m";
+        case WHT: return "\033[1;37m";
+        case RST: return "\033[0m";
     }
     return "\033[0m"; // To silence compiler warning
 }

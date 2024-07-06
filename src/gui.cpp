@@ -1,4 +1,4 @@
-#include "gui.hu"
+#include "gui.hpp"
 
 // Defined Valuse
 #define DENSITY_ATTRIBUTE 0
@@ -36,12 +36,12 @@ int openGUI() {
 
 
     // Creiamo la matrice di fluidi e gli aggiungiamo densità in una cella
-    FluidMatrix matrix = FluidMatrix(matrixSize, 0.0f, 0.0000001f, 0.2f);
+    FluidMatrix *matrix = CFluidMatrix_new(matrixSize, 0.0f, 0.0000001f, 0.2f);
 
     // Ciclo principale
     while (!glfwWindowShouldClose(window)) {
         // Rendering di IMGui
-        renderImGui(io, &matrix);
+        renderImGui(io, matrix);
 
 
         // --------------------------------------------------------------
@@ -71,14 +71,14 @@ int openGUI() {
 
                 //se il valore dell'aggiunta è troppo grande crasha (forse dovrebbe stare tra 0 e 1)'
 
-                matrix.addDensity(xposScaled, yposScaled, 20.0f);
+                CFluidMatrix_add_density(matrix, xposScaled, yposScaled, 20.0f);
             }
 
             // Calcola la velocità
             deltaX /= scalingFactor * 2;
             deltaY /= scalingFactor * 2;
             // Aggiunge velocità
-            matrix.addVelocity(xposScaled, yposScaled, deltaY, deltaX);
+            CFluidMatrix_add_velocity(matrix, xposScaled, yposScaled, deltaY, deltaX);
         }
 
         xpos0 = xpos;
@@ -88,21 +88,21 @@ int openGUI() {
         // Aggiunta effetto macchina del vento
         if (windMachine) {
             for (int i = 0; i < matrixSize; i++) {
-                matrix.addVelocity(2, i, 0.0, 0.5);
+                CFluidMatrix_add_velocity(matrix, 2, i, 0.0, 0.5);
             }
         }
 
 
         // Controlla se la simulazione vada resettata
         if (resetSimulation) {
-            matrix.reset();
+            CFluidMatrix_reset(matrix);
             resetSimulation = false;
         }
 
         // Simulazione
         if (simulazioneIsRunning || frameSimulation) {
-            if (executionMode == SERIAL) matrix.step();
-            else if (executionMode == OPENMP) matrix.OMPstep();
+            if (executionMode == SERIAL) CFluidMatrix_step(matrix);
+            else if (executionMode == OPENMP) CFluidMatrix_OMP_step(matrix);
             frameSimulation = false;
         }
 
@@ -118,7 +118,7 @@ int openGUI() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Rendering della matrice
-        drawMatrix(&matrix);
+        drawMatrix(matrix);
 
 
         // Rendering di IMGui
@@ -368,11 +368,11 @@ float *getDensityVertices(FluidMatrix *matrix) {
     float *vertices = (float *) calloc(sizeof(float), N * N * 3);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            vertices[3 * (FluidMatrix::index(i, j, N))] = j;     // La prima è la X, quindi j
-            vertices[3 * (FluidMatrix::index(i, j, N)) + 1] = i; // La seconda è la Y, quindi i
+            vertices[3 * (CFluidMatrix_index(i, j, N))] = j;     // La prima è la X, quindi j
+            vertices[3 * (CFluidMatrix_index(i, j, N)) + 1] = i; // La seconda è la Y, quindi i
 
             int index = (i / scalingFactor) * matrixSize + (j / scalingFactor);
-            vertices[3 * (FluidMatrix::index(i, j, N)) + 2] = matrix->density[index];
+            vertices[3 * (CFluidMatrix_index(i, j, N)) + 2] = matrix->density[index];
         }
     }
 
@@ -391,12 +391,12 @@ float *getVelocityVertices(FluidMatrix *matrix) {
     float *vertices = (float *) calloc(sizeof(float), N * N * 4);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            vertices[4 * (FluidMatrix::index(i, j, N))] = j;     // La prima è la X, quindi j
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 1] = i; // La seconda è la Y, quindi i
+            vertices[4 * (CFluidMatrix_index(i, j, N))] = j;     // La prima è la X, quindi j
+            vertices[4 * (CFluidMatrix_index(i, j, N)) + 1] = i; // La seconda è la Y, quindi i
 
             int index = (i / scalingFactor) * matrixSize + (j / scalingFactor);
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 2] = matrix->Vx[index];
-            vertices[4 * (FluidMatrix::index(i, j, N)) + 3] = matrix->Vy[index];
+            vertices[4 * (CFluidMatrix_index(i, j, N)) + 2] = matrix->Vx[index];
+            vertices[4 * (CFluidMatrix_index(i, j, N)) + 3] = matrix->Vy[index];
         }
     }
 
@@ -447,8 +447,8 @@ void setupBufferAndArray(uint32_t *VBO, uint32_t *VAO) {
 void normalizeVertices(float *vertices, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            vertices[3 * FluidMatrix::index(i, j, N)] = (vertices[3 * FluidMatrix::index(i, j, N)] / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * FluidMatrix::index(i, j, N) + 1] = 1 - (vertices[3 * FluidMatrix::index(i, j, N) + 1] / ((float) (viewportSize - 1) / 2.0f));
+            vertices[3 * CFluidMatrix_index(i, j, N)] = (vertices[3 * CFluidMatrix_index(i, j, N)] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[3 * CFluidMatrix_index(i, j, N) + 1] = 1 - (vertices[3 * CFluidMatrix_index(i, j, N) + 1] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 }
@@ -457,8 +457,8 @@ void normalizeSpeedVertices(float *vertices, int N) {
 
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            vertices[4 * FluidMatrix::index(i, j, N)] = (vertices[4 * FluidMatrix::index(i, j, N)] / ((float) (viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * FluidMatrix::index(i, j, N) + 1] = 1 - (vertices[4 * FluidMatrix::index(i, j, N) + 1] / ((float) (viewportSize - 1) / 2.0f));
+            vertices[4 * CFluidMatrix_index(i, j, N)] = (vertices[4 * CFluidMatrix_index(i, j, N)] / ((float) (viewportSize - 1) / 2.0f)) - 1;
+            vertices[4 * CFluidMatrix_index(i, j, N) + 1] = 1 - (vertices[4 * CFluidMatrix_index(i, j, N) + 1] / ((float) (viewportSize - 1) / 2.0f));
         }
     }
 }

@@ -58,10 +58,12 @@ void Utils::log(Utils::LogLevel level, std::ostream &ostream, Contents... conten
     (oss << ... << contents);
 
     switch (level) {
-        case Utils::LogLevel::DEBUG: ostream << color(Color::YLW) << "[DEBUG] " << color(Color::RST); break;
-        case Utils::LogLevel::TRACE: ostream << color(Color::GRN) << "[TRACE] " << color(Color::RST); break;
-        case Utils::LogLevel::ALERT: ostream << color(Color::MAG) << "[ALERT] " << color(Color::RST); break;
-        case Utils::LogLevel::ERROR: ostream << color(Color::RED) << "[ERROR] " << color(Color::RST); break;
+        using enum Utils::LogLevel;
+        using enum Utils::Color;
+        case DEBUG: ostream << color(YLW) << "[DEBUG] " << color(RST); break;
+        case TRACE: ostream << color(GRN) << "[TRACE] " << color(RST); break;
+        case ALERT: ostream << color(MAG) << "[ALERT] " << color(RST); break;
+        case ERROR: ostream << color(RED) << "[ERROR] " << color(RST); break;
     }
 
     ostream << oss.str() << std::endl;

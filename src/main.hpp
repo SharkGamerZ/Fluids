@@ -6,4 +6,5 @@
 #include <iostream>
 #include <vector>
 
-#include "gui.hu"
+#include "gui.hpp"
+#include "globals.hpp"

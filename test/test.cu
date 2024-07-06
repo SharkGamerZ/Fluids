@@ -8,7 +8,7 @@ int64_t serialTimeMean = 0, ompTimeMean = 0, cudaTimeMean = 0;
 int main() {
     std::ofstream file;
 
-    const int iterations = 15;
+    const int iterations = 100;
     const int maxSize = 1200;
 
     testProject(maxSize, iterations);
@@ -370,7 +370,7 @@ void cuda_diffuse(int N, Axis mode, std::vector<double> &value, std::vector<doub
     cudaMemcpy(d_oldValue, &oldValue[0], N * N * sizeof(double), cudaMemcpyHostToDevice);
 
 
-    for (int i = 0; i < ITERATIONS; i++) 
+    for (int i = 0; i < ITERATIONS; i++)
     {
         kernel_lin_solve<<<GridSize, BlockSize>>>(N, mode, &d_value[0], &d_oldValue[0], diffusionRate);
         kernel_set_bnd<<<1,1>>>(N, mode, &d_value[0]);
@@ -437,7 +437,7 @@ void omp_advect(int N, Axis mode, std::vector<double> &value, std::vector<double
     double Ndouble = N - 2;
     double dt0 = dt * (N - 2);
 
-#pragma omp parallel
+#pragma omp parallel default(none) shared(trdN, N, vX, vY, dt0, Ndouble, value, oldValue, mode)
     {
         *trdN = omp_get_num_threads();
 
@@ -511,7 +511,7 @@ void project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vecto
 
 
 void omp_project(int N, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div, int *trdN) {
-#pragma omp parallel default(shared)
+#pragma omp parallel default(none) shared(N, vX, vY, p, div, trdN)
     {
 #pragma omp for schedule(guided) collapse(2)
         for (uint32_t i = 1; i < N - 1; i++) {
@@ -562,7 +562,7 @@ void omp_lin_solve(int N, Axis mode, std::vector<double> &nextValue, std::vector
     double cRecip = 1.0 / c;
     for (int k = 0; k < ITERATIONS; k++) {
 
-#pragma omp parallel default(shared)
+#pragma omp parallel default(none) shared(N, nextValue, value, diffusionRate, cRecip, mode, trdN)
         {
             *trdN = omp_get_num_threads();
 #pragma omp for schedule(guided) collapse(2)
