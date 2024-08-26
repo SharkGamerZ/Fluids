@@ -137,6 +137,7 @@ int openGUI() {
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
+    CFluidMatrix_delete(matrix);
 
     return EXIT_SUCCESS;
 }

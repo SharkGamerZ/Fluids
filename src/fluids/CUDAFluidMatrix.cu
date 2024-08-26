@@ -1,28 +1,32 @@
 #include "CUDAFluidMatrix.cuh"
 
 __host__ void FluidMatrix_CUDA_step(FluidMatrix *matrix) {
-// velocity step
+    // Define grid and block dimensions
+    dim3 BlockSize(16, 16, 1);
+    dim3 GridSize((matrix->size + 15) / 16, (matrix->size + 15) / 16, 1);
+
+    // velocity step
     {
         FluidMatrix_CUDA_diffuse(matrix, Axis::X, matrix->Vx0, matrix->Vx, matrix->visc, matrix->dt);
         FluidMatrix_CUDA_diffuse(matrix, Axis::Y, matrix->Vy0, matrix->Vy, matrix->visc, matrix->dt);
 
-        FluidMatrix_CUDA_project(matrix, matrix->Vx0, matrix->Vy0, matrix->Vx, matrix->Vy);
+        FluidMatrix_CUDA_project<<<GridSize, BlockSize>>>(matrix, matrix->Vx0, matrix->Vy0, matrix->Vx, matrix->Vy);
 
 
-        FluidMatrix_CUDA_advect(matrix, Axis::X, matrix->Vx, matrix->Vx0, matrix->Vx0, matrix->Vy0, matrix->dt);
-        FluidMatrix_CUDA_advect(matrix, Axis::Y, matrix->Vy, matrix->Vy0, matrix->Vx0, matrix->Vy0, matrix->dt);
+        FluidMatrix_CUDA_advect<<<GridSize, BlockSize>>>(matrix, Axis::X, matrix->Vx, matrix->Vx0, matrix->Vx0, matrix->Vy0, matrix->dt);
+        FluidMatrix_CUDA_advect<<<GridSize, BlockSize>>>(matrix, Axis::Y, matrix->Vy, matrix->Vy0, matrix->Vx0, matrix->Vy0, matrix->dt);
 
-        FluidMatrix_CUDA_project(matrix, matrix->Vx, matrix->Vy, matrix->Vx0, matrix->Vy0);
+        FluidMatrix_CUDA_project<<<GridSize, BlockSize>>>(matrix, matrix->Vx, matrix->Vy, matrix->Vx0, matrix->Vy0);
     }
 
     // density step
     {
         FluidMatrix_CUDA_diffuse(matrix, Axis::ZERO, matrix->density0, matrix->density, matrix->diff, matrix->dt);
 
-        FluidMatrix_CUDA_advect(matrix, Axis::ZERO, matrix->density, matrix->density0, matrix->Vx, matrix->Vy, matrix->dt);
+        FluidMatrix_CUDA_advect<<<GridSize, BlockSize>>>(matrix, Axis::ZERO, matrix->density, matrix->density0, matrix->Vx, matrix->Vy, matrix->dt);
     }
 
-    FluidMatrix_CUDA_fade_density(matrix, matrix->density);
+    FluidMatrix_CUDA_fade_density<<<GridSize, BlockSize>>>(matrix, matrix->density);
 }
 
 // Private methods
@@ -58,11 +62,11 @@ __host__ void FluidMatrix_CUDA_diffuse(FluidMatrix *matrix, enum Axis mode, doub
 }
 
 __global__ void FluidMatrix_CUDA_advect(FluidMatrix *matrix, enum Axis mode, double *value, double *oldValue, double *Vx, double *Vy, double dt) {
-
+    // TODO
 }
 
 __global__ void FluidMatrix_CUDA_project(FluidMatrix *matrix, double *Vx, double *Vy, double *p, double *div) {
-
+    // TODO
 }
 
 __global__ void FluidMatrix_CUDA_set_bnd(FluidMatrix *matrix, enum Axis mode, double *value) {
