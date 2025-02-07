@@ -1,6 +1,6 @@
 #include "gui.hpp"
 
-SimulationSettings *GUI::settingsPtr = nullptr;
+SimulationSettings *GUI::settingsPtr = nullptr; // TODO: see if this can be removed
 
 void GUI::Init(GLFWwindow *window) {
     // Setup Dear ImGui context
@@ -17,7 +17,7 @@ void GUI::Init(GLFWwindow *window) {
     ImGui_ImplOpenGL3_Init();
 }
 
-void GUI::Render(SimulationSettings &settings, FluidMatrix *matrix) {
+void GUI::Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -31,19 +31,25 @@ void GUI::Render(SimulationSettings &settings, FluidMatrix *matrix) {
         ImGui::SliderFloat("Viscosity", &settings.viscosity, 0.0f, 0.0001f, "%.7f", ImGuiSliderFlags_Logarithmic);
         ImGui::SliderFloat("TimeStep", &settings.deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
 
+        // Update matrix parameters
+        matrix->visc = settings.viscosity;
+        matrix->dt = settings.deltaTime;
+
         // Visualization mode
         ImGui::Text("Visualization:");
-        ImGui::RadioButton("Density", &settings.simulationAttribute, DENSITY_ATTRIBUTE);
+        ImGui::RadioButton("Density", &settings.simulationAttribute, DENSITY);
         ImGui::SameLine();
-        ImGui::RadioButton("Velocity", &settings.simulationAttribute, VELOCITY_ATTRIBUTE);
+        ImGui::RadioButton("Velocity", &settings.simulationAttribute, VELOCITY);
 
         // Execution mode
         ImGui::Text("Execution mode:");
         ImGui::RadioButton("Serial", &settings.executionMode, SERIAL);
         ImGui::SameLine();
         ImGui::RadioButton("OpenMP", &settings.executionMode, OPENMP);
+#ifdef __CUDACC__
         ImGui::SameLine();
         ImGui::RadioButton("CUDA", &settings.executionMode, CUDA);
+#endif
 
         // Start/Stop simulation
         if (ImGui::Button(settings.isSimulationRunning ? "Stop Simulation" : "Start Simulation")) {
@@ -59,19 +65,65 @@ void GUI::Render(SimulationSettings &settings, FluidMatrix *matrix) {
     }
     ImGui::End();
 
+    // Run simulation
+    {
+        // Velocity related mouse controls
+        glfwGetCursorPos(window, &settings.xpos, &settings.ypos);
+        settings.xposScaled = round(settings.xpos / settings.scalingFactor);
+        settings.yposScaled = round(settings.ypos / settings.scalingFactor);
+        settings.mouseTime = glfwGetTime();
+        settings.mouseTimeDelta = settings.mouseTime - settings.mouseTimePrev;
+        settings.deltax = settings.xpos - settings.xposPrev;
+        settings.deltay = settings.ypos - settings.yposPrev;
+        settings.mouseTimePrev = settings.mouseTime;
+
+        if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
+            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+                matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f);
+            }
+
+            settings.deltax /= settings.scalingFactor * 2;
+            settings.deltay /= settings.scalingFactor * 2;
+            matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax, settings.deltay);
+        }
+
+        settings.xposPrev = settings.xpos;
+        settings.yposPrev = settings.ypos;
+
+        // Keybind related actions
+        if (settings.windMachine) {
+            for (int i = 0; i < settings.matrixSize; i++) {
+                matrix->addVelocity(2, i, 0.0f, 0.5f);
+            }
+        }
+        if (settings.resetSimulation) {
+            matrix->reset();
+            settings.resetSimulation = false;
+        }
+        // TODO step simulation (add frame mode)
+        if (settings.isSimulationRunning) {
+            switch (settings.executionMode) {
+                case SERIAL: matrix->step(); break;
+                case OPENMP: matrix->OMP_step(); break;
+#ifdef __CUDACC__
+                case CUDA: matrix->CUDA_step(); break;
+#endif
+            }
+        }
+    }
+
+    // Render matrix
+    RenderMatrix(settings, matrix);
+    // NOTE: this makes it go from 60FPS to 15 :(
+    // NOTE 2: if this is done before ImGui::Render(), the gui is not bugged off-screen
+
     // Render UI
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    // Run simulation
-    // TODO reset, step, wind, addDensity, addVelocity calls here
-
-    // Render matrix
-    RenderMatrix(settings, matrix); // NOTE: this makes it go from 60FPS to 15 :(
 }
 
 void GUI::RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
-    const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute == DENSITY_ATTRIBUTE);
+    const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute == DENSITY);
     if (!shaderProgram) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
         return;
@@ -84,19 +136,18 @@ void GUI::RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    // TODO: use matrix dimensions
     {
-        std::vector<float> verts =
-                settingsPtr->simulationAttribute == DENSITY_ATTRIBUTE ? Renderer::getDensityVertices(&settings, matrix) : Renderer::getVelocityVertices(&settings, matrix);
+        const int viewportSize = settings.viewportSize;
+        std::vector<float> verts = settings.simulationAttribute == DENSITY ? Renderer::getDensityVertices(&settings, matrix) : Renderer::getVelocityVertices(&settings, matrix);
 
-        if (settingsPtr->simulationAttribute == DENSITY_ATTRIBUTE) {
+        if (settings.simulationAttribute == DENSITY) {
             glBindVertexArray(VAO);
-            Renderer::linkDensityVerticesToBuffer(verts.data(), settingsPtr->viewportSize * settingsPtr->viewportSize * 3);
-            glDrawArrays(GL_POINTS, 0, settingsPtr->viewportSize * settingsPtr->viewportSize * 3);
+            Renderer::linkDensityVerticesToBuffer(verts.data(), viewportSize * viewportSize * 3);
+            glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize * 3);
         } else {
             glBindVertexArray(VAO);
-            Renderer::linkVelocityVerticesToBuffer(verts.data(), settingsPtr->viewportSize * settingsPtr->viewportSize * 4);
-            glDrawArrays(GL_POINTS, 0, settingsPtr->viewportSize * settingsPtr->viewportSize * 4);
+            Renderer::linkVelocityVerticesToBuffer(verts.data(), viewportSize * viewportSize * 4);
+            glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize * 4);
         }
     }
 
@@ -111,19 +162,19 @@ void GUI::Cleanup() {
     ImGui::DestroyContext();
 }
 
+// TODO: improve after settingsPtr is removed
 void GUI::KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     // Exit program
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
     // Pause/resume simulation
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-        if (settingsPtr) settingsPtr->isSimulationRunning = !settingsPtr->isSimulationRunning;
-    }
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS && settingsPtr) settingsPtr->isSimulationRunning = !settingsPtr->isSimulationRunning;
     // Reset simulation
-    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-        if (settingsPtr) settingsPtr->ResetMatrix();
-    }
+    if (key == GLFW_KEY_R && action == GLFW_PRESS && settingsPtr) settingsPtr->resetSimulation = true;
+    // Change simulation attribute
+    if (key == GLFW_KEY_V && action == GLFW_PRESS && settingsPtr) settingsPtr->simulationAttribute = settingsPtr->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
+    // Toggle wind machine
+    if (key == GLFW_KEY_W && action == GLFW_PRESS && settingsPtr) settingsPtr->windMachine = !settingsPtr->windMachine;
 }
 
+// TODO: remove after settingsPtr is removed
 void GUI::SetSimulationSettings(SimulationSettings *settings) { settingsPtr = settings; }

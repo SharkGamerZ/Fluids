@@ -7,6 +7,7 @@
 #include "simulation_settings.hpp"
 #include "utils.hpp"
 #include <GLFW/glfw3.h>
+#include <cmath>
 
 
 class GUI {
@@ -14,7 +15,7 @@ public:
     /// Initialize GUI
     static void Init(GLFWwindow *window);
     /// Main UI rendering function
-    static void Render(SimulationSettings &settings, FluidMatrix *matrix);
+    static void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix);
     /// Render fluid matrix
     static void RenderMatrix(SimulationSettings &settings, FluidMatrix *fluidMatrix);
     /// Cleanup GUI

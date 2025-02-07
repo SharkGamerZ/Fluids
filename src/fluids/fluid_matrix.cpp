@@ -118,7 +118,7 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &d, std::vector<double> 
             int j0i = j0;
             int j1i = j1;
 
-            d[index(j, i, this->size)] = s0 * (t0 * d0[index(i0i, j0i, this->size)] + t1 * d0[index(i0i, j1i, this->size)]) +
+            d[index(i, j, this->size)] = s0 * (t0 * d0[index(i0i, j0i, this->size)] + t1 * d0[index(i0i, j1i, this->size)]) +
                                          s1 * (t0 * d0[index(i1i, j0i, this->size)] + t1 * d0[index(i1i, j1i, this->size)]);
         }
     }
@@ -165,7 +165,7 @@ void FluidMatrix::OMP_advect(Axis mode, std::vector<double> &d, std::vector<doub
                 int j0i = j0;
                 int j1i = j1;
 
-                d[index(j, i, this->size)] = s0 * (t0 * d0[index(i0i, j0i, this->size)] + t1 * d0[index(i0i, j1i, this->size)]) +
+                d[index(i, j, this->size)] = s0 * (t0 * d0[index(i0i, j0i, this->size)] + t1 * d0[index(i0i, j1i, this->size)]) +
                                              s1 * (t0 * d0[index(i1i, j0i, this->size)] + t1 * d0[index(i1i, j1i, this->size)]);
             }
         }

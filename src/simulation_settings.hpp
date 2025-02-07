@@ -1,9 +1,7 @@
 #pragma once
 
-#include "utils.hpp"
-
 enum ExecutionMode { SERIAL, OPENMP, CUDA };
-enum SimulationAttribute { DENSITY_ATTRIBUTE, VELOCITY_ATTRIBUTE };
+enum SimulationAttribute { DENSITY, VELOCITY };
 
 struct SimulationSettings {
     // Used to set up the simulation
@@ -16,15 +14,13 @@ struct SimulationSettings {
     float viscosity = 0.0000001f;
     float deltaTime = 0.2f;
     int executionMode = SERIAL;
-    int simulationAttribute = DENSITY_ATTRIBUTE;
+    int simulationAttribute = DENSITY;
+
+    // Mouse state
+    double xpos, ypos, xposPrev, yposPrev, deltax, deltay, xposScaled, yposScaled, mouseTime, mouseTimePrev, mouseTimeDelta;
+
+    // Keybind action flags
     bool isSimulationRunning = false;
-
-    void ResetMatrix() {
-        log(Utils::LogLevel::INFO, std::cout, "Matrix reset!");
-
-        viscosity = 0.0000001f;
-        deltaTime = 0.2f;
-
-        // TODO rest matrix
-    }
+    bool resetSimulation = false;
+    bool windMachine = false;
 };

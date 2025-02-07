@@ -53,15 +53,22 @@ GLuint Renderer::getShaderProgram(const bool useDensityShader) {
 }
 
 std::vector<float> Renderer::getDensityVertices(SimulationSettings *settings, FluidMatrix *matrix) {
-    int n = settings->viewportSize;
+    const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 3);
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            vertices[3 * FluidMatrix::index(i, j, n)] = j;
-            vertices[3 * FluidMatrix::index(i, j, n) + 1] = i;
 
-            int idx = (i / settings->scalingFactor * matrix->size) + (j / settings->scalingFactor);
-            vertices[3 * FluidMatrix::index(i, j, n) + 2] = matrix->density[idx];
+    const float scalingFactorInv = 1.0f / settings->scalingFactor;
+    const int matrixSize = matrix->size;
+
+    for (int i = 0; i < n; i++) {
+        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
+
+        for (int j = 0; j < n; j++) {
+            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
+            const int vertexIdx = 3 * (i * n + j);
+
+            vertices[vertexIdx] = j;
+            vertices[vertexIdx + 1] = i;
+            vertices[vertexIdx + 2] = matrix->density[idx];
         }
     }
 
@@ -71,16 +78,23 @@ std::vector<float> Renderer::getDensityVertices(SimulationSettings *settings, Fl
 }
 
 std::vector<float> Renderer::getVelocityVertices(SimulationSettings *settings, FluidMatrix *matrix) {
-    int n = settings->viewportSize;
+    const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 4);
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            vertices[4 * FluidMatrix::index(i, j, n)] = j;
-            vertices[4 * FluidMatrix::index(i, j, n) + 1] = i;
 
-            int idx = (i / settings->scalingFactor * matrix->size) + (j / settings->scalingFactor);
-            vertices[4 * FluidMatrix::index(i, j, n) + 2] = matrix->Vx[idx];
-            vertices[4 * FluidMatrix::index(i, j, n) + 3] = matrix->Vy[idx];
+    const float scalingFactorInv = 1.0f / settings->scalingFactor;
+    const int matrixSize = matrix->size;
+
+    for (int i = 0; i < n; i++) {
+        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
+
+        for (int j = 0; j < n; j++) {
+            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
+            const int vertexIdx = 4 * (i * n + j);
+
+            vertices[vertexIdx] = j;
+            vertices[vertexIdx + 1] = i;
+            vertices[vertexIdx + 2] = matrix->Vx[idx];
+            vertices[vertexIdx + 3] = matrix->Vy[idx];
         }
     }
 
@@ -102,19 +116,29 @@ void Renderer::linkVelocityVerticesToBuffer(float *vertices, int len) {
 }
 
 void Renderer::normalizeDensityVertices(SimulationSettings *settings, std::vector<float> &vertices, int n) {
+    const float normFactor = 2.0f / (settings->viewportSize - 1);
+    float *v = vertices.data();
+
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            vertices[3 * FluidMatrix::index(i, j, n)] = (vertices[3 * FluidMatrix::index(i, j, n)] / (static_cast<float>(settings->viewportSize - 1) / 2.0f)) - 1;
-            vertices[3 * FluidMatrix::index(i, j, n)] = 1 - (vertices[3 * FluidMatrix::index(i, j, n) + 1] / (static_cast<float>(settings->viewportSize - 1) / 2.0f));
+            const int vertIdx = 3 * FluidMatrix::index(i, j, n);
+
+            v[vertIdx] = (v[vertIdx] * normFactor) - 1.0f;
+            v[vertIdx + 1] = 1 - (v[vertIdx + 1] * normFactor);
         }
     }
 }
 
 void Renderer::normalizeSpeedVertices(SimulationSettings *settings, std::vector<float> &vertices, int n) {
+    const float normFactor = 2.0f / (settings->viewportSize - 1);
+    float *v = vertices.data();
+
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            vertices[4 * FluidMatrix::index(i, j, n)] = (vertices[4 * FluidMatrix::index(i, j, n)] / (static_cast<float>(settings->viewportSize - 1) / 2.0f)) - 1;
-            vertices[4 * FluidMatrix::index(i, j, n) + 1] = 1 - (vertices[4 * FluidMatrix::index(i, j, n) + 1] / (static_cast<float>(settings->viewportSize - 1) / 2.0f));
+            const int vertIdx = 4 * FluidMatrix::index(i, j, n);
+
+            v[vertIdx] = (v[vertIdx] * normFactor) - 1.0f;
+            v[vertIdx + 1] = 1 - (v[vertIdx + 1] * normFactor);
         }
     }
 }

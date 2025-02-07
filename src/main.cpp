@@ -24,13 +24,12 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    glViewport(0, 0, 800, 800);
-
-    GUI::Init(window);
-
     // Init simulation settings
     SimulationSettings settings;
     GUI::SetSimulationSettings(&settings);
+
+    glViewport(0, 0, settings.viewportSize, settings.viewportSize);
+    GUI::Init(window);
 
     // Register callback for key events
     glfwSetKeyCallback(window, GUI::KeyCallback);
@@ -46,7 +45,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Render GUI
-        GUI::Render(settings, &matrix);
+        GUI::Render(settings, window, &matrix);
 
         // Swap buffers
         glfwSwapBuffers(window);
