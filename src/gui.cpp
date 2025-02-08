@@ -22,46 +22,66 @@ void GUI::Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Window position and size
-    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-    ImGui::SetNextWindowSize(ImVec2(350.0f, 200.0f));
-
     if (ImGui::Begin("Simulation parameters", nullptr, ImGuiWindowFlags_NoResize)) {
-        // Simulation parameters
-        ImGui::SliderFloat("Viscosity", &settings.viscosity, 0.0f, 0.0001f, "%.7f", ImGuiSliderFlags_Logarithmic);
-        ImGui::SliderFloat("TimeStep", &settings.deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+        if (ImGui::BeginTabBar("Tabs")) {
+            if (ImGui::BeginTabItem("Parameters")) {
+                // Simulation parameters
+                ImGui::SliderFloat("Viscosity", &settings.viscosity, 0.0f, 0.0001f, "%.7f", ImGuiSliderFlags_Logarithmic);
+                ImGui::SliderFloat("TimeStep", &settings.deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
 
-        // Update matrix parameters
-        matrix->visc = settings.viscosity;
-        matrix->dt = settings.deltaTime;
+                // Update matrix parameters
+                matrix->visc = settings.viscosity;
+                matrix->dt = settings.deltaTime;
 
-        // Visualization mode
-        ImGui::Text("Visualization:");
-        ImGui::RadioButton("Density", &settings.simulationAttribute, DENSITY);
-        ImGui::SameLine();
-        ImGui::RadioButton("Velocity", &settings.simulationAttribute, VELOCITY);
+                // Visualization mode
+                ImGui::Text("Visualization:");
+                ImGui::RadioButton("Density", &settings.simulationAttribute, DENSITY);
+                ImGui::SameLine();
+                ImGui::RadioButton("Velocity", &settings.simulationAttribute, VELOCITY);
 
-        // Execution mode
-        ImGui::Text("Execution mode:");
-        ImGui::RadioButton("Serial", &settings.executionMode, SERIAL);
-        ImGui::SameLine();
-        ImGui::RadioButton("OpenMP", &settings.executionMode, OPENMP);
+                // Execution mode
+                ImGui::Text("Execution mode:");
+                ImGui::RadioButton("Serial", &settings.executionMode, SERIAL);
+                ImGui::SameLine();
+                ImGui::RadioButton("OpenMP", &settings.executionMode, OPENMP);
 #ifdef __CUDACC__
-        ImGui::SameLine();
-        ImGui::RadioButton("CUDA", &settings.executionMode, CUDA);
+                ImGui::SameLine();
+                ImGui::RadioButton("CUDA", &settings.executionMode, CUDA);
 #endif
 
-        // Start/Stop simulation
-        if (ImGui::Button(settings.isSimulationRunning ? "Stop Simulation" : "Start Simulation")) {
-            settings.isSimulationRunning = !settings.isSimulationRunning;
+                // Toggle wind machine
+                if (ImGui::Button(settings.windMachine ? "Stop wind machine" : "Start wind machine")) {
+                    settings.windMachine = !settings.windMachine;
+                }
+                ImGui::SameLine();
+                ImGui::Text("Wind Machine: %s", settings.windMachine ? "ON" : "OFF");
+
+
+                // Start/Stop simulation
+                if (ImGui::Button(settings.isSimulationRunning ? "Stop Simulation" : "Start Simulation")) {
+                    settings.isSimulationRunning = !settings.isSimulationRunning;
+                }
+                ImGui::SameLine();
+                ImGui::Text("Simulation status: %s", settings.isSimulationRunning ? "Running" : "Stopped");
+
+                // Performance display
+                ImGui::Text("Avg %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Keybinds")) {
+                ImGui::Text("[ESC] - Exit program");
+                ImGui::Text("[SPACE] - Pause/Resume simulation");
+                ImGui::Text("[R] - Reset simulation");
+                ImGui::Text("[V] - Change simulation attribute");
+                ImGui::Text("[M] - Change execution mode");
+                ImGui::Text("[W] - Toggle wind machine");
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
         }
-
-        // Status display
-        ImGui::SameLine();
-        ImGui::Text("Status: %s", settings.isSimulationRunning ? "Running" : "Stopped");
-
-        // Performance display
-        ImGui::Text("Avg %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     }
     ImGui::End();
 
@@ -172,7 +192,15 @@ void GUI::KeyCallback(GLFWwindow *window, int key, int scancode, int action, int
     if (key == GLFW_KEY_R && action == GLFW_PRESS && settingsPtr) settingsPtr->resetSimulation = true;
     // Change simulation attribute
     if (key == GLFW_KEY_V && action == GLFW_PRESS && settingsPtr) settingsPtr->simulationAttribute = settingsPtr->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
-    // Toggle wind machine
+    // Change execution mode
+    if (key == GLFW_KEY_M && action == GLFW_PRESS && settingsPtr) {
+#ifdef __CUDACC__
+        settingsPtr->executionMode = (settingsPtr->executionMode + 1) % (CUDA + 1);
+#else
+        settingsPtr->executionMode = settingsPtr->executionMode == SERIAL ? OPENMP : SERIAL;
+#endif
+    }
+    // Toggle wind machine    // Toggle wind machine
     if (key == GLFW_KEY_W && action == GLFW_PRESS && settingsPtr) settingsPtr->windMachine = !settingsPtr->windMachine;
 }
 
