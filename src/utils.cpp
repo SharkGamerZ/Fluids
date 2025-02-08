@@ -54,13 +54,13 @@ namespace Utils {
         try {
             std::ifstream file(filePath, std::ios::binary | std::ios::ate);
             if (!file.is_open()) {
-                log(LogLevel::ERROR, std::cerr, std::format("Failed to open file: {}", filePath));
+                log(ERROR, std::cerr, std::format("Failed to open file: {}", filePath));
                 return std::nullopt;
             }
 
             const std::streamsize size = file.tellg();
             if (size <= 0) {
-                log(LogLevel::ERROR, std::cerr, std::format("File is empty or invalid: {}", filePath));
+                log(ERROR, std::cerr, std::format("File is empty or invalid: {}", filePath));
                 return std::nullopt;
             }
 
@@ -68,13 +68,13 @@ namespace Utils {
             std::string buffer(size, '\0');
 
             if (!file.read(buffer.data(), size)) {
-                log(LogLevel::ERROR, std::cerr, std::format("Failed to read file: {}", filePath));
+                log(ERROR, std::cerr, std::format("Failed to read file: {}", filePath));
                 return std::nullopt;
             }
 
             return buffer;
         } catch (const std::exception &e) {
-            log(LogLevel::ERROR, std::cerr, std::format("Exception occurred: {}", e.what()));
+            log(ERROR, std::cerr, std::format("Exception occurred: {}", e.what()));
             return std::nullopt;
         }
     }

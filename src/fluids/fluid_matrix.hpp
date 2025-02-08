@@ -24,7 +24,7 @@ public:
     FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
     ~FluidMatrix();
 
-    [[nodiscard]] static uint32_t index(uint32_t i, uint32_t j, uint32_t matrix_size) { return j + i * matrix_size; }
+    [[nodiscard]] static uint32_t index(const uint32_t i, const uint32_t j, const uint32_t matrix_size) { return j + i * matrix_size; }
     void reset();
 
     void step();

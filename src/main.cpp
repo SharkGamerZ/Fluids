@@ -3,7 +3,7 @@
 int main() {
     // Initialize GLFW
     if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
+        log(Utils::LogLevel::ERROR, std::cerr, "Failed to initialize GLFW");
         return EXIT_FAILURE;
     }
 
