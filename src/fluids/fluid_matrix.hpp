@@ -36,7 +36,7 @@ public:
     void addDensity(uint32_t x, uint32_t y, double amount);
     void addVelocity(uint32_t x, uint32_t y, double amountX, double amountY);
 
-private:
+protected:
     int numMaxThreads; ///< Number of threads used by OpenMP
 
     void diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const;

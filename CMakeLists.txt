@@ -23,9 +23,9 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
     set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 else ()
     message(STATUS "Building in Release mode: Enabling full optimizations.")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto=auto")
     set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -lineinfo --use_fast_math")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -flto")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -flto=auto")
 endif ()
 
 # Set flags
@@ -67,3 +67,26 @@ target_link_libraries(fluids PRIVATE
 
 # Include directories
 target_include_directories(fluids PRIVATE lib/imgui/ lib/imgui/backends)
+
+# ---------------------------------------------------------
+# Testing setup
+# ---------------------------------------------------------
+
+# Add test executable with just the needed sources
+add_executable(test_fluids
+        tests/test_performance.cpp
+        tests/test_fluid_matrix.hpp
+        src/fluids/fluid_matrix.cpp
+        src/utils.cpp
+)
+
+# Copy relevant flags and settings from main target
+target_compile_options(test_fluids PRIVATE
+        $<$<CONFIG:Release>:-O3 -march=native -flto=auto>
+        $<$<CONFIG:Debug>:-O0 -g>
+)
+
+# Link only necessary libraries
+target_link_libraries(test_fluids PRIVATE
+        OpenMP::OpenMP_CXX
+)
