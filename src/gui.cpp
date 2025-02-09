@@ -1,6 +1,7 @@
 #include "gui.hpp"
 
-void GUI::Init(GLFWwindow *window) {
+namespace GUI {
+void Init(GLFWwindow *window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -15,10 +16,12 @@ void GUI::Init(GLFWwindow *window) {
     ImGui_ImplOpenGL3_Init();
 }
 
-void GUI::Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix) {
+void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 
     if (ImGui::Begin("Simulation parameters", nullptr, ImGuiWindowFlags_NoResize)) {
         if (ImGui::BeginTabBar("Tabs")) {
@@ -140,7 +143,7 @@ void GUI::Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void GUI::RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
+void RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
     const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute == DENSITY);
     if (!shaderProgram) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
@@ -174,13 +177,13 @@ void GUI::RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
     glDeleteProgram(shaderProgram);
 }
 
-void GUI::Cleanup() {
+void Cleanup() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
 
-void GUI::KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     auto *settings = static_cast<SimulationSettings *>(glfwGetWindowUserPointer(window));
     if (!settings) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to get window user pointer");
@@ -206,3 +209,4 @@ void GUI::KeyCallback(GLFWwindow *window, int key, int scancode, int action, int
     // Toggle wind machine    // Toggle wind machine
     if (key == GLFW_KEY_W && action == GLFW_PRESS) settings->windMachine = !settings->windMachine;
 }
+} // namespace GUI

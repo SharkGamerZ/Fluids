@@ -2,15 +2,15 @@
 
 
 namespace {
-    // Shader paths
-    const std::string DENSITY_VERTEX_SHADER_PATH = "../src/shaders/density.vert";
-    const std::string VELOCITY_VERTEX_SHADER_PATH = "../src/shaders/velocity.vert";
-    const std::string DENSITY_FRAGMENT_SHADER_PATH = "../src/shaders/density.frag";
-    const std::string VELOCITY_FRAGMENT_SHADER_PATH = "../src/shaders/velocity.frag";
-
+// Shader paths
+const std::string DENSITY_VERTEX_SHADER_PATH = "../src/shaders/density.vert";
+const std::string VELOCITY_VERTEX_SHADER_PATH = "../src/shaders/velocity.vert";
+const std::string DENSITY_FRAGMENT_SHADER_PATH = "../src/shaders/density.frag";
+const std::string VELOCITY_FRAGMENT_SHADER_PATH = "../src/shaders/velocity.frag";
 } // namespace
 
-GLuint Renderer::getShaderProgram(const bool useDensityShader) {
+namespace Renderer {
+GLuint getShaderProgram(const bool useDensityShader) {
     const auto vertexShaderSource = useDensityShader ? Utils::readFile(DENSITY_VERTEX_SHADER_PATH) : Utils::readFile(VELOCITY_VERTEX_SHADER_PATH);
     const auto fragmentShaderSource = useDensityShader ? Utils::readFile(DENSITY_FRAGMENT_SHADER_PATH) : Utils::readFile(VELOCITY_FRAGMENT_SHADER_PATH);
     if (!vertexShaderSource || !fragmentShaderSource) {
@@ -52,7 +52,7 @@ GLuint Renderer::getShaderProgram(const bool useDensityShader) {
     return shaderProgram;
 }
 
-std::vector<float> Renderer::getDensityVertices(SimulationSettings *settings, FluidMatrix *matrix) {
+std::vector<float> getDensityVertices(SimulationSettings *settings, FluidMatrix *matrix) {
     const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 3);
 
@@ -77,7 +77,7 @@ std::vector<float> Renderer::getDensityVertices(SimulationSettings *settings, Fl
     return vertices;
 }
 
-std::vector<float> Renderer::getVelocityVertices(SimulationSettings *settings, FluidMatrix *matrix) {
+std::vector<float> getVelocityVertices(SimulationSettings *settings, FluidMatrix *matrix) {
     const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 4);
 
@@ -103,19 +103,19 @@ std::vector<float> Renderer::getVelocityVertices(SimulationSettings *settings, F
     return vertices;
 }
 
-void Renderer::linkDensityVerticesToBuffer(float *vertices, int len) {
+void linkDensityVerticesToBuffer(float *vertices, int len) {
     glBufferData(GL_ARRAY_BUFFER, len * sizeof(float), vertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
 }
 
-void Renderer::linkVelocityVerticesToBuffer(float *vertices, int len) {
+void linkVelocityVerticesToBuffer(float *vertices, int len) {
     glBufferData(GL_ARRAY_BUFFER, len * sizeof(float), vertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
 }
 
-void Renderer::normalizeDensityVertices(SimulationSettings *settings, std::vector<float> &vertices, int n) {
+void normalizeDensityVertices(SimulationSettings *settings, std::vector<float> &vertices, int n) {
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     float *v = vertices.data();
 
@@ -129,7 +129,7 @@ void Renderer::normalizeDensityVertices(SimulationSettings *settings, std::vecto
     }
 }
 
-void Renderer::normalizeSpeedVertices(SimulationSettings *settings, std::vector<float> &vertices, int n) {
+void normalizeSpeedVertices(SimulationSettings *settings, std::vector<float> &vertices, int n) {
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     float *v = vertices.data();
 
@@ -143,7 +143,7 @@ void Renderer::normalizeSpeedVertices(SimulationSettings *settings, std::vector<
     }
 }
 
-std::optional<GLuint> Renderer::compileShader(const std::string &shaderSource, GLenum shaderType) {
+std::optional<GLuint> compileShader(const std::string &shaderSource, GLenum shaderType) {
     const GLuint shader = glCreateShader(shaderType);
     const char *shaderSourceCStr = shaderSource.c_str();
     glShaderSource(shader, 1, &shaderSourceCStr, nullptr);
@@ -160,3 +160,4 @@ std::optional<GLuint> Renderer::compileShader(const std::string &shaderSource, G
     }
     return shader;
 }
+} // namespace Renderer
