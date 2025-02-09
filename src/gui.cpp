@@ -1,7 +1,5 @@
 #include "gui.hpp"
 
-SimulationSettings *GUI::settingsPtr = nullptr; // TODO: see if this can be removed
-
 void GUI::Init(GLFWwindow *window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -182,27 +180,29 @@ void GUI::Cleanup() {
     ImGui::DestroyContext();
 }
 
-// TODO: improve after settingsPtr is removed
 void GUI::KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    auto *settings = static_cast<SimulationSettings *>(glfwGetWindowUserPointer(window));
+    if (!settings) {
+        log(Utils::LogLevel::ERROR, std::cerr, "Failed to get window user pointer");
+        return;
+    }
+
     // Exit program
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
     // Pause/resume simulation
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS && settingsPtr) settingsPtr->isSimulationRunning = !settingsPtr->isSimulationRunning;
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) settings->isSimulationRunning = !settings->isSimulationRunning;
     // Reset simulation
-    if (key == GLFW_KEY_R && action == GLFW_PRESS && settingsPtr) settingsPtr->resetSimulation = true;
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) settings->resetSimulation = true;
     // Change simulation attribute
-    if (key == GLFW_KEY_V && action == GLFW_PRESS && settingsPtr) settingsPtr->simulationAttribute = settingsPtr->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
+    if (key == GLFW_KEY_V && action == GLFW_PRESS) settings->simulationAttribute = settings->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
     // Change execution mode
-    if (key == GLFW_KEY_M && action == GLFW_PRESS && settingsPtr) {
+    if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 #ifdef __CUDACC__
-        settingsPtr->executionMode = (settingsPtr->executionMode + 1) % (CUDA + 1);
+        settings->executionMode = (settings->executionMode + 1) % (CUDA + 1);
 #else
-        settingsPtr->executionMode = settingsPtr->executionMode == SERIAL ? OPENMP : SERIAL;
+        settings->executionMode = settings->executionMode == SERIAL ? OPENMP : SERIAL;
 #endif
     }
     // Toggle wind machine    // Toggle wind machine
-    if (key == GLFW_KEY_W && action == GLFW_PRESS && settingsPtr) settingsPtr->windMachine = !settingsPtr->windMachine;
+    if (key == GLFW_KEY_W && action == GLFW_PRESS) settings->windMachine = !settings->windMachine;
 }
-
-// TODO: remove after settingsPtr is removed
-void GUI::SetSimulationSettings(SimulationSettings *settings) { settingsPtr = settings; }

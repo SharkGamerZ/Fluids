@@ -26,8 +26,7 @@ int main() {
 
     // Init simulation settings
     SimulationSettings settings;
-    GUI::SetSimulationSettings(&settings);
-
+    glfwSetWindowUserPointer(window, &settings);
     glViewport(0, 0, settings.viewportSize, settings.viewportSize);
     GUI::Init(window);
 

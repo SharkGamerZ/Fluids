@@ -22,9 +22,4 @@ public:
     static void Cleanup();
     /// Callback for key events
     static void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
-    /// Set simulation settings
-    static void SetSimulationSettings(SimulationSettings *settings);
-
-private:
-    static SimulationSettings *settingsPtr;
 };
