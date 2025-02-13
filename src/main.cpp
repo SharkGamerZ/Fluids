@@ -1,6 +1,9 @@
 #include "gui.hpp"
 
 int main() {
+    // Init simulation settings
+    SimulationSettings settings;
+
     // Initialize GLFW
     if (!glfwInit()) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to initialize GLFW");
@@ -8,7 +11,7 @@ int main() {
     }
 
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow *window = glfwCreateWindow(800, 800, "Fluids", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(settings.viewportSize, settings.viewportSize, "Fluids", nullptr, nullptr);
     if (!window) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create window");
         glfwTerminate();
@@ -24,8 +27,6 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    // Init simulation settings
-    SimulationSettings settings;
     glfwSetWindowUserPointer(window, &settings);
     glViewport(0, 0, settings.viewportSize, settings.viewportSize);
     GUI::Init(window);

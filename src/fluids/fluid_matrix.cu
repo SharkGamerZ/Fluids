@@ -1,5 +1,29 @@
 #include "fluid_matrix.hpp"
 
+void FluidMatrix::CUDA_init() {
+    const size_t size_bytes = this->size * this->size * sizeof(double);
+
+    cudaMalloc(&d_density, size_bytes);
+    cudaMalloc(&d_density_prev, size_bytes);
+    cudaMalloc(&d_vX, size_bytes);
+    cudaMalloc(&d_vX_prev, size_bytes);
+    cudaMalloc(&d_vY, size_bytes);
+    cudaMalloc(&d_vY_prev, size_bytes);
+    cudaMalloc(&d_div, size_bytes);
+    cudaMalloc(&d_p, size_bytes);
+}
+
+void FluidMatrix::CUDA_destroy() const {
+    cudaFree(d_density);
+    cudaFree(d_density_prev);
+    cudaFree(d_vX);
+    cudaFree(d_vX_prev);
+    cudaFree(d_vY);
+    cudaFree(d_vY_prev);
+    cudaFree(d_div);
+    cudaFree(d_p);
+}
+
 __device__ int index(const int i, const int j, const int size) { return i * size + j; }
 
 __global__ void advect_kernel(int size, double *d, const double *d0, const double *vX, const double *vY, double dt) {
@@ -119,41 +143,24 @@ void FluidMatrix::CUDA_diffuse(Axis mode, std::vector<double> &current, std::vec
 }
 
 void FluidMatrix::CUDA_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
-    double *d_d, *d_d0, *d_vX, *d_vY;
-    size_t size_bytes = this->size * this->size * sizeof(double);
+    const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    cudaMalloc(&d_d, size_bytes);
-    cudaMalloc(&d_d0, size_bytes);
-    cudaMalloc(&d_vX, size_bytes);
-    cudaMalloc(&d_vY, size_bytes);
-
-    cudaMemcpy(d_d0, d0.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_density, d0.data(), size_bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    advect_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_d, d_d0, d_vX, d_vY, dt);
+    advect_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_density, d_density_prev, d_vX, d_vY, dt);
 
-    cudaMemcpy(d.data(), d_d, size_bytes, cudaMemcpyDeviceToHost);
-
-    cudaFree(d_d);
-    cudaFree(d_d0);
-    cudaFree(d_vX);
-    cudaFree(d_vY);
+    cudaMemcpy(d.data(), d_density, size_bytes, cudaMemcpyDeviceToHost);
 
     CUDA_set_bnd(mode, d);
 }
 
 void FluidMatrix::CUDA_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
-    double *d_vX, *d_vY, *d_p, *d_div;
-    size_t size_bytes = this->size * this->size * sizeof(double);
-
-    cudaMalloc(&d_vX, size_bytes);
-    cudaMalloc(&d_vY, size_bytes);
-    cudaMalloc(&d_p, size_bytes);
-    cudaMalloc(&d_div, size_bytes);
+    const size_t size_bytes = this->size * this->size * sizeof(double);
 
     cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
@@ -176,61 +183,46 @@ void FluidMatrix::CUDA_project(std::vector<double> &vX, std::vector<double> &vY,
 
     cudaMemcpy(vX.data(), d_vX, size_bytes, cudaMemcpyDeviceToHost);
     cudaMemcpy(vY.data(), d_vY, size_bytes, cudaMemcpyDeviceToHost);
-
-    cudaFree(d_vX);
-    cudaFree(d_vY);
-    cudaFree(d_p);
-    cudaFree(d_div);
 }
 
 void FluidMatrix::CUDA_set_bnd(Axis mode, std::vector<double> &attr) const {
-    double *d_attr;
-    size_t size_bytes = this->size * this->size * sizeof(double);
-    cudaMalloc(&d_attr, size_bytes);
-    cudaMemcpy(d_attr, attr.data(), size_bytes, cudaMemcpyHostToDevice);
+    const size_t size_bytes = this->size * this->size * sizeof(double);
+
+    cudaMemcpy(d_p, attr.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    set_bnd_edges<<<numBlocks, threadsPerBlock>>>(this->size, mode, d_attr);
-    set_bnd_corners<<<1, 1>>>(this->size, d_attr);
+    set_bnd_edges<<<numBlocks, threadsPerBlock>>>(this->size, mode, d_p);
+    set_bnd_corners<<<1, 1>>>(this->size, d_p);
 
-    cudaMemcpy(attr.data(), d_attr, size_bytes, cudaMemcpyDeviceToHost);
-    cudaFree(d_attr);
+    cudaMemcpy(attr.data(), d_p, size_bytes, cudaMemcpyDeviceToHost);
 }
 
 void FluidMatrix::CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
-    double *d_value, *d_oldValue;
-    size_t size_bytes = this->size * this->size * sizeof(double);
+    const size_t size_bytes = this->size * this->size * sizeof(double);
+
     double c = 1 + 6 * diffusionRate; // TODO: +6 or +4?
     double cRecip = 1 / c;
 
-    cudaMalloc(&d_value, size_bytes);
-    cudaMalloc(&d_oldValue, size_bytes);
-
-    cudaMemcpy(d_value, value.data(), size_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_oldValue, oldValue.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_p, value.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_div, oldValue.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
     for (int k = 0; k < ITERATIONS; k++) {
-        lin_solve_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_value, d_oldValue, diffusionRate, cRecip);
+        lin_solve_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_p, d_div, diffusionRate, cRecip);
         cudaDeviceSynchronize();
         CUDA_set_bnd(mode, value);
     }
 
-    cudaMemcpy(value.data(), d_value, size_bytes, cudaMemcpyDeviceToHost);
-
-    cudaFree(d_value);
-    cudaFree(d_oldValue);
+    cudaMemcpy(value.data(), d_p, size_bytes, cudaMemcpyDeviceToHost);
 }
 
 void FluidMatrix::CUDA_fadeDensity(std::vector<double> &density) const {
-    double *d_density;
-    size_t size_bytes = this->size * this->size * sizeof(double);
+    const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    cudaMalloc(&d_density, size_bytes);
     cudaMemcpy(d_density, density.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
@@ -239,6 +231,4 @@ void FluidMatrix::CUDA_fadeDensity(std::vector<double> &density) const {
     fade_density_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_density);
 
     cudaMemcpy(density.data(), d_density, size_bytes, cudaMemcpyDeviceToHost);
-
-    cudaFree(d_density);
 }

@@ -45,7 +45,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                 ImGui::RadioButton("Serial", &settings.executionMode, SERIAL);
                 ImGui::SameLine();
                 ImGui::RadioButton("OpenMP", &settings.executionMode, OPENMP);
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
                 ImGui::SameLine();
                 ImGui::RadioButton("CUDA", &settings.executionMode, CUDA);
 #endif
@@ -126,7 +126,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
             switch (settings.executionMode) {
                 case SERIAL: matrix->step(); break;
                 case OPENMP: matrix->OMP_step(); break;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
                 case CUDA: matrix->CUDA_step(); break;
 #endif
             }
@@ -200,7 +200,7 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_V && action == GLFW_PRESS) settings->simulationAttribute = settings->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
     // Change execution mode
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
         settings->executionMode = (settings->executionMode + 1) % (CUDA + 1);
 #else
         settings->executionMode = settings->executionMode == SERIAL ? OPENMP : SERIAL;

@@ -78,10 +78,10 @@ int main() {
     generate_random_fluid_matrix_params(fluidMatrix, 400);
 
     // Example usage with member function
-    test_function_performance("lin_solve", 20, [&fluidMatrix] { fluidMatrix.lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff); });
+    test_function_performance("lin_solve", 200, [&fluidMatrix] { fluidMatrix.lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff); });
 
     // Example usage with different arguments
-    test_function_performance("diffuse", 20, [&fluidMatrix] { fluidMatrix.diffuse(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff, fluidMatrix.dt); });
+    test_function_performance("OMP_lin_solve", 200, [&fluidMatrix] { fluidMatrix.OMP_lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff); });
 
     return EXIT_SUCCESS;
 }

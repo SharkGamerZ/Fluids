@@ -27,7 +27,7 @@ public:
     using FluidMatrix::OMP_lin_solve;
     using FluidMatrix::OMP_fadeDensity;
 
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     // Expose CUDA implementations
     using FluidMatrix::CUDA_diffuse;
     using FluidMatrix::CUDA_advect;

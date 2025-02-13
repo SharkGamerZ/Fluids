@@ -6,16 +6,24 @@
 in vec2 vel;
 out vec4 FragColor;
 
-float MapToRange(float val, float minIn, float maxIn, float minOut, float maxOut) {
-    float x = (val - minIn) / (maxIn - minIn);
-    float result = minOut + (maxOut - minOut) * x;
-    return (result < minOut) ? minOut : (result > maxOut) ? maxOut : result;
+float mapRange(float val, float inMin, float inMax, float outMin, float outMax) {
+    // Division by zero check
+    float range = inMax - inMin;
+    if (abs(range) < 0.0001) return outMin;
+
+    // Clamp to [0, 1] and map to output range
+    float normalized = clamp((val - inMin) / range, 0.0, 1.0);
+    return mix(outMin, outMax, normalized);
 }
 
-void main()
-{
-    vec2 velocites;
-    velocites.x = MapToRange(vel.x, -0.05, 0.05, 0.0, 1.0);
-    velocites.y = MapToRange(vel.y, -0.05, 0.05, 0.0, 1.0);
-    FragColor = vec4(1.0, velocites.y, velocites.x, 1.0);
+void main() {
+    const float VEL_MIN = -0.05;
+    const float VEL_MAX = 0.05;
+
+    vec2 mappedVel = vec2(
+        mapRange(vel.x, VEL_MIN, VEL_MAX, 0.0, 1.0),
+        mapRange(vel.y, VEL_MIN, VEL_MAX, 0.0, 1.0)
+    );
+
+    FragColor = vec4(1.0, mappedVel.y, mappedVel.x, 1.0);
 }

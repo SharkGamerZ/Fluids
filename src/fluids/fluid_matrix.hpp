@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../utils.hpp"
+#include <cmath>
 #include <cstdint>
 #include <omp.h>
 #include <vector>
@@ -29,7 +31,7 @@ public:
 
     void step();
     void OMP_step();
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_step();
 #endif
 
@@ -39,39 +41,54 @@ public:
 protected:
     int numMaxThreads; ///< Number of threads used by OpenMP
 
+#ifdef CUDA_SUPPORT
+    /// Preallocate CUDA memory on matrix creation
+    void CUDA_init();
+    /// Free all CUDA memory on matrix destruction
+    void CUDA_destroy() const;
+#endif
+
     void diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const;
     void OMP_diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const;
 #endif
 
     void advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
     void OMP_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
 #endif
 
     void project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
     void OMP_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
 #endif
 
     void set_bnd(Axis mode, std::vector<double> &attr) const;
     void OMP_set_bnd(Axis mode, std::vector<double> &attr) const;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_set_bnd(Axis mode, std::vector<double> &attr) const;
 #endif
 
     void lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
     void OMP_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 #endif
 
     void fadeDensity(std::vector<double> &density) const;
     void OMP_fadeDensity(std::vector<double> &density) const;
-#ifdef __CUDACC__
+#ifdef CUDA_SUPPORT
     void CUDA_fadeDensity(std::vector<double> &density) const;
+#endif
+
+#ifdef CUDA_SUPPORT
+private:
+    double *d_density, *d_density_prev;
+    double *d_vX, *d_vX_prev;
+    double *d_vY, *d_vY_prev;
+    double *d_div, *d_p; ///< Divergence and pressure
 #endif
 };
