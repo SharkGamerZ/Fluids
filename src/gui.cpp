@@ -29,6 +29,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                 // Simulation parameters
                 ImGui::SliderFloat("Viscosity", &settings.viscosity, 0.0f, 0.0001f, "%.7f", ImGuiSliderFlags_Logarithmic);
                 ImGui::SliderFloat("TimeStep", &settings.deltaTime, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+                ImGui::SliderFloat("Mouse density", &settings.mouse_density, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_None);
+                ImGui::SliderFloat("Mouse velocity", &settings.mouse_velocity, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_None);
 
                 // Update matrix parameters
                 matrix->visc = settings.viscosity;
@@ -100,12 +102,13 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
         if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-                matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f);
+                matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
             }
 
             settings.deltax /= settings.scalingFactor * 2;
             settings.deltay /= settings.scalingFactor * 2;
-            matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax, settings.deltay);
+            matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
+                                settings.deltay * settings.mouse_velocity);
         }
 
         settings.xposPrev = settings.xpos;
