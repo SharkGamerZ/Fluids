@@ -1,15 +1,20 @@
 #include "fluid_matrix.hpp"
 
-#include "../utils.hpp"
-
-#include <cmath>
-
-
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
     : size(size), dt(dt), diff(diffusion), visc(viscosity), density(std::vector<double>(size * size)), density_prev(std::vector<double>(size * size)),
       Vx(std::vector<double>(size * size)), Vy(std::vector<double>(size * size)), Vx_prev(std::vector<double>(size * size)), Vy_prev(std::vector<double>(size * size)),
-      numMaxThreads(omp_get_max_threads()) {
+        numMaxThreads(omp_get_max_threads()) {
+#ifdef CUDA_SUPPORT
+            CUDA_init();
+#endif
     log(Utils::LogLevel::DEBUG, std::cout, std::format("FluidMatrix created with {} threads", numMaxThreads));
+}
+
+FluidMatrix::~FluidMatrix() {
+#ifdef CUDA_SUPPORT
+    CUDA_destroy();
+#endif
+    log(Utils::LogLevel::DEBUG, std::cout, "FluidMatrix deleted");
 }
 
 FluidMatrix::~FluidMatrix() { log(Utils::LogLevel::DEBUG, std::cout, "FluidMatrix deleted"); }

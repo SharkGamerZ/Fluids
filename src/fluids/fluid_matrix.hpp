@@ -21,6 +21,13 @@ public:
     std::vector<double> Vx_prev;      ///< Velocity in the x-axis in the previous step
     std::vector<double> Vy_prev;      ///< Velocity in the y-axis in the previous step
 
+    double* d_density;
+    double* d_density_prev;
+    double* d_Vx;
+    double* d_Vy;
+    double* d_Vx_prev;
+    double* d_Vy_prev;
+
     FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
     ~FluidMatrix();
 

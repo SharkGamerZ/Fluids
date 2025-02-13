@@ -1,5 +1,26 @@
 #include "fluid_matrix.hpp"
 
+void FluidMatrix::CUDA_init() {
+    const size_t size_bytes = this->size * this->size * sizeof(double);
+
+    cudaMalloc(&d_density, size_bytes);
+    cudaMalloc(&d_density_prev, size_bytes);
+    cudaMalloc(&d_vX, size_bytes);
+    cudaMalloc(&d_vY, size_bytes);
+    cudaMalloc(&d_vX_prev, size_bytes);
+    cudaMalloc(&d_vY_prev, size_bytes);
+
+}
+
+void FluidMatrix::CUDA_destroy() const {
+    cudaFree(d_density);
+    cudaFree(d_density_prev);
+    cudaFree(d_vX);
+    cudaFree(d_vY);
+    cudaFree(d_vX_prev);
+    cudaFree(d_vY_prev);
+}
+
 __device__ int index(const int i, const int j, const int size) { return i * size + j; }
 
 __global__ void advect_kernel(int size, double *d, const double *d0, const double *vX, const double *vY, double dt) {
