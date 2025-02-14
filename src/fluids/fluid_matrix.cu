@@ -119,19 +119,19 @@ __global__ void fade_density_kernel(int size, double *density) {
 void FluidMatrix::CUDA_step() {
     // Velocity
     {
-        CUDA_diffuse(X, Vx_prev, Vx, visc, dt);
-        CUDA_diffuse(Y, Vy_prev, Vy, visc, dt);
+        CUDA_diffuse(X, vX_prev, vX, visc, dt);
+        CUDA_diffuse(Y, vY_prev, vY, visc, dt);
 
-        CUDA_project(Vx_prev, Vy_prev, Vx, Vy);
+        CUDA_project(vX_prev, vY_prev, vX, vY);
 
-        CUDA_advect(X, Vx, Vx_prev, Vx_prev, Vy_prev, dt);
-        CUDA_advect(Y, Vy, Vy_prev, Vx_prev, Vy_prev, dt);
+        CUDA_advect(X, vX, vX_prev, vX_prev, vY_prev, dt);
+        CUDA_advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);
     }
 
     // Density
     {
         CUDA_diffuse(ZERO, density_prev, density, diff, dt);
-        CUDA_advect(ZERO, density, density_prev, Vx, Vy, dt);
+        CUDA_advect(ZERO, density, density_prev, vX, vY, dt);
     }
 
     CUDA_fadeDensity(density);
@@ -145,7 +145,7 @@ void FluidMatrix::CUDA_diffuse(Axis mode, std::vector<double> &current, std::vec
 void FluidMatrix::CUDA_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    cudaMemcpy(d_density, d0.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_density_prev, d0.data(), size_bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
 

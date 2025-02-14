@@ -15,8 +15,8 @@ struct SimulationSettings {
     float deltaTime = 0.2f;
     float mouse_density = 1.0f;
     float mouse_velocity = 1.0f;
-    int executionMode = SERIAL;
-    int simulationAttribute = DENSITY;
+    ExecutionMode executionMode = SERIAL;
+    SimulationAttribute simulationAttribute = DENSITY;
 
     // Mouse state
     double xpos, ypos, xposPrev, yposPrev, deltax, deltay, xposScaled, yposScaled, mouseTime, mouseTimePrev, mouseTimeDelta;

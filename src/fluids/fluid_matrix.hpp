@@ -18,10 +18,10 @@ public:
     double visc;                      ///< Viscosity
     std::vector<double> density;      ///< Density of the fluid
     std::vector<double> density_prev; ///< Density of the fluid in the previous step
-    std::vector<double> Vx;           ///< Velocity in the x-axis
-    std::vector<double> Vy;           ///< Velocity in the y-axis
-    std::vector<double> Vx_prev;      ///< Velocity in the x-axis in the previous step
-    std::vector<double> Vy_prev;      ///< Velocity in the y-axis in the previous step
+    std::vector<double> vX;           ///< Velocity in the x-axis
+    std::vector<double> vY;           ///< Velocity in the y-axis
+    std::vector<double> vX_prev;      ///< Velocity in the x-axis in the previous step
+    std::vector<double> vY_prev;      ///< Velocity in the y-axis in the previous step
 
     FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
     ~FluidMatrix();

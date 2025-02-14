@@ -15,7 +15,7 @@ void Init(GLFWwindow *window);
 /// Main UI rendering function
 void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix);
 /// Render fluid matrix
-void RenderMatrix(SimulationSettings &settings, FluidMatrix *fluidMatrix);
+void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *fluidMatrix);
 /// Cleanup GUI
 void Cleanup();
 /// Callback for key events

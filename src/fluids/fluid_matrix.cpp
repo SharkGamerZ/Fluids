@@ -2,7 +2,7 @@
 
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
     : size(size), dt(dt), diff(diffusion), visc(viscosity), density(std::vector<double>(size * size)), density_prev(std::vector<double>(size * size)),
-      Vx(std::vector<double>(size * size)), Vy(std::vector<double>(size * size)), Vx_prev(std::vector<double>(size * size)), Vy_prev(std::vector<double>(size * size)),
+      vX(std::vector<double>(size * size)), vY(std::vector<double>(size * size)), vX_prev(std::vector<double>(size * size)), vY_prev(std::vector<double>(size * size)),
       numMaxThreads(omp_get_max_threads()) {
 #ifdef CUDA_SUPPORT
     CUDA_init();
@@ -20,28 +20,28 @@ FluidMatrix::~FluidMatrix() {
 void FluidMatrix::reset() {
     std::ranges::fill(density, 0);
     std::ranges::fill(density_prev, 0);
-    std::ranges::fill(Vx, 0);
-    std::ranges::fill(Vy, 0);
-    std::ranges::fill(Vx_prev, 0);
-    std::ranges::fill(Vy_prev, 0);
+    std::ranges::fill(vX, 0);
+    std::ranges::fill(vY, 0);
+    std::ranges::fill(vX_prev, 0);
+    std::ranges::fill(vY_prev, 0);
 }
 
 void FluidMatrix::step() {
     // Velocity
     {
-        diffuse(X, Vx_prev, Vx, visc, dt);
-        diffuse(Y, Vy_prev, Vy, visc, dt);
+        diffuse(X, vX_prev, vX, visc, dt);
+        diffuse(Y, vY_prev, vY, visc, dt);
 
-        project(Vx_prev, Vy_prev, Vx, Vy);
+        project(vX_prev, vY_prev, vX, vY);
 
-        advect(X, Vx, Vx_prev, Vx_prev, Vy_prev, dt);
-        advect(Y, Vy, Vy_prev, Vx_prev, Vy_prev, dt);
+        advect(X, vX, vX_prev, vX_prev, vY_prev, dt);
+        advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);
     }
 
     // Density
     {
         diffuse(ZERO, density_prev, density, diff, dt);
-        advect(ZERO, density, density_prev, Vx, Vy, dt);
+        advect(ZERO, density, density_prev, vX, vY, dt);
     }
 
     fadeDensity(density);
@@ -50,19 +50,19 @@ void FluidMatrix::step() {
 void FluidMatrix::OMP_step() {
     // Velocity
     {
-        OMP_diffuse(X, Vx_prev, Vx, visc, dt);
-        OMP_diffuse(Y, Vy_prev, Vy, visc, dt);
+        OMP_diffuse(X, vX_prev, vX, visc, dt);
+        OMP_diffuse(Y, vY_prev, vY, visc, dt);
 
-        OMP_project(Vx_prev, Vy_prev, Vx, Vy);
+        OMP_project(vX_prev, vY_prev, vX, vY);
 
-        OMP_advect(X, Vx, Vx_prev, Vx_prev, Vy_prev, dt);
-        OMP_advect(Y, Vy, Vy_prev, Vx_prev, Vy_prev, dt);
+        OMP_advect(X, vX, vX_prev, vX_prev, vY_prev, dt);
+        OMP_advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);
     }
 
     // Density
     {
         OMP_diffuse(ZERO, density_prev, density, diff, dt);
-        OMP_advect(ZERO, density, density_prev, Vx, Vy, dt);
+        OMP_advect(ZERO, density, density_prev, vX, vY, dt);
     }
     OMP_fadeDensity(density);
 }
@@ -72,8 +72,8 @@ void FluidMatrix::addDensity(uint32_t x, uint32_t y, double amount) { this->dens
 void FluidMatrix::addVelocity(uint32_t x, uint32_t y, double amountX, double amountY) {
     uint32_t idx = index(y, x, this->size);
 
-    this->Vx[idx] += amountX;
-    this->Vy[idx] += amountY;
+    this->vX[idx] += amountX;
+    this->vY[idx] += amountY;
 }
 
 void FluidMatrix::diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {

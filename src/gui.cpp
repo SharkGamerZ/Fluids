@@ -37,20 +37,16 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                 matrix->dt = settings.deltaTime;
 
                 // Visualization mode
-                ImGui::Text("Visualization:");
-                ImGui::RadioButton("Density", &settings.simulationAttribute, DENSITY);
-                ImGui::SameLine();
-                ImGui::RadioButton("Velocity", &settings.simulationAttribute, VELOCITY);
+                constexpr std::array visualizationModeNames{"Density", "Velocity"};
+                ImGui::Combo("Visualization", reinterpret_cast<int *>(&settings.simulationAttribute), visualizationModeNames.data(), visualizationModeNames.size());
 
                 // Execution mode
-                ImGui::Text("Execution mode:");
-                ImGui::RadioButton("Serial", &settings.executionMode, SERIAL);
-                ImGui::SameLine();
-                ImGui::RadioButton("OpenMP", &settings.executionMode, OPENMP);
+                constexpr std::array executionModeNames{"Serial", "OpenMP",
 #ifdef CUDA_SUPPORT
-                ImGui::SameLine();
-                ImGui::RadioButton("CUDA", &settings.executionMode, CUDA);
+                                                        "CUDA"
 #endif
+                };
+                ImGui::Combo("Execution mode", reinterpret_cast<int *>(&settings.executionMode), executionModeNames.data(), executionModeNames.size());
 
                 // Toggle wind machine
                 if (ImGui::Button(settings.windMachine ? "Stop wind machine" : "Start wind machine")) {
@@ -132,6 +128,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 #ifdef CUDA_SUPPORT
                 case CUDA: matrix->CUDA_step(); break;
 #endif
+                default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
             }
         }
     }
@@ -146,9 +143,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
-    const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute == DENSITY);
-    if (!shaderProgram) {
+void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix) {
+    if (const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute); !shaderProgram) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
         return;
     }
@@ -162,22 +158,18 @@ void RenderMatrix(SimulationSettings &settings, FluidMatrix *matrix) {
 
     {
         const int viewportSize = settings.viewportSize;
+        const auto componentCount = Renderer::getVertexComponentCount(settings.simulationAttribute);
         std::vector<float> verts = settings.simulationAttribute == DENSITY ? Renderer::getDensityVertices(&settings, matrix) : Renderer::getVelocityVertices(&settings, matrix);
 
-        if (settings.simulationAttribute == DENSITY) {
-            glBindVertexArray(VAO);
-            Renderer::linkDensityVerticesToBuffer(verts.data(), viewportSize * viewportSize * 3);
-            glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize * 3);
-        } else {
-            glBindVertexArray(VAO);
-            Renderer::linkVelocityVerticesToBuffer(verts.data(), viewportSize * viewportSize * 4);
-            glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize * 4);
-        }
+        glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, componentCount, GL_FLOAT, GL_FALSE, componentCount * sizeof(float), nullptr);
+        glEnableVertexAttribArray(0);
+
+        glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize);
     }
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
 }
 
 void Cleanup() {
@@ -204,7 +196,7 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     // Change execution mode
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 #ifdef CUDA_SUPPORT
-        settings->executionMode = (settings->executionMode + 1) % (CUDA + 1);
+        settings->executionMode = static_cast<ExecutionMode>((static_cast<int>(settings->executionMode) + 1) % (CUDA + 1));
 #else
         settings->executionMode = settings->executionMode == SERIAL ? OPENMP : SERIAL;
 #endif

@@ -58,18 +58,18 @@ void generate_random_fluid_matrix_params(FluidMatrix &fluidMatrix, const int siz
     // Resize the matrices
     fluidMatrix.density.resize(fluidMatrix.size * fluidMatrix.size);
     fluidMatrix.density_prev.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.Vx.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.Vy.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.Vx_prev.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.Vy_prev.resize(fluidMatrix.size * fluidMatrix.size);
+    fluidMatrix.vX.resize(fluidMatrix.size * fluidMatrix.size);
+    fluidMatrix.vY.resize(fluidMatrix.size * fluidMatrix.size);
+    fluidMatrix.vX_prev.resize(fluidMatrix.size * fluidMatrix.size);
+    fluidMatrix.vY_prev.resize(fluidMatrix.size * fluidMatrix.size);
 
     // Initialize the matrices with some random values (just for testing)
     std::ranges::generate(fluidMatrix.density, [&gen, &diff_dist] { return diff_dist(gen); });
     std::ranges::generate(fluidMatrix.density_prev, [&gen, &diff_dist] { return diff_dist(gen); });
-    std::ranges::generate(fluidMatrix.Vx, [&gen, &visc_dist] { return visc_dist(gen); });
-    std::ranges::generate(fluidMatrix.Vy, [&gen, &visc_dist] { return visc_dist(gen); });
-    std::ranges::generate(fluidMatrix.Vx, [&gen, &visc_dist] { return visc_dist(gen); });
-    std::ranges::generate(fluidMatrix.Vy_prev, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(fluidMatrix.vX, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(fluidMatrix.vY, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(fluidMatrix.vX, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(fluidMatrix.vY_prev, [&gen, &visc_dist] { return visc_dist(gen); });
 }
 
 int main() {
