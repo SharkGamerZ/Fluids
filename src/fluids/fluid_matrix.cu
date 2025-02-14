@@ -146,41 +146,41 @@ void FluidMatrix::CUDA_advect(Axis mode, std::vector<double> &d, std::vector<dou
     CUDA_set_bnd(mode, d);
 }
 
-void FluidMatrix::CUDA_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
-    double *d_vX, *d_vY, *d_p, *d_div;
+void FluidMatrix::CUDA_project(std::vector<double> &vX_prev, std::vector<double> &vY_prev, std::vector<double> &vX, std::vector<double> &vY) const {
+    double *d_vX_prev, *d_vY_prev, *d_vX, *d_vY;
     size_t size_bytes = this->size * this->size * sizeof(double);
 
+    cudaMalloc(&d_vX_prev, size_bytes);
+    cudaMalloc(&d_vY_prev, size_bytes);
     cudaMalloc(&d_vX, size_bytes);
     cudaMalloc(&d_vY, size_bytes);
-    cudaMalloc(&d_p, size_bytes);
-    cudaMalloc(&d_div, size_bytes);
 
-    cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_vX_prev, vX_prev.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_vY_prev, vY_prev.data(), size_bytes, cudaMemcpyHostToDevice);
 
-    cudaMemset(d_p, 0, size_bytes);
+    cudaMemset(d_vX, 0, size_bytes);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    project_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_div);
+    project_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX_prev, d_vY_prev, d_vY);
 
-    CUDA_set_bnd(ZERO, div);
-    CUDA_set_bnd(ZERO, p);
-    CUDA_lin_solve(ZERO, p, div, 1);
+    CUDA_set_bnd(ZERO, vY);
+    CUDA_set_bnd(ZERO, vX);
+    CUDA_lin_solve(ZERO, vX, vY, 1);
 
-    update_velocity_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_p);
+    update_velocity_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX_prev, d_vY_prev, d_vX);
 
-    CUDA_set_bnd(X, vX);
-    CUDA_set_bnd(Y, vY);
+    CUDA_set_bnd(X, vX_prev);
+    CUDA_set_bnd(Y, vY_prev);
 
-    cudaMemcpy(vX.data(), d_vX, size_bytes, cudaMemcpyDeviceToHost);
-    cudaMemcpy(vY.data(), d_vY, size_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(vX_prev.data(), d_vX_prev, size_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(vY_prev.data(), d_vY_prev, size_bytes, cudaMemcpyDeviceToHost);
 
+    cudaFree(d_vX_prev);
+    cudaFree(d_vY_prev);
     cudaFree(d_vX);
     cudaFree(d_vY);
-    cudaFree(d_p);
-    cudaFree(d_div);
 }
 
 void FluidMatrix::CUDA_set_bnd(Axis mode, std::vector<double> &attr) const {
