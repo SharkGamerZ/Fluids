@@ -42,8 +42,3 @@
 - [ ] Fare CUDA della Advect e la Project
 
 
-# Bibliografia
-Gran parte di questo lavoro è basato su vari paper/risorse:
-- [Real-Time Fluid Dynamics for Games](https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf) by Jos Stam
-- [Fluid Simulation for Dummies](https://mikeash.com/pyblog/fluid-simulation-for-dummies.html) by Mike Ash
-- [But How DO Fluid Simulations Work?](https://www.youtube.com/watch?v=qsYE1wMEMPA) by Gonkee

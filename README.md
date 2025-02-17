@@ -44,3 +44,13 @@ OpenGL è la nostra libreria usata per andare a renderizzare a schermo i nostri 
 Le funzioni di OpenGL sono dette **Shader**, e nel nostro caso ne usiamo due:
 - [Vertex Shader](https://www.khronos.org/opengl/wiki/Vertex_Shader): la Vertex Shader processa i singoli vertici, andando a restituire in output altri vertici.
 - [Fragment Shader](https://www.khronos.org/opengl/wiki/Fragment_Shader): la Fragment Shader processa i frammenti che gli vengono passati, che sono un'insieme di pixel, per assegnargli dei colori.
+
+---
+
+
+
+# Bibliografia
+Gran parte di questo lavoro è basato su vari paper/risorse:
+- [Real-Time Fluid Dynamics for Games](https://www.dgp.toronto.edu/public_user/stam/reality/Research/pdf/GDC03.pdf) by Jos Stam
+- [Fluid Simulation for Dummies](https://mikeash.com/pyblog/fluid-simulation-for-dummies.html) by Mike Ash
+- [But How DO Fluid Simulations Work?](https://www.youtube.com/watch?v=qsYE1wMEMPA) by Gonkee
