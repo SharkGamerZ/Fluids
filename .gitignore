@@ -3,4 +3,5 @@
 *.iws
 cmake-build-*/
 out/
+build/
 
