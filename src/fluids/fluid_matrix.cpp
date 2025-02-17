@@ -1,5 +1,12 @@
 #include "fluid_matrix.hpp"
 
+#define SWAP(x0, x) \
+    {               \
+        auto tmp = x0; \
+        x0 = x;     \
+        x = tmp;    \
+    }
+
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
     : size(size), dt(dt), diff(diffusion), visc(viscosity), density(std::vector<double>(size * size)), density_prev(std::vector<double>(size * size)),
       vX(std::vector<double>(size * size)), vY(std::vector<double>(size * size)), vX_prev(std::vector<double>(size * size)), vY_prev(std::vector<double>(size * size)),
@@ -29,42 +36,65 @@ void FluidMatrix::reset() {
 void FluidMatrix::step() {
     // Velocity
     {
-        diffuse(X, vX_prev, vX, visc, dt);
-        diffuse(Y, vY_prev, vY, visc, dt);
+        SWAP(vX_prev, vX); diffuse(X, vX, vX_prev, visc, dt);
+        SWAP(vY_prev, vY); diffuse(Y, vY, vY_prev, visc, dt);
+        project(vX, vY, vX_prev, vY_prev);
 
-        project(vX_prev, vY_prev, vX, vY);
-
+        SWAP(vX_prev, vX); SWAP(vY_prev, vY);
         advect(X, vX, vX_prev, vX_prev, vY_prev, dt);
         advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);
+
+        project(vX, vY, vX_prev, vY_prev);
     }
 
     // Density
     {
-        diffuse(ZERO, density_prev, density, diff, dt);
-        advect(ZERO, density, density_prev, vX, vY, dt);
+        SWAP(density_prev, density); diffuse(ZERO, density, density_prev, diff, dt);
+        SWAP(density_prev, density); advect(ZERO, density, density_prev, vX, vY, dt);
     }
 
     fadeDensity(density);
 }
 
 void FluidMatrix::OMP_step() {
+    /*// Velocity*/
+    /*{*/
+    /*    OMP_diffuse(X, vX_prev, vX, visc, dt);*/
+    /*    OMP_diffuse(Y, vY_prev, vY, visc, dt);*/
+    /**/
+    /*    OMP_project(vX_prev, vY_prev, vX, vY);*/
+    /**/
+    /*    OMP_advect(X, vX, vX_prev, vX_prev, vY_prev, dt);*/
+    /*    OMP_advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);*/
+    /*}*/
+    /**/
+    /*// Density*/
+    /*{*/
+    /*    OMP_diffuse(ZERO, density_prev, density, diff, dt);*/
+    /*    OMP_advect(ZERO, density, density_prev, vX, vY, dt);*/
+    /*}*/
+    /*OMP_fadeDensity(density);*/
+
     // Velocity
     {
-        OMP_diffuse(X, vX_prev, vX, visc, dt);
-        OMP_diffuse(Y, vY_prev, vY, visc, dt);
+        SWAP(vX_prev, vX); OMP_diffuse(X, vX, vX_prev, visc, dt);
+        SWAP(vY_prev, vY); OMP_diffuse(Y, vY, vY_prev, visc, dt);
+        OMP_project(vX, vY, vX_prev, vY_prev);
 
-        OMP_project(vX_prev, vY_prev, vX, vY);
-
+        SWAP(vX_prev, vX); SWAP(vY_prev, vY);
         OMP_advect(X, vX, vX_prev, vX_prev, vY_prev, dt);
         OMP_advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);
+
+        OMP_project(vX, vY, vX_prev, vY_prev);
     }
 
     // Density
     {
-        OMP_diffuse(ZERO, density_prev, density, diff, dt);
-        OMP_advect(ZERO, density, density_prev, vX, vY, dt);
+        SWAP(density_prev, density); OMP_diffuse(ZERO, density, density_prev, diff, dt);
+        SWAP(density_prev, density); OMP_advect(ZERO, density, density_prev, vX, vY, dt);
     }
-    OMP_fadeDensity(density);
+
+    fadeDensity(density);
 }
 
 void FluidMatrix::addDensity(uint32_t x, uint32_t y, double amount) { this->density[index(y, x, this->size)] += amount; }
@@ -87,89 +117,42 @@ void FluidMatrix::OMP_diffuse(Axis mode, std::vector<double> &current, std::vect
 }
 
 void FluidMatrix::advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
-    double i0, i1, j0, j1;
-    double dt0 = dt * (this->size - 2);
-    double s0, s1, t0, t1;
-    double tmp1, tmp2, x, y;
-    double N_double = this->size - 2;
+    int i, j, i0, j0, i1, j1;
+    float x, y, s0, t0, s1, t1, dt0;
+
+    dt0 = dt*(this->size-2);
 
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
-            double v1 = vX[index(i, j, this->size)];
-            double v2 = vY[index(i, j, this->size)];
-            tmp1 = dt0 * v1;
-            tmp2 = dt0 * v2;
-            x = (double) i - tmp1;
-            y = (double) j - tmp2;
-
-            if (x < 0.5f) x = 0.5f;
-            if (x > N_double + 0.5f) x = N_double + 0.5f;
-            i0 = floor(x);
-            i1 = i0 + 1.0f;
-            if (y < 0.5f) y = 0.5f;
-            if (y > N_double + 0.5f) y = N_double + 0.5f;
-            j0 = floor(y);
-            j1 = j0 + 1.0f;
-
-            s1 = x - i0;
-            s0 = 1.0f - s1;
-            t1 = y - j0;
-            t0 = 1.0f - t1;
-
-            int i0i = i0;
-            int i1i = i1;
-            int j0i = j0;
-            int j1i = j1;
-
-            d[index(i, j, this->size)] = s0 * (t0 * d0[index(i0i, j0i, this->size)] + t1 * d0[index(i0i, j1i, this->size)]) +
-                                         s1 * (t0 * d0[index(i1i, j0i, this->size)] + t1 * d0[index(i1i, j1i, this->size)]);
+                    x = i-dt0*vX[index(i,j, this->size)]; y = j-dt0*vY[index(i,j, this->size)];
+                    if (x<0.5f) x=0.5f; if (x>this->size-2+0.5f) x=this->size-2+0.5f; i0=(int)x; i1=i0+1;
+                    if (y<0.5f) y=0.5f; if (y>this->size-2+0.5f) y=this->size-2+0.5f; j0=(int)y; j1=j0+1;
+                    s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+                    d[index(i,j, this->size)] = s0*(t0*d0[index(i0,j0, this->size)]+t1*d0[index(i0,j1, this->size)])+
+                                             s1*(t0*d0[index(i1,j0, this->size)]+t1*d0[index(i1,j1, this->size)]);
         }
     }
-
-    set_bnd(mode, d);
+    set_bnd (mode, d);
+    
 }
 
 void FluidMatrix::OMP_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
-    double dt0 = dt * (this->size - 2);
-    double N_double = this->size - 2;
-
 #pragma omp parallel num_threads(this->numMaxThreads)
     {
-        double i0, i1, j0, j1;
-        double s0, s1, t0, t1;
-        double tmp1, tmp2, x, y;
+        int i, j, i0, j0, i1, j1;
+        float x, y, s0, t0, s1, t1, dt0;
+
+        dt0 = dt*(this->size-2);
 
 #pragma omp for
-        for (int i = 1; i < this->size; i++) {
-            for (int j = 1; j < this->size; j++) {
-                double v1 = vX[index(i, j, this->size)];
-                double v2 = vY[index(i, j, this->size)];
-                tmp1 = dt0 * v1;
-                tmp2 = dt0 * v2;
-                x = (double) i - tmp1;
-                y = (double) j - tmp2;
-
-                if (x < 0.5f) x = 0.5f;
-                if (x > N_double + 0.5f) x = N_double + 0.5f;
-                i0 = floor(x);
-                i1 = i0 + 1.0f;
-                if (y < 0.5f) y = 0.5f;
-                if (y > N_double + 0.5f) y = N_double + 0.5f;
-                j0 = floor(y);
-                j1 = j0 + 1.0f;
-
-                s1 = x - i0;
-                s0 = 1.0f - s1;
-                t1 = y - j0;
-                t0 = 1.0f - t1;
-
-                int i0i = i0;
-                int i1i = i1;
-                int j0i = j0;
-                int j1i = j1;
-
-                d[index(i, j, this->size)] = s0 * (t0 * d0[index(i0i, j0i, this->size)] + t1 * d0[index(i0i, j1i, this->size)]) +
-                                             s1 * (t0 * d0[index(i1i, j0i, this->size)] + t1 * d0[index(i1i, j1i, this->size)]);
+        for (int i = 1; i < this->size - 1; i++) {
+            for (int j = 1; j < this->size - 1; j++) {
+                        x = i-dt0*vX[index(i,j, this->size)]; y = j-dt0*vY[index(i,j, this->size)];
+                        if (x<0.5f) x=0.5f; if (x>this->size-2+0.5f) x=this->size-2+0.5f; i0=(int)x; i1=i0+1;
+                        if (y<0.5f) y=0.5f; if (y>this->size-2+0.5f) y=this->size-2+0.5f; j0=(int)y; j1=j0+1;
+                        s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+                        d[index(i,j, this->size)] = s0*(t0*d0[index(i0,j0, this->size)]+t1*d0[index(i0,j1, this->size)])+
+                                                 s1*(t0*d0[index(i1,j0, this->size)]+t1*d0[index(i1,j1, this->size)]);
             }
         }
         OMP_set_bnd(mode, d);
@@ -187,7 +170,20 @@ void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std:
 
     set_bnd(ZERO, div);
     set_bnd(ZERO, p);
-    lin_solve(ZERO, p, div, 1);
+    /*lin_solve(ZERO, p, div, 1);*/
+
+    double cRecip = 1.0 / 4;
+
+    for (int k = 0; k < ITERATIONS; k++) {
+        for (int i = 1; i < this->size - 1; i++) {
+            for (int j = 1; j < this->size - 1; j++) {
+                p[index(i, j, this->size)] = (div[index(i, j, this->size)] + (p[index(i + 1, j, this->size)] + p[index(i - 1, j, this->size)] +
+                                                                            p[index(i, j + 1, this->size)] + p[index(i, j - 1, this->size)])) *
+                                                 cRecip;
+            }
+        }
+        set_bnd(ZERO, p);
+    }
 
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
@@ -215,11 +211,29 @@ void FluidMatrix::OMP_project(std::vector<double> &vX, std::vector<double> &vY, 
 
         OMP_set_bnd(ZERO, div);
         OMP_set_bnd(ZERO, p);
-#pragma omp single
+/*#pragma omp single*/
+/*        {*/
+/*            omp_set_nested(1);*/
+/*            OMP_lin_solve(ZERO, p, div, 1);*/
+/*        }*/
+
+
+    double cRecip = 1.0 / 4;
+
+    for (int k = 0; k < ITERATIONS; k++) {
         {
-            omp_set_nested(1);
-            OMP_lin_solve(ZERO, p, div, 1);
+#pragma omp for schedule(guided) collapse(2)
+            for (int i = 1; i < this->size - 1; i++) {
+                for (int j = 1; j < this->size - 1; j++) {
+                    p[index(i, j, this->size)] =
+                            (div[index(i, j, this->size)] + (p[index(i + 1, j, this->size)] + p[index(i - 1, j, this->size)] +
+                                                                                  p[index(i, j + 1, this->size)] + p[index(i, j - 1, this->size)])) *
+                            cRecip;
+                }
+            }
+            OMP_set_bnd(ZERO, p);
         }
+    }
 
 #pragma omp for schedule(guided) collapse(2)
         for (int i = 1; i < this->size - 1; i++) {
@@ -276,8 +290,8 @@ void FluidMatrix::OMP_set_bnd(Axis mode, std::vector<double> &attr) const {
 }
 
 void FluidMatrix::lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
-    double c = 1 + 6 * diffusionRate;
-    double cRecip = 1.0 / c;
+    double c = diffusionRate;
+    double cRecip = 1.0 / 1 + 4*c;
 
     for (int k = 0; k < ITERATIONS; k++) {
         for (int i = 1; i < this->size - 1; i++) {
@@ -292,8 +306,8 @@ void FluidMatrix::lin_solve(Axis mode, std::vector<double> &value, std::vector<d
 }
 
 void FluidMatrix::OMP_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
-    double c = 1 + 4 * diffusionRate;
-    double cRecip = 1.0 / c;
+    double c = diffusionRate;
+    double cRecip = 1.0 / 1 + 4 * c;
 
     for (int k = 0; k < ITERATIONS; k++) {
 #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
