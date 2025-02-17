@@ -113,7 +113,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         // Keybind related actions
         if (settings.windMachine) {
             for (int i = 0; i < settings.matrixSize; i++) {
-                matrix->addVelocity(2, i, 0.0f, 0.5f);
+                matrix->addVelocity(2, i, 0.5f, 0.0f);
             }
         }
         if (settings.resetSimulation) {
