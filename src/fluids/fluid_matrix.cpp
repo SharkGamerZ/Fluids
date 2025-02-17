@@ -72,8 +72,8 @@ void FluidMatrix::addDensity(uint32_t x, uint32_t y, double amount) { this->dens
 void FluidMatrix::addVelocity(uint32_t x, uint32_t y, double amountX, double amountY) {
     uint32_t idx = index(y, x, this->size);
 
-    this->vX[idx] += amountX;
-    this->vY[idx] += amountY;
+    this->vX[idx] += amountY;
+    this->vY[idx] += amountX;
 }
 
 void FluidMatrix::diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {
