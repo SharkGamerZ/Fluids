@@ -291,7 +291,7 @@ void FluidMatrix::OMP_set_bnd(Axis mode, std::vector<double> &attr) const {
 
 void FluidMatrix::lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
     double c = diffusionRate;
-    double cRecip = 1.0 / 1 + 4*c;
+    double cRecip = 1.0 / (1 + 4*c);
 
     for (int k = 0; k < ITERATIONS; k++) {
         for (int i = 1; i < this->size - 1; i++) {
@@ -307,7 +307,7 @@ void FluidMatrix::lin_solve(Axis mode, std::vector<double> &value, std::vector<d
 
 void FluidMatrix::OMP_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
     double c = diffusionRate;
-    double cRecip = 1.0 / 1 + 4 * c;
+    double cRecip = 1.0 / (1 + 4 * c);
 
     for (int k = 0; k < ITERATIONS; k++) {
 #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
