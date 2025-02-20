@@ -5,7 +5,7 @@ enum SimulationAttribute { DENSITY, VELOCITY };
 
 struct SimulationSettings {
     // Used to set up the simulation
-    int matrixSize = 400;
+    int matrixSize = 200;
     int scalingFactor = 2;
     int viewportSize = matrixSize * scalingFactor;
     int chunkSize = 9;
@@ -24,5 +24,6 @@ struct SimulationSettings {
     // Keybind action flags
     bool isSimulationRunning = false;
     bool resetSimulation = false;
+    bool frameSimulation = false;
     bool windMachine = false;
 };

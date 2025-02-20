@@ -163,7 +163,7 @@ void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std:
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
             div[index(i, j, this->size)] =
-                    -0.5f * (vX[index(i + 1, j, this->size)] - vX[index(i - 1, j, this->size)] + vY[index(i, j + 1, this->size)] - vY[index(i, j - 1, this->size)]) / this->size;
+                    -0.5f * (vX[index(i + 1, j, this->size)] - vX[index(i - 1, j, this->size)] + vY[index(i, j + 1, this->size)] - vY[index(i, j - 1, this->size)]) * (this->size - 2);
             p[index(i, j, this->size)] = 0;
         }
     }
@@ -187,8 +187,8 @@ void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std:
 
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
-            vX[index(i, j, this->size)] -= 0.5f * (p[index(i + 1, j, this->size)] - p[index(i - 1, j, this->size)]) * this->size;
-            vY[index(i, j, this->size)] -= 0.5f * (p[index(i, j + 1, this->size)] - p[index(i, j - 1, this->size)]) * this->size;
+            vX[index(i, j, this->size)] -= 0.5f * (p[index(i + 1, j, this->size)] - p[index(i - 1, j, this->size)]) / (this->size - 2);
+            vY[index(i, j, this->size)] -= 0.5f * (p[index(i, j + 1, this->size)] - p[index(i, j - 1, this->size)]) / (this->size - 2);
         }
     }
 

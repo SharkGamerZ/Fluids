@@ -112,16 +112,17 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
         // Keybind related actions
         if (settings.windMachine) {
-            for (int i = 0; i < settings.matrixSize; i++) {
-                matrix->addVelocity(2, i, 0.5f, 0.0f);
-            }
+            matrix->addVelocity(2, settings.matrixSize/2  , 0.3, 0.0f);
+            /*for (int i = 0; i < settings.matrixSize; i++) {*/
+            /*    matrix->addVelocity(2, i, 0.5f, 0.0f);*/
+            /*}*/
         }
         if (settings.resetSimulation) {
             matrix->reset();
             settings.resetSimulation = false;
         }
         // TODO step simulation (add frame mode)
-        if (settings.isSimulationRunning) {
+        if (settings.isSimulationRunning || settings.frameSimulation) {
             switch (settings.executionMode) {
                 case SERIAL: matrix->step(); break;
                 case OPENMP: matrix->OMP_step(); break;
@@ -130,6 +131,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 #endif
                 default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
             }
+
+            settings.frameSimulation = false;
         }
     }
 
@@ -186,13 +189,20 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     }
 
     // Exit program
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
+    if ((key == GLFW_KEY_ESCAPE || key == GLFW_KEY_Q) && action == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
+
     // Pause/resume simulation
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) settings->isSimulationRunning = !settings->isSimulationRunning;
+
+    // Frame simulation
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) settings->frameSimulation = true;
+
     // Reset simulation
     if (key == GLFW_KEY_R && action == GLFW_PRESS) settings->resetSimulation = true;
+
     // Change simulation attribute
     if (key == GLFW_KEY_V && action == GLFW_PRESS) settings->simulationAttribute = settings->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
+
     // Change execution mode
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 #ifdef CUDA_SUPPORT
