@@ -141,6 +141,11 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
     // NOTE: this makes it go from 60FPS to 15 :(
     // NOTE 2: if this is done before ImGui::Render(), the gui is not bugged off-screen
 
+    // TODO: Check why we have to do this
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+
     // Render UI
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
