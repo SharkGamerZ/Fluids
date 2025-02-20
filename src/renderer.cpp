@@ -179,8 +179,8 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
             // Generate vertices x, y, vx, vy
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = matrix->vX[idx];
-            vertices[vertexIdx + 3] = matrix->vY[idx];
+            vertices[vertexIdx + 2] = (matrix->vX[idx]+matrix->vorticity[idx])/2;
+            vertices[vertexIdx + 3] = (matrix->vY[idx]+matrix->vorticity[idx])/2;
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;

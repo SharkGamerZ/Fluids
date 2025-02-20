@@ -9,7 +9,7 @@
 
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
     : size(size), dt(dt), diff(diffusion), visc(viscosity), density(std::vector<double>(size * size)), density_prev(std::vector<double>(size * size)),
-      vX(std::vector<double>(size * size)), vY(std::vector<double>(size * size)), vX_prev(std::vector<double>(size * size)), vY_prev(std::vector<double>(size * size)),
+        vX(std::vector<double>(size * size)), vY(std::vector<double>(size * size)), vX_prev(std::vector<double>(size * size)), vY_prev(std::vector<double>(size * size)), vorticity(std::vector<double>(size * size)),
       numMaxThreads(omp_get_max_threads()) {
 #ifdef CUDA_SUPPORT
     CUDA_init();
@@ -31,6 +31,7 @@ void FluidMatrix::reset() {
     std::ranges::fill(vY, 0);
     std::ranges::fill(vX_prev, 0);
     std::ranges::fill(vY_prev, 0);
+    std::ranges::fill(vorticity, 0);
 }
 
 void FluidMatrix::step() {
@@ -54,6 +55,8 @@ void FluidMatrix::step() {
     }
 
     fadeDensity(density);
+
+    CalculateVorticity(vX, vY, vorticity);
 }
 
 void FluidMatrix::OMP_step() {
@@ -338,5 +341,17 @@ void FluidMatrix::OMP_fadeDensity(std::vector<double> &density) const {
     for (int i = 0; i < this->size * this->size; i++) {
         double d = density[i];
         density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
+    }
+}
+
+void FluidMatrix::CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity) {
+    const double h = 1.0 / (this->size - 2); // assuming unit length domain
+    for (int i = 1; i < this->size - 1; i++) {
+        for (int j = 1; j < this->size - 1; j++) {
+            int idx = index(i, j, this->size);
+            double dv_dx = (vY[index(i+1, j, this->size)] - vY[index(i-1, j, this->size)]) / (2 * h);
+            double du_dy = (vX[index(i, j+1, this->size)] - vX[index(i, j-1, this->size)]) / (2 * h);
+            vorticity[idx] = dv_dx - du_dy;
+        }
     }
 }

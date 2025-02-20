@@ -22,6 +22,8 @@ public:
     std::vector<double> vY;           ///< Velocity in the y-axis
     std::vector<double> vX_prev;      ///< Velocity in the x-axis in the previous step
     std::vector<double> vY_prev;      ///< Velocity in the y-axis in the previous step
+    
+    std::vector<double> vorticity;    ///< Vorticity of the fluid
 
     FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
     ~FluidMatrix();
@@ -83,6 +85,9 @@ protected:
 #ifdef CUDA_SUPPORT
     void CUDA_fadeDensity(std::vector<double> &density) const;
 #endif
+
+
+    void CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity);
 
 #ifdef CUDA_SUPPORT
 private:
