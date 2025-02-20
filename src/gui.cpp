@@ -173,6 +173,7 @@ void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix)
         glVertexAttribPointer(0, componentCount, GL_FLOAT, GL_FALSE, componentCount * sizeof(float), nullptr);
         glEnableVertexAttribArray(0);
 
+        glPointSize(3.0f); // Render the points bigger to fill the blank spaces 
         glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize);
     }
 
