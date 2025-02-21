@@ -1,7 +1,7 @@
 #pragma once
 
 enum ExecutionMode { SERIAL, OPENMP, CUDA };
-enum SimulationAttribute { DENSITY, VELOCITY };
+enum SimulationAttribute { DENSITY, VELOCITY, VORTICITY };
 
 struct SimulationSettings {
     // Used to set up the simulation
