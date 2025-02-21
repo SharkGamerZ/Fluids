@@ -1,12 +1,5 @@
 #include "fluid_matrix.hpp"
 
-#define SWAP(x0, x) \
-    {               \
-        auto tmp = x0; \
-        x0 = x;     \
-        x = tmp;    \
-    }
-
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
     : size(size), dt(dt), diff(diffusion), visc(viscosity), density(std::vector<double>(size * size)), density_prev(std::vector<double>(size * size)),
         vX(std::vector<double>(size * size)), vY(std::vector<double>(size * size)), vX_prev(std::vector<double>(size * size)), vY_prev(std::vector<double>(size * size)), vorticity(std::vector<double>(size * size)),

@@ -9,6 +9,14 @@
 constexpr int ITERATIONS = 15; ///< Number of iterations
 enum Axis { X, Y, ZERO };
 
+#define SWAP(x0, x) \
+    {               \
+        auto tmp = x0; \
+        x0 = x;     \
+        x = tmp;    \
+    }
+
+
 /// FluidMatrix class for serial, OpenMP, and CUDA-based simulation
 class FluidMatrix {
 public:
