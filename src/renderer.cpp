@@ -10,7 +10,8 @@ struct ShaderPaths {
 };
 
 const std::unordered_map<SimulationAttribute, ShaderPaths> SHADER_PATHS = {{DENSITY, ShaderPaths("../src/shaders/density.vert", "../src/shaders/density.frag")},
-                                                                           {VELOCITY, ShaderPaths("../src/shaders/velocity.vert", "../src/shaders/velocity.frag")}};
+                                                                           {VELOCITY, ShaderPaths("../src/shaders/velocity.vert", "../src/shaders/velocity.frag")},
+                                                                           {VORTICITY, ShaderPaths("../src/shaders/vorticity.vert", "../src/shaders/vorticity.frag")}};
 /// Cache for compiled shaders and shader programs
 struct ShaderCache {
     std::unordered_map<std::string, GLuint> compiledShaders;
@@ -130,6 +131,7 @@ int getVertexComponentCount(const SimulationAttribute attribute) {
     switch (attribute) {
         case DENSITY: return 3;  // x, y, density
         case VELOCITY: return 4; // x, y, vx, vy
+        case VORTICITY: return 3; // x, y, vorticity
         default: log(Utils::LogLevel::ERROR, std::cerr, std::format("Unknown vertex component count for attribute {}", static_cast<int>(attribute))); return 0;
     }
 }
@@ -179,8 +181,36 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
             // Generate vertices x, y, vx, vy
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = (matrix->vX[idx]+matrix->vorticity[idx])/2;
-            vertices[vertexIdx + 3] = (matrix->vY[idx]+matrix->vorticity[idx])/2;
+            vertices[vertexIdx + 2] = matrix->vX[idx];
+            vertices[vertexIdx + 3] = matrix->vY[idx];
+
+            // Normalize coordinates
+            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
+            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
+        }
+    }
+
+    return vertices;
+}
+
+std::vector<float> getVorticityVertices(const SimulationSettings *settings, const FluidMatrix *matrix) {
+    const int n = settings->viewportSize;
+    std::vector<float> vertices(n * n * 3);
+    const float scalingFactorInv = 1.0f / settings->scalingFactor;
+    const float normFactor = 2.0f / (settings->viewportSize - 1);
+    const int matrixSize = matrix->size;
+
+    for (int i = 0; i < n; i++) {
+        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
+
+        for (int j = 0; j < n; j++) {
+            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
+            const int vertexIdx = 3 * (i * n + j);
+
+            // Generate vertices x, y, vorticity
+            vertices[vertexIdx] = j;
+            vertices[vertexIdx + 1] = i;
+            vertices[vertexIdx + 2] = matrix->vorticity[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
@@ -191,3 +221,4 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
     return vertices;
 }
 } // namespace Renderer
+

@@ -88,6 +88,7 @@ protected:
 
 
     void CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity);
+    void OMP_CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity);
 
 #ifdef CUDA_SUPPORT
 private:

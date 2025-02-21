@@ -16,4 +16,5 @@ GLuint getShaderProgram(SimulationAttribute attribute);
 int getVertexComponentCount(SimulationAttribute attribute);
 std::vector<float> getDensityVertices(const SimulationSettings *settings, const FluidMatrix *matrix);
 std::vector<float> getVelocityVertices(const SimulationSettings *settings, const FluidMatrix *matrix);
+std::vector<float> getVorticityVertices(const SimulationSettings *settings, const FluidMatrix *matrix);
 }; // namespace Renderer

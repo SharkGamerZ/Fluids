@@ -60,24 +60,6 @@ void FluidMatrix::step() {
 }
 
 void FluidMatrix::OMP_step() {
-    /*// Velocity*/
-    /*{*/
-    /*    OMP_diffuse(X, vX_prev, vX, visc, dt);*/
-    /*    OMP_diffuse(Y, vY_prev, vY, visc, dt);*/
-    /**/
-    /*    OMP_project(vX_prev, vY_prev, vX, vY);*/
-    /**/
-    /*    OMP_advect(X, vX, vX_prev, vX_prev, vY_prev, dt);*/
-    /*    OMP_advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);*/
-    /*}*/
-    /**/
-    /*// Density*/
-    /*{*/
-    /*    OMP_diffuse(ZERO, density_prev, density, diff, dt);*/
-    /*    OMP_advect(ZERO, density, density_prev, vX, vY, dt);*/
-    /*}*/
-    /*OMP_fadeDensity(density);*/
-
     // Velocity
     {
         SWAP(vX_prev, vX); OMP_diffuse(X, vX, vX_prev, visc, dt);
@@ -98,6 +80,8 @@ void FluidMatrix::OMP_step() {
     }
 
     fadeDensity(density);
+
+    OMP_CalculateVorticity(vX, vY, vorticity);
 }
 
 void FluidMatrix::addDensity(uint32_t x, uint32_t y, double amount) { this->density[index(y, x, this->size)] += amount; }
@@ -355,3 +339,20 @@ void FluidMatrix::CalculateVorticity(std::vector<double> &vX, std::vector<double
         }
     }
 }
+
+
+void FluidMatrix::OMP_CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity) {
+    const double h = 1.0 / (this->size - 2); // assuming unit length domain
+    // Calculate vorticity
+#pragma omp parallel for num_threads(this->numMaxThreads) default(shared)
+    for (int i = 1; i < this->size - 1; i++) {
+        for (int j = 1; j < this->size - 1; j++) {
+            int idx = index(i, j, this->size);
+            double dv_dx = (vY[index(i+1, j, this->size)] - vY[index(i-1, j, this->size)]) / (2 * h);
+            double du_dy = (vX[index(i, j+1, this->size)] - vX[index(i, j-1, this->size)]) / (2 * h);
+            vorticity[idx] = dv_dx - du_dy;
+        }
+    }
+}
+
+

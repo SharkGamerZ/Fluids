@@ -37,7 +37,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                 matrix->dt = settings.deltaTime;
 
                 // Visualization mode
-                constexpr std::array visualizationModeNames{"Density", "Velocity"};
+                constexpr std::array visualizationModeNames{"Density", "Velocity", "Vorticity"};
                 ImGui::Combo("Visualization", reinterpret_cast<int *>(&settings.simulationAttribute), visualizationModeNames.data(), visualizationModeNames.size());
 
                 // Execution mode
@@ -167,7 +167,13 @@ void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix)
     {
         const int viewportSize = settings.viewportSize;
         const auto componentCount = Renderer::getVertexComponentCount(settings.simulationAttribute);
-        std::vector<float> verts = settings.simulationAttribute == DENSITY ? Renderer::getDensityVertices(&settings, matrix) : Renderer::getVelocityVertices(&settings, matrix);
+
+        std::vector<float> verts;
+        switch(settings.simulationAttribute) {
+            case DENSITY: verts = Renderer::getDensityVertices(&settings, matrix); break;
+            case VELOCITY: verts = Renderer::getVelocityVertices(&settings, matrix); break;
+            case VORTICITY: verts = Renderer::getVorticityVertices(&settings, matrix); break;
+        }
 
         glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
         glVertexAttribPointer(0, componentCount, GL_FLOAT, GL_FALSE, componentCount * sizeof(float), nullptr);
@@ -207,7 +213,20 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_R && action == GLFW_PRESS) settings->resetSimulation = true;
 
     // Change simulation attribute
-    if (key == GLFW_KEY_V && action == GLFW_PRESS) settings->simulationAttribute = settings->simulationAttribute == DENSITY ? VELOCITY : DENSITY;
+    if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+        switch (settings->simulationAttribute) {
+            case DENSITY: settings->simulationAttribute = VORTICITY; break;
+            case VELOCITY: settings->simulationAttribute = DENSITY; break;
+            case VORTICITY: settings->simulationAttribute = VELOCITY; break;
+        }
+    }
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        switch (settings->simulationAttribute) {
+            case DENSITY: settings->simulationAttribute = VELOCITY; break;
+            case VELOCITY: settings->simulationAttribute = VORTICITY; break;
+            case VORTICITY: settings->simulationAttribute = DENSITY; break;
+        }
+    }
 
     // Change execution mode
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
