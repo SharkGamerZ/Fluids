@@ -119,22 +119,34 @@ __global__ void fade_density_kernel(int size, double *density) {
 void FluidMatrix::CUDA_step() {
     // Velocity
     {
-        CUDA_diffuse(X, vX_prev, vX, visc, dt);
-        CUDA_diffuse(Y, vY_prev, vY, visc, dt);
+        SWAP(vX_prev, vX);
+        CUDA_diffuse(X, vX, vX_prev, visc, dt);
 
-        CUDA_project(vX_prev, vY_prev, vX, vY);
+        SWAP(vY_prev, vY);
+        CUDA_diffuse(Y, vY, vY_prev, visc, dt);
 
+        CUDA_project(vX, vY, vX_prev, vY_prev);
+
+        SWAP(vX_prev, vX);
+        SWAP(vY_prev, vY);
         CUDA_advect(X, vX, vX_prev, vX_prev, vY_prev, dt);
         CUDA_advect(Y, vY, vY_prev, vX_prev, vY_prev, dt);
+
+        CUDA_project(vX, vY, vX_prev, vY_prev);
     }
 
     // Density
     {
-        CUDA_diffuse(ZERO, density_prev, density, diff, dt);
+        SWAP(density_prev, density);
+        CUDA_diffuse(ZERO, density, density_prev, diff, dt);
+
+        SWAP(density_prev, density);
         CUDA_advect(ZERO, density, density_prev, vX, vY, dt);
     }
 
     CUDA_fadeDensity(density);
+
+    CalculateVorticity(vX, vY, vorticity);
 }
 
 void FluidMatrix::CUDA_diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {
@@ -145,16 +157,39 @@ void FluidMatrix::CUDA_diffuse(Axis mode, std::vector<double> &current, std::vec
 void FluidMatrix::CUDA_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    cudaMemcpy(d_density_prev, d0.data(), size_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
+    double *dp_d, *dp_d0, *dp_vX, *dp_vY;
+
+    switch (mode) {
+        case X:
+            dp_d = d_vX;
+            dp_d0 = d_vX_prev;
+            dp_vX = d_vX_prev;
+            dp_vY = d_vY_prev;
+            break;
+        case Y:
+            dp_d = d_vY;
+            dp_d0 = d_vY_prev;
+            dp_vX = d_vX_prev;
+            dp_vY = d_vY_prev;
+            break;
+        case ZERO:
+            dp_d = d_density;
+            dp_d0 = d_density_prev;
+            dp_vX = d_vX_prev;
+            dp_vY = d_vY_prev;
+            break;
+    }
+
+    cudaMemcpy(dp_d0, d0.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(dp_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(dp_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    advect_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_density, d_density_prev, d_vX, d_vY, dt);
+    advect_kernel<<<numBlocks, threadsPerBlock>>>(this->size, dp_d, dp_d0, dp_vX, dp_vY, dt);
 
-    cudaMemcpy(d.data(), d_density, size_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(d.data(), dp_d, size_bytes, cudaMemcpyDeviceToHost);
 
     CUDA_set_bnd(mode, d);
 }
@@ -165,18 +200,18 @@ void FluidMatrix::CUDA_project(std::vector<double> &vX, std::vector<double> &vY,
     cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice);
 
-    cudaMemset(d_p, 0, size_bytes);
+    cudaMemset(d_vX_prev, 0, size_bytes);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    project_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_div);
+    project_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_vY_prev);
 
     CUDA_set_bnd(ZERO, div);
     CUDA_set_bnd(ZERO, p);
     CUDA_lin_solve(ZERO, p, div, 1);
 
-    update_velocity_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_p);
+    update_velocity_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_vX_prev);
 
     CUDA_set_bnd(X, vX);
     CUDA_set_bnd(Y, vY);
@@ -202,22 +237,40 @@ void FluidMatrix::CUDA_set_bnd(Axis mode, std::vector<double> &attr) const {
 void FluidMatrix::CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    double c = 1 + 6 * diffusionRate; // TODO: +6 or +4?
-    double cRecip = 1 / c;
+    double c = diffusionRate;
+    double cRecip = 1.0 / (1 + 4 * c);
 
-    cudaMemcpy(d_p, value.data(), size_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_div, oldValue.data(), size_bytes, cudaMemcpyHostToDevice);
+    double *d_value, *d_oldValue;
+    switch (mode) {
+        case X:
+            d_value = d_vX;
+            d_oldValue = d_vX_prev;
+            break;
+        case Y:
+            d_value = d_vY;
+            d_oldValue = d_vY_prev;
+            break;
+        case ZERO:
+            d_value = d_density;
+            d_oldValue = d_density_prev;
+            c = 1;
+            cRecip = 1.0 / 4;
+            break;
+    }
+
+    cudaMemcpy(d_value, value.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_oldValue, oldValue.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
     for (int k = 0; k < ITERATIONS; k++) {
-        lin_solve_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_p, d_div, diffusionRate, cRecip);
+        lin_solve_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_value, d_oldValue, diffusionRate, cRecip);
         cudaDeviceSynchronize();
         CUDA_set_bnd(mode, value);
     }
 
-    cudaMemcpy(value.data(), d_p, size_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(value.data(), d_value, size_bytes, cudaMemcpyDeviceToHost);
 }
 
 void FluidMatrix::CUDA_fadeDensity(std::vector<double> &density) const {
