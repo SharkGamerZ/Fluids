@@ -6,3 +6,4 @@
     - [x] slider for mouse density added on click
     - [x] slider for mouse velocity added on move
 - [x] Add shader caching
+- [ ]  Change the diffuse, adding the cRecip as a parameter, so that it can be used inside the advect
