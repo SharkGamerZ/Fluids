@@ -9,8 +9,6 @@ void FluidMatrix::CUDA_init() {
     cudaMalloc(&d_vX_prev, size_bytes);
     cudaMalloc(&d_vY, size_bytes);
     cudaMalloc(&d_vY_prev, size_bytes);
-    cudaMalloc(&d_div, size_bytes);
-    cudaMalloc(&d_p, size_bytes);
 }
 
 void FluidMatrix::CUDA_destroy() const {
@@ -20,8 +18,6 @@ void FluidMatrix::CUDA_destroy() const {
     cudaFree(d_vX_prev);
     cudaFree(d_vY);
     cudaFree(d_vY_prev);
-    cudaFree(d_div);
-    cudaFree(d_p);
 }
 
 __device__ int index(const int i, const int j, const int size) { return i * size + j; }
@@ -223,15 +219,15 @@ void FluidMatrix::CUDA_project(std::vector<double> &vX, std::vector<double> &vY,
 void FluidMatrix::CUDA_set_bnd(Axis mode, std::vector<double> &attr) const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    cudaMemcpy(d_p, attr.data(), size_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_density, attr.data(), size_bytes, cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    set_bnd_edges<<<numBlocks, threadsPerBlock>>>(this->size, mode, d_p);
-    set_bnd_corners<<<1, 1>>>(this->size, d_p);
+    set_bnd_edges<<<numBlocks, threadsPerBlock>>>(this->size, mode, d_density);
+    set_bnd_corners<<<1, 1>>>(this->size, d_density);
 
-    cudaMemcpy(attr.data(), d_p, size_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(attr.data(), d_density, size_bytes, cudaMemcpyDeviceToHost);
 }
 
 void FluidMatrix::CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {

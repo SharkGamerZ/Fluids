@@ -103,6 +103,5 @@ private:
     double *d_density, *d_density_prev;
     double *d_vX, *d_vX_prev;
     double *d_vY, *d_vY_prev;
-    double *d_div, *d_p; ///< Divergence and pressure
 #endif
 };
