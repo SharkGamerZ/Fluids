@@ -43,7 +43,7 @@ void FluidMatrix::step() {
 
     // Density
     {
-        SWAP(density_prev, density); diffuse(ZERO, density, density_prev, diff, dt);
+        SWAP(density_prev, density); diffuse(ZERO, density, density_prev, visc, dt);
         SWAP(density_prev, density); advect(ZERO, density, density_prev, vX, vY, dt);
     }
 
@@ -68,7 +68,7 @@ void FluidMatrix::OMP_step() {
 
     // Density
     {
-        SWAP(density_prev, density); OMP_diffuse(ZERO, density, density_prev, diff, dt);
+        SWAP(density_prev, density); OMP_diffuse(ZERO, density, density_prev, visc, dt);
         SWAP(density_prev, density); OMP_advect(ZERO, density, density_prev, vX, vY, dt);
     }
 

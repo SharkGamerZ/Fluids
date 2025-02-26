@@ -134,7 +134,7 @@ void FluidMatrix::CUDA_step() {
     // Density
     {
         SWAP(density_prev, density);
-        CUDA_diffuse(ZERO, density, density_prev, diff, dt);
+        CUDA_diffuse(ZERO, density, density_prev, visc, dt);
 
         SWAP(density_prev, density);
         CUDA_advect(ZERO, density, density_prev, vX, vY, dt);
