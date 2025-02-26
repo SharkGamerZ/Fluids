@@ -74,14 +74,93 @@ void generate_random_fluid_matrix_params(FluidMatrix &fluidMatrix, const int siz
 
 int main() {
     // Create a FluidMatrix object with randomized parameters
-    TestFluidMatrix fluidMatrix(0, 0.0, 0.0, 0.0);
-    generate_random_fluid_matrix_params(fluidMatrix, 400);
+    TestFluidMatrix fluidMatrix(5, 0.0, 0.0, 0.0);
+    generate_random_fluid_matrix_params(fluidMatrix, 5);
 
-    // Example usage with member function
-    test_function_performance("lin_solve", 200, [&fluidMatrix] { fluidMatrix.lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff); });
 
-    // Example usage with different arguments
-    test_function_performance("OMP_lin_solve", 200, [&fluidMatrix] { fluidMatrix.OMP_lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff); });
+    TestFluidMatrix OMP_fluidMatrix = fluidMatrix;
+    TestFluidMatrix CUDA_fluidMatrix = fluidMatrix;
+
+
+    if (fluidMatrix.density != OMP_fluidMatrix.density) {
+        std::cerr << "OMP_FluidMatrix copy failed\n";
+    }
+
+    if (fluidMatrix.density != CUDA_fluidMatrix.density) {
+        std::cerr << "CUDA_FluidMatrix copy failed\n";
+    }
+
+    int num_runs = 1;
+
+    printf("Matrix Size: %d\n", fluidMatrix.size);
+    
+    // DIFFUSE
+    test_function_performance("diffuse", num_runs, [&fluidMatrix] { fluidMatrix.diffuse(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.visc, fluidMatrix.dt); });
+    test_function_performance("OMP_diffuse", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_diffuse(X, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.visc, OMP_fluidMatrix.dt); });
+    test_function_performance("CUDA_diffuse", num_runs, [&CUDA_fluidMatrix] { CUDA_fluidMatrix.CUDA_diffuse(X, CUDA_fluidMatrix.density, CUDA_fluidMatrix.density_prev, CUDA_fluidMatrix.visc, CUDA_fluidMatrix.dt); });
+
+    // Compare the results of the two functions
+    if (fluidMatrix.density != OMP_fluidMatrix.density) {
+        std::cerr << "diffuse and OMP_diffuse produced different results\n";
+        // Print where the difference is
+        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
+            if (fluidMatrix.density[i] != OMP_fluidMatrix.density[i]) {
+                std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " OMP_fluidMatrix.density[i]: " << OMP_fluidMatrix.density[i] << '\n';
+            }
+        }
+    }
+
+    if (fluidMatrix.density != CUDA_fluidMatrix.density) {
+        std::cerr << "diffuse and CUDA_diffuse produced different results\n";
+        // Print where the difference is
+        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
+            if (fluidMatrix.density[i] != CUDA_fluidMatrix.density[i]) {
+                std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " CUDA_fluidMatrix.density[i]: " << CUDA_fluidMatrix.density[i] << '\n';
+            }
+        }
+    }
+
+
+    // ADVECT
+    test_function_performance("advect", num_runs, [&fluidMatrix] { fluidMatrix.advect(ZERO, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.vX, fluidMatrix.vY, fluidMatrix.dt); });
+    test_function_performance("OMP_advect", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_advect(ZERO, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.vX, OMP_fluidMatrix.vY, OMP_fluidMatrix.dt); });
+    test_function_performance("CUDA_advect", num_runs, [&CUDA_fluidMatrix] { CUDA_fluidMatrix.CUDA_advect(ZERO, CUDA_fluidMatrix.density, CUDA_fluidMatrix.density_prev, CUDA_fluidMatrix.vX, CUDA_fluidMatrix.vY, CUDA_fluidMatrix.dt); });
+
+    // Compare the results of the two functions
+    if (fluidMatrix.density != OMP_fluidMatrix.density) {
+        std::cerr << "advect and OMP_advect produced different results\n";
+        // Print where the difference is
+        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
+            if (fluidMatrix.density[i] != OMP_fluidMatrix.density[i]) {
+                std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " OMP_fluidMatrix.density[i]: " << OMP_fluidMatrix.density[i] << '\n';
+            }
+        }
+    }
+
+    if (fluidMatrix.density != CUDA_fluidMatrix.density) {
+        std::cerr << "advect and CUDA_advect produced different results\n";
+        // Print where the difference is
+        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
+            if (fluidMatrix.density[i] != CUDA_fluidMatrix.density[i]) {
+                std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " CUDA_fluidMatrix.density[i]: " << CUDA_fluidMatrix.density[i] << '\n';
+            }
+        }
+    }
+
+
+    // PROJECT
+    test_function_performance("project", num_runs, [&fluidMatrix] { fluidMatrix.project(fluidMatrix.vX, fluidMatrix.vY, fluidMatrix.vX_prev, fluidMatrix.vY_prev); });
+    test_function_performance("OMP_project", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_project(OMP_fluidMatrix.vX, OMP_fluidMatrix.vY, OMP_fluidMatrix.vX_prev, OMP_fluidMatrix.vY_prev); });
+    test_function_performance("CUDA_project", num_runs, [&CUDA_fluidMatrix] { CUDA_fluidMatrix.CUDA_project(CUDA_fluidMatrix.vX, CUDA_fluidMatrix.vY, CUDA_fluidMatrix.vX_prev, CUDA_fluidMatrix.vY_prev); });
+
+    // Compare the results of the two functions
+    if (fluidMatrix.vX != OMP_fluidMatrix.vX) {
+        std::cerr << "project and OMP_project produced different results\n";
+    }
+
+    if (fluidMatrix.vX != CUDA_fluidMatrix.vX) {
+        std::cerr << "project and CUDA_project produced different results\n";
+    }
 
     return EXIT_SUCCESS;
 }

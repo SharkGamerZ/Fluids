@@ -33,6 +33,12 @@ public:
     
     std::vector<double> vorticity;    ///< Vorticity of the fluid
 
+#ifdef CUDA_SUPPORT
+    double *d_density, *d_density_prev;
+    double *d_vX, *d_vX_prev;
+    double *d_vY, *d_vY_prev;
+#endif
+
     FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
     ~FluidMatrix();
 
@@ -98,10 +104,4 @@ protected:
     void CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity);
     void OMP_CalculateVorticity(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vorticity);
 
-#ifdef CUDA_SUPPORT
-private:
-    double *d_density, *d_density_prev;
-    double *d_vX, *d_vX_prev;
-    double *d_vY, *d_vY_prev;
-#endif
 };
