@@ -88,7 +88,7 @@ void FluidMatrix::addVelocity(uint32_t x, uint32_t y, double amountX, double amo
 
 void FluidMatrix::diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {
     double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
-    jacobi_lin_solve(mode, current, previous, diffusionRate);
+    gauss_lin_solve(mode, current, previous, diffusionRate);
 }
 
 void FluidMatrix::OMP_diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {
@@ -139,36 +139,36 @@ void FluidMatrix::OMP_advect(Axis mode, std::vector<double> &d, std::vector<doub
     }
 }
 
-void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
+void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vX_prev, std::vector<double> &vY_prev) const {
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
-            div[index(i, j, this->size)] =
+            vY_prev[index(i, j, this->size)] =
                     -0.5f * (vX[index(i + 1, j, this->size)] - vX[index(i - 1, j, this->size)] + vY[index(i, j + 1, this->size)] - vY[index(i, j - 1, this->size)]) * (this->size - 2);
-            p[index(i, j, this->size)] = 0;
+            vX_prev[index(i, j, this->size)] = 0;
         }
     }
 
-    set_bnd(ZERO, div);
-    set_bnd(ZERO, p);
+    set_bnd(ZERO, vY_prev);
+    set_bnd(ZERO, vX_prev);
     /*lin_solve(ZERO, p, div, 1);*/
 
     double cRecip = 1.0 / 4;
 
-    for (int k = 0; k < ITERATIONS; k++) {
+    for (int k = 0; k < GAUSS_ITERATIONS; k++) {
         for (int i = 1; i < this->size - 1; i++) {
             for (int j = 1; j < this->size - 1; j++) {
-                p[index(i, j, this->size)] = (div[index(i, j, this->size)] + (p[index(i + 1, j, this->size)] + p[index(i - 1, j, this->size)] +
-                                                                            p[index(i, j + 1, this->size)] + p[index(i, j - 1, this->size)])) *
+                vX_prev[index(i, j, this->size)] = (vY_prev[index(i, j, this->size)] + (vX_prev[index(i + 1, j, this->size)] + vX_prev[index(i - 1, j, this->size)] +
+                                                                            vX_prev[index(i, j + 1, this->size)] + vX_prev[index(i, j - 1, this->size)])) *
                                                  cRecip;
             }
         }
-        set_bnd(ZERO, p);
+        set_bnd(ZERO, vX_prev);
     }
 
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
-            vX[index(i, j, this->size)] -= 0.5f * (p[index(i + 1, j, this->size)] - p[index(i - 1, j, this->size)]) / (this->size - 2);
-            vY[index(i, j, this->size)] -= 0.5f * (p[index(i, j + 1, this->size)] - p[index(i, j - 1, this->size)]) / (this->size - 2);
+            vX[index(i, j, this->size)] -= 0.5f * (vX_prev[index(i + 1, j, this->size)] - vX_prev[index(i - 1, j, this->size)]) / (this->size - 2);
+            vY[index(i, j, this->size)] -= 0.5f * (vX_prev[index(i, j + 1, this->size)] - vX_prev[index(i, j - 1, this->size)]) / (this->size - 2);
         }
     }
 
@@ -200,7 +200,7 @@ void FluidMatrix::OMP_project(std::vector<double> &vX, std::vector<double> &vY, 
 
     double cRecip = 1.0 / 4;
 
-    for (int k = 0; k < ITERATIONS; k++) {
+    for (int k = 0; k < JACOBI_ITERATIONS; k++) {
         {
 #pragma omp for schedule(guided) collapse(2)
             for (int i = 1; i < this->size - 1; i++) {
@@ -276,7 +276,7 @@ void FluidMatrix::jacobi_lin_solve(Axis mode, std::vector<double> &value, std::v
     // Create a temporary array to store the new values
     std::vector<double> newValue(this->size * this->size, 0.0);
 
-    for (int k = 0; k < ITERATIONS; k++) {
+    for (int k = 0; k < JACOBI_ITERATIONS; k++) {
         for (int i = 1; i < this->size - 1; i++) {
             for (int j = 1; j < this->size - 1; j++) {
                 // Compute the new value using the Jacobi method
@@ -298,7 +298,7 @@ void FluidMatrix::gauss_lin_solve(Axis mode, std::vector<double> &value, std::ve
     double c = diffusionRate;
     double cRecip = 1.0 / (1 + 4*c);
 
-    for (int k = 0; k < ITERATIONS; k++) {
+    for (int k = 0; k < GAUSS_ITERATIONS; k++) {
         for (int i = 1; i < this->size - 1; i++) {
             for (int j = 1; j < this->size - 1; j++) {
                 value[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
@@ -314,7 +314,7 @@ void FluidMatrix::OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, std
     double c = diffusionRate;
     double cRecip = 1.0 / (1 + 4 * c);
 
-    for (int k = 0; k < ITERATIONS; k++) {
+    for (int k = 0; k < GAUSS_ITERATIONS; k++) {
 #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
         {
 #pragma omp for schedule(guided) collapse(2)
@@ -338,7 +338,7 @@ void FluidMatrix::OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, st
     // Create a temporary array to store the new values
     std::vector<double> newValue(this->size * this->size, 0.0);
 
-    for (int k = 0; k < ITERATIONS; k++) {
+    for (int k = 0; k < JACOBI_ITERATIONS; k++) {
 #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
         {
 #pragma omp for schedule(guided) collapse(2)

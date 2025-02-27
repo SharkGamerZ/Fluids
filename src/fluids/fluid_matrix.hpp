@@ -6,7 +6,8 @@
 #include <omp.h>
 #include <vector>
 
-constexpr int ITERATIONS = 100; ///< Number of iterations
+constexpr int GAUSS_ITERATIONS = 20;    ///< Number of iterations for the Gauss-Siedel
+constexpr int JACOBI_ITERATIONS = 100;  ///< Number of iterations for the Jacobi
 enum Axis { X, Y, ZERO };
 
 #define SWAP(x0, x) \
@@ -85,7 +86,7 @@ protected:
     void set_bnd(Axis mode, std::vector<double> &attr) const;
     void OMP_set_bnd(Axis mode, std::vector<double> &attr) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_set_bnd(Axis mode, std::vector<double> &attr) const;
+    void CUDA_set_bnd(Axis mode, double *d_value) const;
 #endif
 
     void gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
@@ -93,7 +94,7 @@ protected:
     void OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
     void OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
+    void CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate, double cRecip) const;
 #endif
 
     void fadeDensity(std::vector<double> &density) const;

@@ -74,8 +74,9 @@ void generate_random_fluid_matrix_params(FluidMatrix &fluidMatrix, const int siz
 
 int main() {
     // Create a FluidMatrix object with randomized parameters
-    TestFluidMatrix fluidMatrix(5, 0.0, 0.0, 0.0);
-    generate_random_fluid_matrix_params(fluidMatrix, 5);
+    int size = 10;
+    TestFluidMatrix fluidMatrix(size, 0.0, 0.0, 0.0);
+    generate_random_fluid_matrix_params(fluidMatrix, size);
 
 
     TestFluidMatrix OMP_fluidMatrix = fluidMatrix;
@@ -90,7 +91,7 @@ int main() {
         std::cerr << "CUDA_FluidMatrix copy failed\n";
     }
 
-    int num_runs = 1;
+    int num_runs = 10;
 
     printf("Matrix Size: %d\n", fluidMatrix.size);
     
@@ -105,6 +106,10 @@ int main() {
         // Print where the difference is
         for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
             if (fluidMatrix.density[i] != OMP_fluidMatrix.density[i]) {
+                // Check if the cell is a boundary cell
+                if (i % fluidMatrix.size == 0 || i % fluidMatrix.size == fluidMatrix.size - 1 || i / fluidMatrix.size == 0 || i / fluidMatrix.size == fluidMatrix.size - 1) {
+                    std::cerr<< "Boundary cell:";
+                }
                 std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " OMP_fluidMatrix.density[i]: " << OMP_fluidMatrix.density[i] << '\n';
             }
         }
@@ -115,6 +120,10 @@ int main() {
         // Print where the difference is
         for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
             if (fluidMatrix.density[i] != CUDA_fluidMatrix.density[i]) {
+                // Check if the cell is a boundary cell
+                if (i % fluidMatrix.size == 0 || i % fluidMatrix.size == fluidMatrix.size - 1 || i / fluidMatrix.size == 0 || i / fluidMatrix.size == fluidMatrix.size - 1) {
+                    std::cerr<< "Boundary cell:";
+                }
                 std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " CUDA_fluidMatrix.density[i]: " << CUDA_fluidMatrix.density[i] << '\n';
             }
         }
@@ -131,20 +140,28 @@ int main() {
         std::cerr << "advect and OMP_advect produced different results\n";
         // Print where the difference is
         for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
-            if (fluidMatrix.density[i] != OMP_fluidMatrix.density[i]) {
-                std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " OMP_fluidMatrix.density[i]: " << OMP_fluidMatrix.density[i] << '\n';
-            }
+            /*if (fluidMatrix.density[i] != OMP_fluidMatrix.density[i]) {*/
+            /*    // Check if the cell is a boundary cell*/
+            /*    if (i % fluidMatrix.size == 0 || i % fluidMatrix.size == fluidMatrix.size - 1 || i / fluidMatrix.size == 0 || i / fluidMatrix.size == fluidMatrix.size - 1) {*/
+            /*        std::cerr<< "Boundary cell:";*/
+            /*    }*/
+            /*    std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " OMP_fluidMatrix.density[i]: " << OMP_fluidMatrix.density[i] << '\n';*/
+            /*}*/
         }
     }
 
     if (fluidMatrix.density != CUDA_fluidMatrix.density) {
         std::cerr << "advect and CUDA_advect produced different results\n";
         // Print where the difference is
-        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
-            if (fluidMatrix.density[i] != CUDA_fluidMatrix.density[i]) {
-                std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " CUDA_fluidMatrix.density[i]: " << CUDA_fluidMatrix.density[i] << '\n';
-            }
-        }
+        /*for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {*/
+        /*    if (fluidMatrix.density[i] != CUDA_fluidMatrix.density[i]) {*/
+        /*        // Check if the cell is a boundary cell*/
+        /*        if (i % fluidMatrix.size == 0 || i % fluidMatrix.size == fluidMatrix.size - 1 || i / fluidMatrix.size == 0 || i / fluidMatrix.size == fluidMatrix.size - 1) {*/
+        /*            std::cerr<< "Boundary cell:";*/
+        /*        }*/
+        /*        std::cerr << "i: " << i << " fluidMatrix.density[i]: " << fluidMatrix.density[i] << " CUDA_fluidMatrix.density[i]: " << CUDA_fluidMatrix.density[i] << '\n';*/
+        /*    }*/
+        /*}*/
     }
 
 
@@ -156,10 +173,30 @@ int main() {
     // Compare the results of the two functions
     if (fluidMatrix.vX != OMP_fluidMatrix.vX) {
         std::cerr << "project and OMP_project produced different results\n";
+        // Print where the difference is
+        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
+            if (fluidMatrix.vX[i] != OMP_fluidMatrix.vX[i]) {
+                // Check if the cell is a boundary cell
+                if (i % fluidMatrix.size == 0 || i % fluidMatrix.size == fluidMatrix.size - 1 || i / fluidMatrix.size == 0 || i / fluidMatrix.size == fluidMatrix.size - 1) {
+                    std::cerr<< "Boundary cell:";
+                }
+                std::cerr << "i: " << i << " fluidMatrix.vX[i]: " << fluidMatrix.vX[i] << " OMP_fluidMatrix.vX[i]: " << OMP_fluidMatrix.vX[i] << '\n';
+            }
+        }
     }
 
     if (fluidMatrix.vX != CUDA_fluidMatrix.vX) {
         std::cerr << "project and CUDA_project produced different results\n";
+        // Print where the difference is
+        for (int i = 0; i < fluidMatrix.size * fluidMatrix.size; i++) {
+            if (fluidMatrix.vX[i] != CUDA_fluidMatrix.vX[i]) {
+                // Check if the cell is a boundary cell
+                if (i % fluidMatrix.size == 0 || i % fluidMatrix.size == fluidMatrix.size - 1 || i / fluidMatrix.size == 0 || i / fluidMatrix.size == fluidMatrix.size - 1) {
+                    std::cerr<< "Boundary cell:";
+                }
+                std::cerr << "i: " << i << " fluidMatrix.vX[i]: " << fluidMatrix.vX[i] << " CUDA_fluidMatrix.vX[i]: " << CUDA_fluidMatrix.vX[i] << '\n';
+            }
+        }
     }
 
     return EXIT_SUCCESS;
