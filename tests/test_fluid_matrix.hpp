@@ -16,7 +16,8 @@ public:
     using FluidMatrix::advect;
     using FluidMatrix::project;
     using FluidMatrix::set_bnd;
-    using FluidMatrix::lin_solve;
+    using FluidMatrix::gauss_lin_solve;
+    using FluidMatrix::jacobi_lin_solve;
     using FluidMatrix::fadeDensity;
 
     // Expose OpenMP implementations
@@ -24,7 +25,8 @@ public:
     using FluidMatrix::OMP_advect;
     using FluidMatrix::OMP_project;
     using FluidMatrix::OMP_set_bnd;
-    using FluidMatrix::OMP_lin_solve;
+    using FluidMatrix::OMP_gauss_lin_solve;
+    using FluidMatrix::OMP_jacobi_lin_solve;
     using FluidMatrix::OMP_fadeDensity;
 
 #ifdef CUDA_SUPPORT

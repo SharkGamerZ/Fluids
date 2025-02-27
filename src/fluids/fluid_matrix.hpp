@@ -6,7 +6,7 @@
 #include <omp.h>
 #include <vector>
 
-constexpr int ITERATIONS = 15; ///< Number of iterations
+constexpr int ITERATIONS = 100; ///< Number of iterations
 enum Axis { X, Y, ZERO };
 
 #define SWAP(x0, x) \
@@ -88,8 +88,10 @@ protected:
     void CUDA_set_bnd(Axis mode, std::vector<double> &attr) const;
 #endif
 
-    void lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
-    void OMP_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
+    void gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
+    void jacobi_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
+    void OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
+    void OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 #ifdef CUDA_SUPPORT
     void CUDA_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 #endif

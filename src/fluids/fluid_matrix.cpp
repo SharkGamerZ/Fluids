@@ -88,16 +88,16 @@ void FluidMatrix::addVelocity(uint32_t x, uint32_t y, double amountX, double amo
 
 void FluidMatrix::diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {
     double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
-    lin_solve(mode, current, previous, diffusionRate);
+    jacobi_lin_solve(mode, current, previous, diffusionRate);
 }
 
 void FluidMatrix::OMP_diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const {
     double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
-    OMP_lin_solve(mode, current, previous, diffusionRate);
+    OMP_jacobi_lin_solve(mode, current, previous, diffusionRate);
 }
 
 void FluidMatrix::advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
-    int i, j, i0, j0, i1, j1;
+    int i0, j0, i1, j1;
     float x, y, s0, t0, s1, t1, dt0;
 
     dt0 = dt*(this->size-2);
@@ -269,7 +269,32 @@ void FluidMatrix::OMP_set_bnd(Axis mode, std::vector<double> &attr) const {
     }
 }
 
-void FluidMatrix::lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
+void FluidMatrix::jacobi_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
+    double c = diffusionRate;
+    double cRecip = 1.0 / (1 + 4 * c);
+
+    // Create a temporary array to store the new values
+    std::vector<double> newValue(this->size * this->size, 0.0);
+
+    for (int k = 0; k < ITERATIONS; k++) {
+        for (int i = 1; i < this->size - 1; i++) {
+            for (int j = 1; j < this->size - 1; j++) {
+                // Compute the new value using the Jacobi method
+                newValue[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
+                                                                                                         value[index(i, j + 1, this->size)] + value[index(i, j - 1, this->size)])) *
+                                                    cRecip;
+            }
+        }
+        // Swap the new values into the main array
+        std::swap(value, newValue);
+
+        // Apply boundary conditions
+        set_bnd(mode, value);
+    }
+}
+
+
+void FluidMatrix::gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
     double c = diffusionRate;
     double cRecip = 1.0 / (1 + 4*c);
 
@@ -285,7 +310,7 @@ void FluidMatrix::lin_solve(Axis mode, std::vector<double> &value, std::vector<d
     }
 }
 
-void FluidMatrix::OMP_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
+void FluidMatrix::OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
     double c = diffusionRate;
     double cRecip = 1.0 / (1 + 4 * c);
 
@@ -305,6 +330,32 @@ void FluidMatrix::OMP_lin_solve(Axis mode, std::vector<double> &value, std::vect
         }
     }
 }
+
+void FluidMatrix::OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const {
+    double c = diffusionRate;
+    double cRecip = 1.0 / (1 + 4 * c);
+
+    // Create a temporary array to store the new values
+    std::vector<double> newValue(this->size * this->size, 0.0);
+
+    for (int k = 0; k < ITERATIONS; k++) {
+#pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+        {
+#pragma omp for schedule(guided) collapse(2)
+            for (int i = 1; i < this->size - 1; i++) {
+                for (int j = 1; j < this->size - 1; j++) {
+                    newValue[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
+                                                                                                         value[index(i, j + 1, this->size)] + value[index(i, j - 1, this->size)])) *
+                                                    cRecip;
+                }
+            }
+        }
+        // Swap the new values into the main array
+        std::swap(value, newValue);
+        OMP_set_bnd(mode, value);
+    }
+}
+
 
 void FluidMatrix::fadeDensity(std::vector<double> &density) const {
     for (int i = 0; i < this->size * this->size; i++) {
