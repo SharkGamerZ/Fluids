@@ -24,7 +24,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 
     char buf[128];
-    sprintf(buf, "Simulation Parameters - %s###SimulationParameters", settings.executionMode == SERIAL ? "Serial" : settings.executionMode == OPENMP ? "OpenMP" : "CUDA");
+    sprintf(buf, "Simulation Parameters - %s fps: %.1f ###SimulationParameters", settings.executionMode == SERIAL ? "Serial" : settings.executionMode == OPENMP ? "OpenMP" : "CUDA", ImGui::GetIO().Framerate);
     
     if (ImGui::Begin(buf, nullptr, ImGuiWindowFlags_NoResize)) {
         if (ImGui::BeginTabBar("Tabs")) {
