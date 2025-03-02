@@ -23,7 +23,10 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 
-    if (ImGui::Begin("Simulation parameters", nullptr, ImGuiWindowFlags_NoResize)) {
+    char buf[128];
+    sprintf(buf, "Simulation Parameters - %s###SimulationParameters", settings.executionMode == SERIAL ? "Serial" : settings.executionMode == OPENMP ? "OpenMP" : "CUDA");
+    
+    if (ImGui::Begin(buf, nullptr, ImGuiWindowFlags_NoResize)) {
         if (ImGui::BeginTabBar("Tabs")) {
             if (ImGui::BeginTabItem("Parameters")) {
                 // Simulation parameters
@@ -70,12 +73,13 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
             }
 
             if (ImGui::BeginTabItem("Keybinds")) {
-                ImGui::Text("[ESC] - Exit program");
+                ImGui::Text("[ESC]/[Q] - Exit program");
                 ImGui::Text("[SPACE] - Pause/Resume simulation");
                 ImGui::Text("[R] - Reset simulation");
-                ImGui::Text("[V] - Change simulation attribute");
+                ImGui::Text("[A]/[D] - Cycle simulation attribute backwards/forwards");
                 ImGui::Text("[M] - Change execution mode");
                 ImGui::Text("[W] - Toggle wind machine");
+                ImGui::Text("[->] - Frame simulation (when paused)");
                 ImGui::EndTabItem();
             }
 
