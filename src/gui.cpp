@@ -128,15 +128,28 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         // TODO step simulation (add frame mode)
         if (settings.isSimulationRunning || settings.frameSimulation) {
             switch (settings.executionMode) {
-                case SERIAL: matrix->step(); break;
-                case OPENMP: matrix->OMP_step(); break;
+                case SERIAL: 
+                    if (settings.executionModePrev == CUDA) matrix->copyToHost();
+                    matrix->step(); 
+                    break;
+
+                case OPENMP: 
+                    if (settings.executionModePrev == CUDA) matrix->copyToHost();
+                    matrix->OMP_step(); 
+                    break;
 #ifdef CUDA_SUPPORT
-                case CUDA: matrix->CUDA_step(); break;
+                case CUDA: 
+                    if (settings.executionModePrev != CUDA) matrix->copyToDevice();
+                    matrix->CUDA_step();
+                    matrix->copyToHost();
+                    break;
 #endif
                 default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
             }
 
             settings.frameSimulation = false;
+            settings.executionModePrev = settings.executionMode;
+
         }
     }
 
