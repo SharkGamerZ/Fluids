@@ -50,10 +50,21 @@ public:
     void OMP_step();
 #ifdef CUDA_SUPPORT
     void CUDA_step();
+
+    void CUDA_reset();
+    void copyToHost();
+    void copyToDevice();
 #endif
+
+
 
     void addDensity(uint32_t x, uint32_t y, double amount);
     void addVelocity(uint32_t x, uint32_t y, double amountX, double amountY);
+
+#ifdef CUDA_SUPPORT
+    void CUDA_addVelocity(int x, int y, double amountX, double amountY);
+    void CUDA_addDensity(int x, int y, double amount);
+#endif
 
 protected:
     int numMaxThreads; ///< Number of threads used by OpenMP

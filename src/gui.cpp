@@ -102,13 +102,19 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
         if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-                matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+                if (settings.executionMode != CUDA)
+                    matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+                else
+                    matrix->CUDA_addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
             }
 
             settings.deltax /= settings.scalingFactor * 2;
             settings.deltay /= settings.scalingFactor * 2;
-            matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
-                                settings.deltay * settings.mouse_velocity);
+
+            if (settings.executionMode != CUDA)
+                matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
+            else
+                matrix->CUDA_addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
         }
 
         settings.xposPrev = settings.xpos;

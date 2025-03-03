@@ -52,6 +52,35 @@ void FluidMatrix::copyToDevice() {
 
 __device__ int index(const int i, const int j, const int size) { return i * size + j; }
 
+__global__ void addVelocity_kernel(double *d_vX, double *d_vY, int x, int y, int size, double amountX, double amountY) {
+    d_vX[index(y, x, size)] += amountY;
+    d_vY[index(y, x, size)] += amountX;
+}
+
+void FluidMatrix::CUDA_addVelocity(int x, int y, double amountX, double amountY) {
+    if (x < 0 || x >= size || y < 0 || y >= size) return;
+    addVelocity_kernel<<<1, 1>>>(d_vX, d_vY, x, y, size, amountX, amountY);
+}
+
+
+__global__ void addDensity_kernel(double *d_density, int x, int y, int size, double amount) { d_density[index(y, x, size)] += amount; }
+
+void FluidMatrix::CUDA_addDensity(int x, int y, double amount) {
+    if (x < 0 || x >= size || y < 0 || y >= size) return;
+    addDensity_kernel<<<1, 1>>>(d_density, x, y, size, amount);
+}
+
+
+void FluidMatrix::CUDA_reset() {
+    const size_t size_bytes = this->size * this->size * sizeof(double);
+    gpuErrchk(cudaMemset(d_density, 0, size_bytes));
+    gpuErrchk(cudaMemset(d_density_prev, 0, size_bytes));
+    gpuErrchk(cudaMemset(d_vX, 0, size_bytes));
+    gpuErrchk(cudaMemset(d_vX_prev, 0, size_bytes));
+    gpuErrchk(cudaMemset(d_vY, 0, size_bytes));
+    gpuErrchk(cudaMemset(d_vY_prev, 0, size_bytes));
+}
+
 __global__ void advect_kernel(int size, double *d, const double *d0, const double *vX, const double *vY, double dt) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
