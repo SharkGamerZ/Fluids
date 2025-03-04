@@ -143,6 +143,7 @@ std::vector<float> getDensityVertices(const SimulationSettings *settings, const 
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     const int matrixSize = matrix->size;
 
+#pragma omp for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
         const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
 
@@ -171,6 +172,7 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     const int matrixSize = matrix->size;
 
+#pragma omp for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
         const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
 
@@ -200,6 +202,7 @@ std::vector<float> getVorticityVertices(const SimulationSettings *settings, cons
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     const int matrixSize = matrix->size;
 
+#pragma omp for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
         const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
 
