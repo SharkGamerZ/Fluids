@@ -18,6 +18,7 @@ void FluidMatrix::CUDA_init() {
     gpuErrchk(cudaMalloc(&d_vX_prev, size_bytes));
     gpuErrchk(cudaMalloc(&d_vY, size_bytes));
     gpuErrchk(cudaMalloc(&d_vY_prev, size_bytes));
+    gpuErrchk(cudaMalloc(&d_newValue, size_bytes));
 }
 
 void FluidMatrix::CUDA_destroy() const {
@@ -27,15 +28,16 @@ void FluidMatrix::CUDA_destroy() const {
     gpuErrchk(cudaFree(d_vX_prev));
     gpuErrchk(cudaFree(d_vY));
     gpuErrchk(cudaFree(d_vY_prev));
+    gpuErrchk(cudaFree(d_newValue));
 }
 
 void FluidMatrix::copyToHost() {
     const size_t size_bytes = this->size * this->size * sizeof(double);
-    gpuErrchk(cudaMemcpy(density.data(), d_density, size_bytes, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpyAsync(density.data(), d_density, size_bytes, cudaMemcpyDeviceToHost));
     // gpuErrchk(cudaMemcpy(density_prev.data(), d_density_prev, size_bytes, cudaMemcpyDeviceToHost));
-    gpuErrchk(cudaMemcpy(vX.data(), d_vX, size_bytes, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpyAsync(vX.data(), d_vX, size_bytes, cudaMemcpyDeviceToHost));
     // gpuErrchk(cudaMemcpy(vX_prev.data(), d_vX_prev, size_bytes, cudaMemcpyDeviceToHost));
-    gpuErrchk(cudaMemcpy(vY.data(), d_vY, size_bytes, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpyAsync(vY.data(), d_vY, size_bytes, cudaMemcpyDeviceToHost));
     // gpuErrchk(cudaMemcpy(vY_prev.data(), d_vY_prev, size_bytes, cudaMemcpyDeviceToHost));
 }
 
@@ -198,20 +200,14 @@ void FluidMatrix::CUDA_step() {
     CalculateVorticity(vX, vY, vorticity);
 }
 
-void FluidMatrix::CUDA_diffuse(Axis mode, double *current, double *previous, double diffusion, double dt) const {
+void FluidMatrix::CUDA_diffuse(Axis mode, double *current, double *previous, double diffusion, double dt) {
     double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
     double cRecip = 1.0 / (1 + 4 * diffusionRate);
     CUDA_lin_solve(mode, current, previous, diffusionRate, cRecip);
 }
 
-void FluidMatrix::CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt) const {
+void FluidMatrix::CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt) {
     const size_t size_bytes = this->size * this->size * sizeof(double);
-
-    // double *d_density, *d_density0, *d_vX, *d_vY;
-
-    // gpuErrchk(cudaMemcpy(dp_d0, d0.data(), size_bytes, cudaMemcpyHostToDevice));
-    // gpuErrchk(cudaMemcpy(dp_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice));
-    // gpuErrchk(cudaMemcpy(dp_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice));
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
@@ -219,19 +215,13 @@ void FluidMatrix::CUDA_advect(Axis mode, double *d_density, double *d_density0, 
     advect_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_density, d_density0, d_vX, d_vY, dt);
     gpuErrchk(cudaPeekAtLastError());
 
-    // gpuErrchk(cudaMemcpy(d.data(), dp_d, size_bytes, cudaMemcpyDeviceToHost));
-
     CUDA_set_bnd(mode, d_density);
 }
 
-void FluidMatrix::CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, double *d_vY_prev) const {
+void FluidMatrix::CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, double *d_vY_prev) {
     const size_t size_bytes = this->size * this->size * sizeof(double);
 
-    // gpuErrchk(cudaMemcpy(d_vX, vX.data(), size_bytes, cudaMemcpyHostToDevice));
-    // gpuErrchk(cudaMemcpy(d_vY, vY.data(), size_bytes, cudaMemcpyHostToDevice));
-
     gpuErrchk(cudaMemset(d_vX_prev, 0, size_bytes));
-
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
@@ -243,10 +233,6 @@ void FluidMatrix::CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, do
     // CUDA_lin_solve(ZERO, vX_prev, vY_prev, 1, 1.0 / 4);
 
 
-    double *d_newValue;
-    gpuErrchk(cudaMalloc(&d_newValue, size_bytes));
-    gpuErrchk(cudaMemset(d_newValue, 0, size_bytes));
-
     for (int k = 0; k < JACOBI_ITERATIONS; k++) {
         lin_solve_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX_prev, d_vY_prev, d_newValue, 1.0, 1.0 / 4);
         gpuErrchk(cudaPeekAtLastError());
@@ -256,17 +242,12 @@ void FluidMatrix::CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, do
         CUDA_set_bnd(ZERO, d_vX_prev);
     }
 
-    gpuErrchk(cudaFree(d_newValue));
-
 
     update_velocity_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_vX, d_vY, d_vX_prev);
     gpuErrchk(cudaPeekAtLastError());
 
     CUDA_set_bnd(X, d_vX);
     CUDA_set_bnd(Y, d_vY);
-
-    // gpuErrchk(cudaMemcpy(vX.data(), d_vX, size_bytes, cudaMemcpyDeviceToHost));
-    // gpuErrchk(cudaMemcpy(vY.data(), d_vY, size_bytes, cudaMemcpyDeviceToHost));
 }
 
 __global__ void CUDA_set_bnd_kernel(Axis mode, double *d_value, int size) {
@@ -315,16 +296,10 @@ void FluidMatrix::CUDA_set_bnd(Axis mode, double *d_value) const {
     gpuErrchk(cudaDeviceSynchronize());
 }
 
-void FluidMatrix::CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip) const {
+void FluidMatrix::CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip) {
     const size_t size_bytes = this->size * this->size * sizeof(double);
 
     double c = diffusionRate;
-
-    // gpuErrchk(cudaMemcpy(d_value, value.data(), size_bytes, cudaMemcpyHostToDevice));
-    // gpuErrchk(cudaMemcpy(d_oldValue, oldValue.data(), size_bytes, cudaMemcpyHostToDevice));
-    double *d_newValue;
-    gpuErrchk(cudaMalloc(&d_newValue, size_bytes));
-    gpuErrchk(cudaMemset(d_newValue, 0, size_bytes));
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
@@ -337,21 +312,14 @@ void FluidMatrix::CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue,
         std::swap(d_value, d_newValue);
         CUDA_set_bnd(mode, d_value);
     }
-
-    // gpuErrchk(cudaMemcpy(value.data(), d_value, size_bytes, cudaMemcpyDeviceToHost));
-    gpuErrchk(cudaFree(d_newValue));
 }
 
 void FluidMatrix::CUDA_fadeDensity(double *density) const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
-
-    // gpuErrchk(cudaMemcpy(d_density, density.data(), size_bytes, cudaMemcpyHostToDevice));
 
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
     fade_density_kernel<<<numBlocks, threadsPerBlock>>>(this->size, d_density);
     gpuErrchk(cudaPeekAtLastError());
-
-    // gpuErrchk(cudaMemcpy(density.data(), d_density, size_bytes, cudaMemcpyDeviceToHost));
 }

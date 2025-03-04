@@ -39,6 +39,7 @@ public:
     double *d_density, *d_density_prev;
     double *d_vX, *d_vX_prev;
     double *d_vY, *d_vY_prev;
+    double *d_newValue;
 #endif
 
     FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt);
@@ -82,19 +83,19 @@ protected:
     void diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const;
     void OMP_diffuse(Axis mode, std::vector<double> &current, std::vector<double> &previous, double diffusion, double dt) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_diffuse(Axis mode, double *current, double *previous, double diffusion, double dt) const;
+    void CUDA_diffuse(Axis mode, double *current, double *previous, double diffusion, double dt);
 #endif
 
     void advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
     void OMP_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt) const;
+    void CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt);
 #endif
 
     void project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
     void OMP_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, double *d_vY_prev) const;
+    void CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, double *d_vY_prev);
 #endif
 
     void set_bnd(Axis mode, std::vector<double> &attr) const;
@@ -108,7 +109,7 @@ protected:
     void OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
     void OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, std::vector<double> &oldValue, double diffusionRate) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip) const;
+    void CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip);
 #endif
 
     void fadeDensity(std::vector<double> &density) const;
