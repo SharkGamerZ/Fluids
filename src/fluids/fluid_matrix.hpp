@@ -25,6 +25,7 @@ public:
     double dt;                        ///< Delta time
     double diff;                      ///< Diffusion
     double visc;                      ///< Viscosity
+    double gravity = -0.00981; // Gravity acceleration
     std::vector<double> density;      ///< Density of the fluid
     std::vector<double> density_prev; ///< Density of the fluid in the previous step
     std::vector<double> vX;           ///< Velocity in the x-axis
@@ -65,6 +66,8 @@ public:
     void CUDA_addVelocity(int x, int y, double amountX, double amountY);
     void CUDA_addDensity(int x, int y, double amount);
 #endif
+
+    void applyGravity();
 
 protected:
     int numMaxThreads; ///< Number of threads used by OpenMP

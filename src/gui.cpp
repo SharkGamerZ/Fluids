@@ -101,6 +101,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         settings.mouseTimePrev = settings.mouseTime;
 
         if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
+            // Add Density
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
                 if (settings.executionMode != CUDA)
                     matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
@@ -108,9 +109,12 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                     matrix->CUDA_addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
             }
 
+
+            // Calculate velocity
             settings.deltax /= settings.scalingFactor * 2;
             settings.deltay /= settings.scalingFactor * 2;
 
+            // Add Velocity
             if (settings.executionMode != CUDA)
                 matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
             else
@@ -120,18 +124,25 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         settings.xposPrev = settings.xpos;
         settings.yposPrev = settings.ypos;
 
-        // Keybind related actions
+        // Wind machine
         if (settings.windMachine) {
-            matrix->addVelocity(2, settings.matrixSize/2  , 0.3, 0.0f);
-            /*for (int i = 0; i < settings.matrixSize; i++) {*/
-            /*    matrix->addVelocity(2, i, 0.5f, 0.0f);*/
-            /*}*/
+            if (settings.executionMode != CUDA)
+                matrix->addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
+            else
+                matrix->CUDA_addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
         }
+
+        if (settings.gravity) {
+            matrix->applyGravity();
+        }
+
+        // Reset simulation
         if (settings.resetSimulation) {
             matrix->reset();
             settings.resetSimulation = false;
         }
-        // TODO step simulation (add frame mode)
+        
+        // Run simulation
         if (settings.isSimulationRunning || settings.frameSimulation) {
             switch (settings.executionMode) {
                 case SERIAL: 
@@ -161,8 +172,6 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
     // Render matrix
     RenderMatrix(settings, matrix);
-    // NOTE: this makes it go from 60FPS to 15 :(
-    // NOTE 2: if this is done before ImGui::Render(), the gui is not bugged off-screen
 
     // TODO: Check why we have to do this
     int display_w, display_h;
@@ -259,7 +268,10 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         settings->executionMode = settings->executionMode == SERIAL ? OPENMP : SERIAL;
 #endif
     }
-    // Toggle wind machine    // Toggle wind machine
+    // Toggle wind machine
     if (key == GLFW_KEY_W && action == GLFW_PRESS) settings->windMachine = !settings->windMachine;
+
+    // Toggle gravity
+    if (key == GLFW_KEY_G && action == GLFW_PRESS) settings->gravity = !settings->gravity;
 }
 } // namespace GUI

@@ -401,3 +401,10 @@ void FluidMatrix::OMP_CalculateVorticity(std::vector<double> &vX, std::vector<do
 }
 
 
+void FluidMatrix::applyGravity() {
+    for (int i = 1; i < size - 1; i++) {
+        for (int j = 1; j < size - 1; j++) {
+            vY[index(i, j, size)] += gravity;  // Apply gravity acceleration to vertical velocity
+        }
+    }
+}
