@@ -46,8 +46,8 @@ void test_function_performance(const std::string &func_name, const int num_runs,
 void generate_random_fluid_matrix_params(FluidMatrix &fluidMatrix, const int size) {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution diff_dist(0.0, 1.0); // Random diffusion between 0.0 and 1.0
-    std::uniform_real_distribution visc_dist(0.0, 1.0); // Random viscosity between 0.0 and 1.0
+    std::uniform_real_distribution diff_dist(0.0, 100.0); // Random diffusion between 0.0 and 1.0
+    std::uniform_real_distribution visc_dist(0.0, 100.0); // Random viscosity between 0.0 and 1.0
     std::uniform_real_distribution dt_dist(0.001, 0.1); // Random delta time between 0.001 and 0.1
 
     fluidMatrix.size = size;
@@ -72,11 +72,41 @@ void generate_random_fluid_matrix_params(FluidMatrix &fluidMatrix, const int siz
     std::ranges::generate(fluidMatrix.vY_prev, [&gen, &visc_dist] { return visc_dist(gen); });
 }
 
-void compareMatrixes(std::vector<double> m1, std::vector<double> m2, bool printMatrix) {
+void compareMatrixes(std::vector<double> m1, std::vector<double> m2, bool printMatrix, FILE *fp) {
     int size = sqrt(m1.size());
 
     if (m1 != m2) {
-        std::cerr << "project and CUDA_project produced different results\n";
+        std::cerr << "produced different results\n";
+
+        // Calculate min, max and avg difference
+        double min_diff = std::numeric_limits<double>::max();
+        double max_diff = std::numeric_limits<double>::min();
+        double avg_diff = 0.0;
+        int diff_count = 0;
+        
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                // Check if the cell is a boundary cell
+                if (i == 0 || i == size - 1 || j == 0 || j == size - 1) continue;
+
+                if (m1[i * size + j] != m2[i * size + j]) {
+                    min_diff = std::min(min_diff, std::abs(m1[i * size + j] - m2[i * size + j]));
+                    max_diff = std::max(max_diff, std::abs(m1[i * size + j] - m2[i * size + j]));
+                    avg_diff += std::abs(m1[i * size + j] - m2[i * size + j]);
+                    diff_count++;
+                }
+            }
+        }
+
+        avg_diff /= diff_count;
+
+        std::cerr << "Min difference: " << min_diff << '\n';
+        std::cerr << "Max difference: " << max_diff << '\n';
+        std::cerr << "Average difference: " << avg_diff << '\n';
+
+        std::cout << std::endl;
+
+        fprintf(fp, "%3.7f ", avg_diff);
 
         if (!printMatrix) return;
         // Print where the difference is
@@ -86,12 +116,11 @@ void compareMatrixes(std::vector<double> m1, std::vector<double> m2, bool printM
                 if (i % size == 0 || i % size == size - 1 || i / size == 0 || i / size == size - 1) {
                     std::cerr<< "Boundary cell:";
                 }
-                std::cerr << "i: " << i << " fluidMatrix.vX[i]: " << m1[i] << " CUDA_fluidMatrix.vX[i]: " << m2[i] << '\n';
+                std::cerr << "i: " << i << " m1.vX[i]: " << m1[i] << " m2.vX[i]: " << m2[i] << '\n';
             }
         }
     }
 }
-
 
 std::vector<double> solvePerfectMatrix(uint32_t size, const std::vector<double> &oldValue, double diffusionRate) {
     const int N = size - 2;  // Active grid (excluding boundaries)
@@ -105,6 +134,7 @@ std::vector<double> solvePerfectMatrix(uint32_t size, const std::vector<double> 
     double cRecip = 1.0 / (1 + 4 * c);
 
     // Construct A based on the finite difference stencil
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             int idx = i * N + j;
@@ -125,36 +155,47 @@ std::vector<double> solvePerfectMatrix(uint32_t size, const std::vector<double> 
 
     for (int i = 0; i < matrixSize; i++) {
         L[i][i] = 1.0;  // L has 1s on the diagonal
+        
+        #pragma omp parallel for
         for (int j = i; j < matrixSize; j++) {
+            double sum = 0.0;
             for (int k = 0; k < i; k++)
-                U[i][j] -= L[i][k] * U[k][j];
+                sum += L[i][k] * U[k][j]; 
+            U[i][j] = A[i][j] - sum;
         }
+
+        #pragma omp parallel for
         for (int j = i + 1; j < matrixSize; j++) {
+            double sum = 0.0;
             for (int k = 0; k < i; k++)
-                U[j][i] -= L[j][k] * U[k][i];
-            L[j][i] = U[j][i] / U[i][i];
+                sum += L[j][k] * U[k][i];
+            L[j][i] = (A[j][i] - sum) / U[i][i];
         }
     }
 
     // Forward substitution: solve Ly = b
     std::vector<double> y(matrixSize, 0.0);
+    #pragma omp parallel for
     for (int i = 0; i < matrixSize; i++) {
-        y[i] = b[i];
+        double sum = 0.0;
         for (int j = 0; j < i; j++)
-            y[i] -= L[i][j] * y[j];
+            sum += L[i][j] * y[j];
+        y[i] = b[i] - sum;
     }
 
     // Backward substitution: solve Ux = y
     std::vector<double> x(matrixSize, 0.0);
+    #pragma omp parallel for
     for (int i = matrixSize - 1; i >= 0; i--) {
-        x[i] = y[i];
+        double sum = 0.0;
         for (int j = i + 1; j < matrixSize; j++)
-            x[i] -= U[i][j] * x[j];
-        x[i] /= U[i][i];
+            sum += U[i][j] * x[j];
+        x[i] = (y[i] - sum) / U[i][i];
     }
 
     // Convert x back to full grid format
     std::vector<double> result(size * size, 0.0);
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             result[(i + 1) * size + (j + 1)] = x[i * N + j];
@@ -164,10 +205,9 @@ std::vector<double> solvePerfectMatrix(uint32_t size, const std::vector<double> 
     return result;
 }
 
-
 int main() {
     // Create a FluidMatrix object with randomized parameters
-    int size = 20;
+    int size = 50;
     TestFluidMatrix fluidMatrix(size, 0.0, 0.0, 0.0);
     generate_random_fluid_matrix_params(fluidMatrix, size);
 
@@ -175,39 +215,52 @@ int main() {
     TestFluidMatrix OMP_fluidMatrix = fluidMatrix;
     if (fluidMatrix.density != OMP_fluidMatrix.density) { std::cerr << "OMP_FluidMatrix copy failed\n"; }
 
-    TestFluidMatrix CUDA_fluidMatrix = fluidMatrix;
-    if (fluidMatrix.density != CUDA_fluidMatrix.density) { std::cerr << "CUDA_FluidMatrix copy failed\n"; }
-
-    int num_runs = 20;
+    int num_runs = 10;
 
     printf("Matrix Size: %d\n", fluidMatrix.size);
 
     std::vector<double> result = solvePerfectMatrix(fluidMatrix.size, fluidMatrix.density, fluidMatrix.diff);
-    test_function_performance("solvePerfectMatrix", num_runs, [&fluidMatrix, &result] { fluidMatrix.OMP_gauss_lin_solve(ZERO, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.diff); });
-    
-    // DIFFUSE
-    test_function_performance("diffuse", num_runs, [&fluidMatrix] { fluidMatrix.diffuse(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.visc, fluidMatrix.dt); });
-    test_function_performance("OMP_diffuse", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_diffuse(X, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.visc, OMP_fluidMatrix.dt); });
-    test_function_performance("CUDA_diffuse", num_runs, [&CUDA_fluidMatrix] { CUDA_fluidMatrix.CUDA_diffuse(X, CUDA_fluidMatrix.density, CUDA_fluidMatrix.density_prev, CUDA_fluidMatrix.visc, CUDA_fluidMatrix.dt); });
 
-    compareMatrixes(fluidMatrix.density, OMP_fluidMatrix.density, false);
-    compareMatrixes(fluidMatrix.density, CUDA_fluidMatrix.density, false);
+    // Open file to write results
+    FILE *fp = fopen("results.txt", "w");
+    if (fp == NULL) {
+        std::cerr << "Error opening file\n";
+        return EXIT_FAILURE;
+    }
 
-    // ADVECT
-    test_function_performance("advect", num_runs, [&fluidMatrix] { fluidMatrix.advect(ZERO, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.vX, fluidMatrix.vY, fluidMatrix.dt); });
-    test_function_performance("OMP_advect", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_advect(ZERO, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.vX, OMP_fluidMatrix.vY, OMP_fluidMatrix.dt); });
-    test_function_performance("CUDA_advect", num_runs, [&CUDA_fluidMatrix] { CUDA_fluidMatrix.CUDA_advect(ZERO, CUDA_fluidMatrix.density, CUDA_fluidMatrix.density_prev, CUDA_fluidMatrix.vX, CUDA_fluidMatrix.vY, CUDA_fluidMatrix.dt); });
+    // Write iterations, serial, omp and cuda header
+    fprintf(fp, "%10s", "Iterations");
+    fprintf(fp, "%10s","Serial ");
+    fprintf(fp, "%10s","OMP ");
+    fprintf(fp, "\n");
 
-    compareMatrixes(fluidMatrix.density, OMP_fluidMatrix.density, false);
-    compareMatrixes(fluidMatrix.density, CUDA_fluidMatrix.density, false);
+    for (int i = 0; i <= 1000; i++) {
+        // Write number of itertion in the file
+        fprintf(fp, "%10d ", i);
 
-    // PROJECT
-    test_function_performance("project", num_runs, [&fluidMatrix] { fluidMatrix.project(fluidMatrix.vX, fluidMatrix.vY, fluidMatrix.vX_prev, fluidMatrix.vY_prev); });
-    test_function_performance("OMP_project", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_project(OMP_fluidMatrix.vX, OMP_fluidMatrix.vY, OMP_fluidMatrix.vX_prev, OMP_fluidMatrix.vY_prev); });
-    test_function_performance("CUDA_project", num_runs, [&CUDA_fluidMatrix] { CUDA_fluidMatrix.CUDA_project(CUDA_fluidMatrix.vX, CUDA_fluidMatrix.vY, CUDA_fluidMatrix.vX_prev, CUDA_fluidMatrix.vY_prev); });
+        TestFluidMatrix fluidMatrix_copy = fluidMatrix;
+        TestFluidMatrix OMP_fluidMatrix_copy = OMP_fluidMatrix;
 
-    compareMatrixes(fluidMatrix.vX, OMP_fluidMatrix.vX, false);
-    compareMatrixes(fluidMatrix.vX, CUDA_fluidMatrix.vX, false);
+        GAUSS_ITERATIONS = i;
+        JACOBI_ITERATIONS = i;
 
-    return EXIT_SUCCESS;
+        std::cout << "Iterations: " << i << std::endl;
+
+        // DIFFUSE
+        test_function_performance("diffuse", num_runs, [&fluidMatrix] { fluidMatrix.diffuse(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.visc, fluidMatrix.dt); });
+        test_function_performance("OMP_diffuse", num_runs, [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_diffuse(X, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.visc, OMP_fluidMatrix.dt); });
+
+        printf("Comparing perfect and serial diffuse()\n");
+        compareMatrixes(result, fluidMatrix.density, false, fp);
+
+        printf("Comparing perfect and OMP diffuse()\n");
+        compareMatrixes(result, OMP_fluidMatrix.density, false, fp);
+
+        std::cout << std::endl << std::endl;
+
+        fluidMatrix = fluidMatrix_copy;
+        OMP_fluidMatrix = OMP_fluidMatrix_copy;
+
+        fprintf(fp, "\n");
+    }
 }
