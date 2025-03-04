@@ -6,8 +6,8 @@
 #include <omp.h>
 #include <vector>
 
-constexpr int GAUSS_ITERATIONS = 50;    ///< Number of iterations for the Gauss-Siedel
-constexpr int JACOBI_ITERATIONS = 100;  ///< Number of iterations for the Jacobi
+extern int GAUSS_ITERATIONS;    ///< Number of iterations for the Gauss-Siedel
+extern int JACOBI_ITERATIONS;  ///< Number of iterations for the Jacobi
 enum Axis { X, Y, ZERO };
 
 #define SWAP(x0, x) \
