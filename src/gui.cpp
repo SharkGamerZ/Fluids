@@ -105,8 +105,10 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
                 if (settings.executionMode != CUDA)
                     matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+#ifdef CUDA_SUPPORT
                 else
                     matrix->CUDA_addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+#endif
             }
 
 
@@ -117,8 +119,10 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
             // Add Velocity
             if (settings.executionMode != CUDA)
                 matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
+#ifdef CUDA_SUPPORT
             else
                 matrix->CUDA_addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
+#endif
         }
 
         settings.xposPrev = settings.xpos;
@@ -128,8 +132,10 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         if (settings.windMachine) {
             if (settings.executionMode != CUDA)
                 matrix->addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
+#ifdef CUDA_SUPPORT
             else
-                matrix->CUDA_addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
+                    matrix->CUDA_addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
+#endif
         }
 
         if (settings.gravity) {
@@ -146,12 +152,16 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         if (settings.isSimulationRunning || settings.frameSimulation) {
             switch (settings.executionMode) {
                 case SERIAL: 
+#ifdef CUDA_SUPPORT
                     if (settings.executionModePrev == CUDA) matrix->copyToHost();
+#endif
                     matrix->step(); 
                     break;
 
                 case OPENMP: 
+#ifdef CUDA_SUPPORT
                     if (settings.executionModePrev == CUDA) matrix->copyToHost();
+#endif
                     matrix->OMP_step(); 
                     break;
 #ifdef CUDA_SUPPORT

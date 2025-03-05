@@ -28,7 +28,9 @@ void FluidMatrix::reset() {
     std::ranges::fill(vX_prev, 0);
     std::ranges::fill(vY_prev, 0);
     std::ranges::fill(vorticity, 0);
+#ifdef CUDA_SUPPORT
     this->CUDA_reset();
+#endif
 }
 
 void FluidMatrix::step() {
