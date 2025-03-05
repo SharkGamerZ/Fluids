@@ -21,7 +21,7 @@ enum Axis { X, Y, ZERO };
 /// FluidMatrix class for serial, OpenMP, and CUDA-based simulation
 class FluidMatrix {
 public:
-    uint32_t size;                    ///< Size of the fluid matrix
+    int size;                    ///< Size of the fluid matrix
     double dt;                        ///< Delta time
     double diff;                      ///< Diffusion
     double visc;                      ///< Viscosity

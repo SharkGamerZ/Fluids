@@ -131,7 +131,6 @@ std::vector<double> solvePerfectMatrix(uint32_t size, const std::vector<double> 
     std::vector<double> b(matrixSize, 0.0);  // Right-hand side vector
 
     double c = diffusionRate;
-    double cRecip = 1.0 / (1 + 4 * c);
 
     // Construct A based on the finite difference stencil
     #pragma omp parallel for collapse(2)
