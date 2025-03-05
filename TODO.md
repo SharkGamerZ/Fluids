@@ -11,6 +11,6 @@
 - [x]  Move the memcpy only at the start/end of the CUDA section, getting and setting the various matrixes in RAM only when needed, and using the device pointers in the CUDA_step
 - [ ]  Implement CUDA_CalculateVorticity
 - [x]  Modify Vorticity shader to user two colors to represent negative and positive vorticity
-- [ ] Spostare la cudaMalloc dalla CUDA_diffuse a fuori
+- [x] Spostare la cudaMalloc dalla CUDA_diffuse a fuori
 - [ ] Mettere la diffuse __no_inline__
 - [ ] Controllare le cudaFree
