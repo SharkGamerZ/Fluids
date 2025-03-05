@@ -1,6 +1,6 @@
 #include "fluid_matrix.hpp"
 
-int GAUSS_ITERATIONS = 20;    ///< Number of iterations for the Gauss-Siedel
+int GAUSS_ITERATIONS = 15;    ///< Number of iterations for the Gauss-Siedel
 int JACOBI_ITERATIONS = 20;  ///< Number of iterations for the Jacobi
 
 FluidMatrix::FluidMatrix(uint32_t size, double diffusion, double viscosity, double dt)
@@ -111,8 +111,14 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &d, std::vector<double> 
     for (int i = 1; i < this->size - 1; i++) {
         for (int j = 1; j < this->size - 1; j++) {
                     x = i-dt0*vX[index(i,j, this->size)]; y = j-dt0*vY[index(i,j, this->size)];
-                    if (x<0.5f) x=0.5f; if (x>this->size-2+0.5f) x=this->size-2+0.5f; i0=(int)x; i1=i0+1;
-                    if (y<0.5f) y=0.5f; if (y>this->size-2+0.5f) y=this->size-2+0.5f; j0=(int)y; j1=j0+1;
+                    if (x<0.5f) x=0.5f; 
+                    if (x>this->size-2+0.5f) x=this->size-2+0.5f; 
+                    i0=(int)x; i1=i0+1;
+
+                    if (y<0.5f) y=0.5f; 
+                    if (y>this->size-2+0.5f) y=this->size-2+0.5f; 
+                    j0=(int)y; j1=j0+1;
+
                     s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
                     d[index(i,j, this->size)] = s0*(t0*d0[index(i0,j0, this->size)]+t1*d0[index(i0,j1, this->size)])+
                                              s1*(t0*d0[index(i1,j0, this->size)]+t1*d0[index(i1,j1, this->size)]);
@@ -125,7 +131,7 @@ void FluidMatrix::advect(Axis mode, std::vector<double> &d, std::vector<double> 
 void FluidMatrix::OMP_advect(Axis mode, std::vector<double> &d, std::vector<double> &d0, std::vector<double> &vX, std::vector<double> &vY, double dt) const {
 #pragma omp parallel num_threads(this->numMaxThreads)
     {
-        int i, j, i0, j0, i1, j1;
+        int i0, j0, i1, j1;
         float x, y, s0, t0, s1, t1, dt0;
 
         dt0 = dt*(this->size-2);
@@ -133,12 +139,18 @@ void FluidMatrix::OMP_advect(Axis mode, std::vector<double> &d, std::vector<doub
 #pragma omp for
         for (int i = 1; i < this->size - 1; i++) {
             for (int j = 1; j < this->size - 1; j++) {
-                        x = i-dt0*vX[index(i,j, this->size)]; y = j-dt0*vY[index(i,j, this->size)];
-                        if (x<0.5f) x=0.5f; if (x>this->size-2+0.5f) x=this->size-2+0.5f; i0=(int)x; i1=i0+1;
-                        if (y<0.5f) y=0.5f; if (y>this->size-2+0.5f) y=this->size-2+0.5f; j0=(int)y; j1=j0+1;
-                        s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
-                        d[index(i,j, this->size)] = s0*(t0*d0[index(i0,j0, this->size)]+t1*d0[index(i0,j1, this->size)])+
-                                                 s1*(t0*d0[index(i1,j0, this->size)]+t1*d0[index(i1,j1, this->size)]);
+                    x = i-dt0*vX[index(i,j, this->size)]; y = j-dt0*vY[index(i,j, this->size)];
+                    if (x<0.5f) x=0.5f; 
+                    if (x>this->size-2+0.5f) x=this->size-2+0.5f; 
+                    i0=(int)x; i1=i0+1;
+
+                    if (y<0.5f) y=0.5f; 
+                    if (y>this->size-2+0.5f) y=this->size-2+0.5f; 
+                    j0=(int)y; j1=j0+1;
+
+                    s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+                    d[index(i,j, this->size)] = s0*(t0*d0[index(i0,j0, this->size)]+t1*d0[index(i0,j1, this->size)])+
+                                             s1*(t0*d0[index(i1,j0, this->size)]+t1*d0[index(i1,j1, this->size)]);
             }
         }
         OMP_set_bnd(mode, d);

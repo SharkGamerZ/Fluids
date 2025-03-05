@@ -207,8 +207,6 @@ void FluidMatrix::CUDA_diffuse(Axis mode, double *current, double *previous, dou
 }
 
 void FluidMatrix::CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt) {
-    const size_t size_bytes = this->size * this->size * sizeof(double);
-
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
@@ -297,10 +295,6 @@ void FluidMatrix::CUDA_set_bnd(Axis mode, double *d_value) const {
 }
 
 void FluidMatrix::CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip) {
-    const size_t size_bytes = this->size * this->size * sizeof(double);
-
-    double c = diffusionRate;
-
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
@@ -314,9 +308,7 @@ void FluidMatrix::CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue,
     }
 }
 
-void FluidMatrix::CUDA_fadeDensity(double *density) const {
-    const size_t size_bytes = this->size * this->size * sizeof(double);
-
+void FluidMatrix::CUDA_fadeDensity(double *d_density) const {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
