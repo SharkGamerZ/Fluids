@@ -45,10 +45,12 @@ if (CMAKE_CUDA_COMPILER)
         message(STATUS "CUDA-capable GPU detected.")
     else ()
         set(CUDA_SUPPORT FALSE)
+        # if not handled in the source code 'FATAL_ERROR' should be the message type
         message(STATUS "NO CUDA-capable GPU detected - CUDA support disabled.")
     endif ()
 else ()
     set(CUDA_SUPPORT FALSE)
+    # if not handled in the source code 'FATAL_ERROR' should be the message type
     message(STATUS "CUDA compiler not found - CUDA support disabled.")
 endif ()
 
