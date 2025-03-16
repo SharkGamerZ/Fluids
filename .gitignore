@@ -4,5 +4,6 @@
 cmake-build-*/
 out/
 build/
+tests/matrix_plots
 .cache
 
