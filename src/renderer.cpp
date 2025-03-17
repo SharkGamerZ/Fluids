@@ -129,8 +129,8 @@ GLuint getShaderProgram(const SimulationAttribute attribute) {
 
 int getVertexComponentCount(const SimulationAttribute attribute) {
     switch (attribute) {
-        case DENSITY: return 3;  // x, y, density
-        case VELOCITY: return 4; // x, y, vx, vy
+        case DENSITY: return 3;   // x, y, density
+        case VELOCITY: return 4;  // x, y, vx, vy
         case VORTICITY: return 3; // x, y, vorticity
         default: log(Utils::LogLevel::ERROR, std::cerr, std::format("Unknown vertex component count for attribute {}", static_cast<int>(attribute))); return 0;
     }
@@ -143,7 +143,7 @@ std::vector<float> getDensityVertices(const SimulationSettings *settings, const 
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     const int matrixSize = matrix->size;
 
-#pragma omp for schedule(guided) collapse(2)
+#pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
         const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
 
@@ -172,7 +172,7 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     const int matrixSize = matrix->size;
 
-#pragma omp for schedule(guided) collapse(2)
+#pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
         const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
 
@@ -202,7 +202,7 @@ std::vector<float> getVorticityVertices(const SimulationSettings *settings, cons
     const float normFactor = 2.0f / (settings->viewportSize - 1);
     const int matrixSize = matrix->size;
 
-#pragma omp for schedule(guided) collapse(2)
+#pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
         const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
 
@@ -224,4 +224,3 @@ std::vector<float> getVorticityVertices(const SimulationSettings *settings, cons
     return vertices;
 }
 } // namespace Renderer
-

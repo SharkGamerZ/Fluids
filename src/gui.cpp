@@ -23,10 +23,14 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 
-    char buf[128];
-    sprintf(buf, "Simulation Parameters - %s fps: %.1f ###SimulationParameters", settings.executionMode == SERIAL ? "Serial" : settings.executionMode == OPENMP ? "OpenMP" : "CUDA", ImGui::GetIO().Framerate);
-    
-    if (ImGui::Begin(buf, nullptr, ImGuiWindowFlags_NoResize)) {
+    const std::string title = std::format("Simulation Parameters - {} fps: {:.1f} ###SimulationParameters",
+                                          settings.executionMode == SERIAL   ? "Serial"
+                                          : settings.executionMode == OPENMP ? "OpenMP"
+                                                                             : "CUDA",
+                                          ImGui::GetIO().Framerate);
+
+
+    if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoResize)) {
         if (ImGui::BeginTabBar("Tabs")) {
             if (ImGui::BeginTabItem("Parameters")) {
                 // Simulation parameters
@@ -103,11 +107,9 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
         if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
             // Add Density
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-                if (settings.executionMode != CUDA)
-                    matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+                if (settings.executionMode != CUDA) matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
 #ifdef CUDA_SUPPORT
-                else
-                    matrix->CUDA_addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+                else matrix->CUDA_addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
 #endif
             }
 
@@ -121,7 +123,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                 matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
 #ifdef CUDA_SUPPORT
             else
-                matrix->CUDA_addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
+                matrix->CUDA_addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
+                                         settings.deltay * settings.mouse_velocity);
 #endif
         }
 
@@ -130,11 +133,9 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
         // Wind machine
         if (settings.windMachine) {
-            if (settings.executionMode != CUDA)
-                matrix->addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
+            if (settings.executionMode != CUDA) matrix->addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
 #ifdef CUDA_SUPPORT
-            else
-                    matrix->CUDA_addVelocity(2, settings.matrixSize/2  , 10, 0.0f);
+            else matrix->CUDA_addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
 #endif
         }
 
@@ -147,25 +148,25 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
             matrix->reset();
             settings.resetSimulation = false;
         }
-        
+
         // Run simulation
         if (settings.isSimulationRunning || settings.frameSimulation) {
             switch (settings.executionMode) {
-                case SERIAL: 
+                case SERIAL:
 #ifdef CUDA_SUPPORT
                     if (settings.executionModePrev == CUDA) matrix->copyToHost();
 #endif
-                    matrix->step(); 
+                    matrix->step();
                     break;
 
-                case OPENMP: 
+                case OPENMP:
 #ifdef CUDA_SUPPORT
                     if (settings.executionModePrev == CUDA) matrix->copyToHost();
 #endif
-                    matrix->OMP_step(); 
+                    matrix->OMP_step();
                     break;
 #ifdef CUDA_SUPPORT
-                case CUDA: 
+                case CUDA:
                     if (settings.executionModePrev != CUDA) matrix->copyToDevice();
                     matrix->CUDA_step();
                     matrix->copyToHost();
@@ -176,7 +177,6 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
             settings.frameSimulation = false;
             settings.executionModePrev = settings.executionMode;
-
         }
     }
 
@@ -211,7 +211,7 @@ void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix)
         const auto componentCount = Renderer::getVertexComponentCount(settings.simulationAttribute);
 
         std::vector<float> verts;
-        switch(settings.simulationAttribute) {
+        switch (settings.simulationAttribute) {
             case DENSITY: verts = Renderer::getDensityVertices(&settings, matrix); break;
             case VELOCITY: verts = Renderer::getVelocityVertices(&settings, matrix); break;
             case VORTICITY: verts = Renderer::getVorticityVertices(&settings, matrix); break;
@@ -221,7 +221,7 @@ void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix)
         glVertexAttribPointer(0, componentCount, GL_FLOAT, GL_FALSE, componentCount * sizeof(float), nullptr);
         glEnableVertexAttribArray(0);
 
-        glPointSize(3.0f); // Render the points bigger to fill the blank spaces 
+        glPointSize(3.0f); // Render the points bigger to fill the blank spaces
         glDrawArrays(GL_POINTS, 0, viewportSize * viewportSize);
     }
 
