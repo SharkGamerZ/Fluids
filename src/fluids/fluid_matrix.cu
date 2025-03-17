@@ -1,15 +1,17 @@
 #include "fluid_matrix.hpp"
+#include <format>
 
-#define gpuErrchk(ans)                                                                                                                                                             \
-    {                                                                                                                                                                              \
-        gpuAssert((ans), __FILE__, __LINE__);                                                                                                                                      \
-    }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
+#define gpuErrchk(ans) gpuAssert((ans), __FILE__, __LINE__);
+
+inline void gpuAssert(const cudaError_t code, const char *file, int line) {
     if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
+        const std::string err_msg = std::format("CUDA error: {} at {}:{}", cudaGetErrorString(code), file, line);
+        std::cerr << err_msg << std::endl;
+        cudaDeviceReset();
+        throw std::runtime_error(err_msg);
     }
 }
+
 void FluidMatrix::CUDA_init() {
     const size_t size_bytes = this->size * this->size * sizeof(double);
     gpuErrchk(cudaMalloc(&d_density, size_bytes));
@@ -41,7 +43,7 @@ void FluidMatrix::copyToHost() {
     // gpuErrchk(cudaMemcpy(vY_prev.data(), d_vY_prev, size_bytes, cudaMemcpyDeviceToHost));
 }
 
-void FluidMatrix::copyToDevice() {
+void FluidMatrix::copyToDevice() const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
     gpuErrchk(cudaMemcpy(d_density, density.data(), size_bytes, cudaMemcpyHostToDevice));
     // gpuErrchk(cudaMemcpy(d_density_prev, density_prev.data(), size_bytes, cudaMemcpyHostToDevice));
@@ -54,26 +56,24 @@ void FluidMatrix::copyToDevice() {
 
 __device__ int index(const int i, const int j, const int size) { return i * size + j; }
 
-__global__ void addVelocity_kernel(double *d_vX, double *d_vY, int x, int y, int size, double amountX, double amountY) {
+__global__ void addVelocity_kernel(double *d_vX, double *d_vY, const int x, const int y, const int size, const double amountX, const double amountY) {
     d_vX[index(y, x, size)] += amountY;
     d_vY[index(y, x, size)] += amountX;
 }
 
-void FluidMatrix::CUDA_addVelocity(int x, int y, double amountX, double amountY) {
+void FluidMatrix::CUDA_addVelocity(const int x, const int y, const double amountX, const double amountY) const {
     if (x < 0 || x >= size || y < 0 || y >= size) return;
     addVelocity_kernel<<<1, 1>>>(d_vX, d_vY, x, y, size, amountX, amountY);
 }
 
+__global__ void addDensity_kernel(double *d_density, const int x, const int y, const int size, const double amount) { d_density[index(y, x, size)] += amount; }
 
-__global__ void addDensity_kernel(double *d_density, int x, int y, int size, double amount) { d_density[index(y, x, size)] += amount; }
-
-void FluidMatrix::CUDA_addDensity(int x, int y, double amount) {
+void FluidMatrix::CUDA_addDensity(const int x, const int y, const double amount) const {
     if (x < 0 || x >= size || y < 0 || y >= size) return;
     addDensity_kernel<<<1, 1>>>(d_density, x, y, size, amount);
 }
 
-
-void FluidMatrix::CUDA_reset() {
+void FluidMatrix::CUDA_reset() const {
     const size_t size_bytes = this->size * this->size * sizeof(double);
     gpuErrchk(cudaMemset(d_density, 0, size_bytes));
     gpuErrchk(cudaMemset(d_density_prev, 0, size_bytes));
@@ -83,7 +83,7 @@ void FluidMatrix::CUDA_reset() {
     gpuErrchk(cudaMemset(d_vY_prev, 0, size_bytes));
 }
 
-__global__ void advect_kernel(int size, double *d, const double *d0, const double *vX, const double *vY, double dt) {
+__global__ void advect_kernel(const int size, double *d, const double *d0, const double *vX, const double *vY, const double dt) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -110,7 +110,7 @@ __global__ void advect_kernel(int size, double *d, const double *d0, const doubl
     d[index(i, j, size)] = s0 * (t0 * d0[index(i0, j0, size)] + t1 * d0[index(i0, j1, size)]) + s1 * (t0 * d0[index(i1, j0, size)] + t1 * d0[index(i1, j1, size)]);
 }
 
-__global__ void project_kernel(int size, double *vX, double *vY, double *vY_prev) {
+__global__ void project_kernel(const int size, const double *vX, const double *vY, double *vY_prev) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < 1 || i >= size - 1 || j < 1 || j >= size - 1) return;
@@ -118,7 +118,7 @@ __global__ void project_kernel(int size, double *vX, double *vY, double *vY_prev
     vY_prev[index(i, j, size)] = -0.5 * (vX[index(i + 1, j, size)] - vX[index(i - 1, j, size)] + vY[index(i, j + 1, size)] - vY[index(i, j - 1, size)]) * (size - 2);
 }
 
-__global__ void update_velocity_kernel(int size, double *vX, double *vY, double *vX_prev) {
+__global__ void update_velocity_kernel(const int size, double *vX, double *vY, const double *vX_prev) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < 1 || i >= size - 1 || j < 1 || j >= size - 1) return;
@@ -127,7 +127,7 @@ __global__ void update_velocity_kernel(int size, double *vX, double *vY, double 
     vY[index(i, j, size)] -= 0.5 * (vX_prev[index(i, j + 1, size)] - vX_prev[index(i, j - 1, size)]) / (size - 2);
 }
 
-__global__ void set_bnd_edges(int size, Axis mode, double *attr) {
+__global__ void set_bnd_edges(const int size, const Axis mode, double *attr) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= 1 && i < size - 1) {
         attr[index(i, 0, size)] = mode == Y ? -attr[index(i, 1, size)] : attr[index(i, 1, size)];
@@ -141,14 +141,14 @@ __global__ void set_bnd_edges(int size, Axis mode, double *attr) {
     }
 }
 
-__global__ void set_bnd_corners(int size, double *attr) {
+__global__ void set_bnd_corners(const int size, double *attr) {
     attr[index(0, 0, size)] = 0.5f * (attr[index(1, 0, size)] + attr[index(0, 1, size)]);
     attr[index(0, size - 1, size)] = 0.5f * (attr[index(1, size - 1, size)] + attr[index(0, size - 2, size)]);
     attr[index(size - 1, 0, size)] = 0.5f * (attr[index(size - 2, 0, size)] + attr[index(size - 1, 1, size)]);
     attr[index(size - 1, size - 1, size)] = 0.5f * (attr[index(size - 2, size - 1, size)] + attr[index(size - 1, size - 2, size)]);
 }
 
-__global__ void lin_solve_kernel(int size, const double *d_value, const double *d_oldValue, double *d_newValue, double diffusionRate, double cRecip) {
+__global__ void lin_solve_kernel(const int size, const double *d_value, const double *d_oldValue, double *d_newValue, const double diffusionRate, const double cRecip) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -159,7 +159,7 @@ __global__ void lin_solve_kernel(int size, const double *d_value, const double *
                                     cRecip;
 }
 
-__global__ void fade_density_kernel(int size, double *density) {
+__global__ void fade_density_kernel(const int size, double *density) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < 0 || i >= size * size) return;
 
@@ -170,16 +170,16 @@ __global__ void fade_density_kernel(int size, double *density) {
 void FluidMatrix::CUDA_step() {
     // Velocity
     {
-        SWAP(d_vX_prev, d_vX);
+        std::swap(d_vX_prev, d_vX);
         CUDA_diffuse(X, d_vX, d_vX_prev, visc, dt);
 
-        SWAP(d_vY_prev, d_vY);
+        std::swap(d_vY_prev, d_vY);
         CUDA_diffuse(Y, d_vY, d_vY_prev, visc, dt);
 
         CUDA_project(d_vX, d_vY, d_vX_prev, d_vY_prev);
 
-        SWAP(d_vX_prev, d_vX);
-        SWAP(d_vY_prev, d_vY);
+        std::swap(d_vX_prev, d_vX);
+        std::swap(d_vY_prev, d_vY);
         CUDA_advect(X, d_vX, d_vX_prev, d_vX_prev, d_vY_prev, dt);
         CUDA_advect(Y, d_vY, d_vY_prev, d_vX_prev, d_vY_prev, dt);
 
@@ -188,10 +188,10 @@ void FluidMatrix::CUDA_step() {
 
     // Density
     {
-        SWAP(d_density_prev, d_density);
+        std::swap(d_density_prev, d_density);
         CUDA_diffuse(ZERO, d_density, d_density_prev, visc, dt);
 
-        SWAP(d_density_prev, d_density);
+        std::swap(d_density_prev, d_density);
         CUDA_advect(ZERO, d_density, d_density_prev, d_vX, d_vY, dt);
     }
 
@@ -200,13 +200,13 @@ void FluidMatrix::CUDA_step() {
     CalculateVorticity(vX, vY, vorticity);
 }
 
-void FluidMatrix::CUDA_diffuse(Axis mode, double *current, double *previous, double diffusion, double dt) {
+void FluidMatrix::CUDA_diffuse(const Axis mode, double *current, const double *previous, const double diffusion, const double dt) {
     double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
     double cRecip = 1.0 / (1 + 4 * diffusionRate);
     CUDA_lin_solve(mode, current, previous, diffusionRate, cRecip);
 }
 
-void FluidMatrix::CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt) {
+void FluidMatrix::CUDA_advect(const Axis mode, double *d_density, const double *d_density0, const double *d_vX, const double *d_vY, const double dt) const {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
@@ -248,7 +248,7 @@ void FluidMatrix::CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, do
     CUDA_set_bnd(Y, d_vY);
 }
 
-__global__ void CUDA_set_bnd_kernel(Axis mode, double *d_value, int size) {
+__global__ void CUDA_set_bnd_kernel(const Axis mode, double *d_value, const int size) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -286,7 +286,7 @@ __global__ void CUDA_set_bnd_kernel(Axis mode, double *d_value, int size) {
     }
 }
 
-void FluidMatrix::CUDA_set_bnd(Axis mode, double *d_value) const {
+void FluidMatrix::CUDA_set_bnd(const Axis mode, double *d_value) const {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((size + threadsPerBlock.x - 1) / threadsPerBlock.x, (size + threadsPerBlock.y - 1) / threadsPerBlock.y);
     CUDA_set_bnd_kernel<<<numBlocks, threadsPerBlock>>>(mode, d_value, this->size);
@@ -294,7 +294,7 @@ void FluidMatrix::CUDA_set_bnd(Axis mode, double *d_value) const {
     gpuErrchk(cudaDeviceSynchronize());
 }
 
-void FluidMatrix::CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip) {
+void FluidMatrix::CUDA_lin_solve(const Axis mode, double *d_value, const double *d_oldValue, const double diffusionRate, const double cRecip) {
     dim3 threadsPerBlock(16, 16);
     dim3 numBlocks((this->size + threadsPerBlock.x - 1) / threadsPerBlock.x, (this->size + threadsPerBlock.y - 1) / threadsPerBlock.y);
 

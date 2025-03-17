@@ -45,9 +45,9 @@ public:
 #ifdef CUDA_SUPPORT
     void CUDA_step();
 
-    void CUDA_reset();
+    void CUDA_reset() const;
     void copyToHost();
-    void copyToDevice();
+    void copyToDevice() const;
 #endif
 
 
@@ -55,8 +55,8 @@ public:
     void addVelocity(uint32_t x, uint32_t y, double amountX, double amountY);
 
 #ifdef CUDA_SUPPORT
-    void CUDA_addVelocity(int x, int y, double amountX, double amountY);
-    void CUDA_addDensity(int x, int y, double amount);
+    void CUDA_addVelocity(int x, int y, double amountX, double amountY) const;
+    void CUDA_addDensity(int x, int y, double amount) const;
 #endif
 
     void applyGravity();
@@ -74,13 +74,13 @@ protected:
     void diffuse(Axis mode, std::vector<double> &current, const std::vector<double> &previous, double diffusion, double dt) const;
     void OMP_diffuse(Axis mode, std::vector<double> &current, const std::vector<double> &previous, double diffusion, double dt) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_diffuse(Axis mode, double *current, double *previous, double diffusion, double dt);
+    void CUDA_diffuse(Axis mode, double *current, const double *previous, double diffusion, double dt);
 #endif
 
     void advect(Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, double dt) const;
     void OMP_advect(Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, double dt) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_advect(Axis mode, double *d_density, double *d_density0, double *d_vX, double *d_vY, double dt);
+    void CUDA_advect(Axis mode, double *d_density, const double *d_density0, const double *d_vX, const double *d_vY, double dt) const;
 #endif
 
     void project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
@@ -100,7 +100,7 @@ protected:
     void OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, double diffusionRate) const;
     void OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, double diffusionRate) const;
 #ifdef CUDA_SUPPORT
-    void CUDA_lin_solve(Axis mode, double *d_value, double *d_oldValue, double diffusionRate, double cRecip);
+    void CUDA_lin_solve(Axis mode, double *d_value, const double *d_oldValue, double diffusionRate, double cRecip);
 #endif
 
     void fadeDensity(std::vector<double> &density) const;
