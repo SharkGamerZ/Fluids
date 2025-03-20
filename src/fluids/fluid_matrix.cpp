@@ -97,14 +97,11 @@ void FluidMatrix::addVelocity(const uint32_t x, const uint32_t y, const double a
     this->vY[idx] += amountX;
 }
 
+// Serial implementations
+
 void FluidMatrix::diffuse(const Axis mode, std::vector<double> &current, const std::vector<double> &previous, const double diffusion, const double dt) const {
     double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
     gauss_lin_solve(mode, current, previous, diffusionRate);
-}
-
-void FluidMatrix::OMP_diffuse(const Axis mode, std::vector<double> &current, const std::vector<double> &previous, const double diffusion, const double dt) const {
-    double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
-    OMP_jacobi_lin_solve(mode, current, previous, diffusionRate);
 }
 
 void FluidMatrix::advect(const Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, const double dt) const {
@@ -130,35 +127,6 @@ void FluidMatrix::advect(const Axis mode, std::vector<double> &d, const std::vec
         }
     }
     set_bnd(mode, d);
-}
-
-void FluidMatrix::OMP_advect(const Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, const double dt) const {
-#pragma omp parallel default(shared) num_threads(this->numMaxThreads)
-    {
-        int i0, j0, i1, j1;
-        float x, y, s0, t0, s1, t1, dt0;
-
-        dt0 = dt * (this->size - 2);
-
-#pragma omp for
-        for (int i = 1; i < this->size - 1; i++) {
-            for (int j = 1; j < this->size - 1; j++) {
-                x = i - dt0 * vX[index(i, j, this->size)]; y = j - dt0 * vY[index(i, j, this->size)];
-                if (x < 0.5f) x = 0.5f;
-                if (x > this->size - 2 + 0.5f) x = this->size - 2 + 0.5f;
-                i0 = (int) x; i1 = i0 + 1;
-
-                if (y < 0.5f) y = 0.5f;
-                if (y > this->size - 2 + 0.5f) y = this->size - 2 + 0.5f;
-                j0 = (int) y; j1 = j0 + 1;
-
-                s1 = x - i0; s0 = 1 - s1; t1 = y - j0; t0 = 1 - t1;
-                d[index(i, j, this->size)] =
-                        s0 * (t0 * d0[index(i0, j0, this->size)] + t1 * d0[index(i0, j1, this->size)]) + s1 * (t0 * d0[index(i1, j0, this->size)] + t1 * d0[index(i1, j1, this->size)]);
-            }
-        }
-        OMP_set_bnd(mode, d);
-    }
 }
 
 void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &vX_prev, std::vector<double> &vY_prev) const {
@@ -196,6 +164,118 @@ void FluidMatrix::project(std::vector<double> &vX, std::vector<double> &vY, std:
 
     set_bnd(X, vX);
     set_bnd(Y, vY);
+}
+
+void FluidMatrix::set_bnd(const Axis mode, std::vector<double> &attr) const {
+    for (int i = 1; i < this->size - 1; i++) {
+        attr[index(i, 0, this->size)] = mode == Y ? -attr[index(i, 1, this->size)] : attr[index(i, 1, this->size)];
+        attr[index(i, this->size - 1, this->size)] = mode == Y ? -attr[index(i, this->size - 2, this->size)] : attr[index(i, this->size - 2, this->size)];
+    }
+
+    for (int j = 1; j < this->size - 1; j++) {
+        attr[index(0, j, this->size)] = mode == X ? -attr[index(1, j, this->size)] : attr[index(1, j, this->size)];
+        attr[index(this->size - 1, j, this->size)] = mode == X ? -attr[index(this->size - 2, j, this->size)] : attr[index(this->size - 2, j, this->size)];
+    }
+
+    attr[index(0, 0, this->size)] = 0.5f * (attr[index(1, 0, this->size)] + attr[index(0, 1, this->size)]);
+    attr[index(0, this->size - 1, this->size)] = 0.5f * (attr[index(1, this->size - 1, this->size)] + attr[index(0, this->size - 2, this->size)]);
+    attr[index(this->size - 1, 0, this->size)] = 0.5f * (attr[index(this->size - 2, 0, this->size)] + attr[index(this->size - 1, 1, this->size)]);
+    attr[index(this->size - 1, this->size - 1, this->size)] = 0.5f * (attr[index(this->size - 2, this->size - 1, this->size)] + attr[index(this->size - 1, this->size - 2, this->size)]);
+}
+
+void FluidMatrix::jacobi_lin_solve(const Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, const double diffusionRate) const {
+    double c = diffusionRate;
+    double cRecip = 1.0 / (1 + 4 * c);
+
+    // Create a temporary array to store the new values
+    std::vector<double> newValue(this->size * this->size, 0.0);
+
+    for (int k = 0; k < JACOBI_ITERATIONS; k++) {
+        for (int i = 1; i < this->size - 1; i++) {
+            for (int j = 1; j < this->size - 1; j++) {
+                // Compute the new value using the Jacobi method
+                newValue[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
+                                                                                                          value[index(i, j + 1, this->size)] + value[index(i, j - 1, this->size)])) *
+                                                    cRecip;
+            }
+        }
+        // Swap the new values into the main array
+        std::swap(value, newValue);
+
+        // Apply boundary conditions
+        set_bnd(mode, value);
+    }
+}
+
+void FluidMatrix::gauss_lin_solve(const Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, const double diffusionRate) const {
+    double c = diffusionRate;
+    double cRecip = 1.0 / (1 + 4 * c);
+
+    for (int k = 0; k < GAUSS_ITERATIONS; k++) {
+        for (int i = 1; i < this->size - 1; i++) {
+            for (int j = 1; j < this->size - 1; j++) {
+                value[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
+                                                                                                       value[index(i, j + 1, this->size)] + value[index(i, j - 1, this->size)])) *
+                                                 cRecip;
+            }
+        }
+        set_bnd(mode, value);
+    }
+}
+
+void FluidMatrix::fadeDensity(std::vector<double> &density) const {
+    for (int i = 0; i < this->size * this->size; i++) {
+        double d = density[i];
+        density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
+    }
+}
+
+void FluidMatrix::CalculateVorticity(const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const {
+    const double h = 1.0 / (this->size - 2); // assuming unit length domain
+    for (int i = 1; i < this->size - 1; i++) {
+        for (int j = 1; j < this->size - 1; j++) {
+            int idx = index(i, j, this->size);
+            double dv_dx = (vY[index(i + 1, j, this->size)] - vY[index(i - 1, j, this->size)]) / (2 * h);
+            double du_dy = (vX[index(i, j + 1, this->size)] - vX[index(i, j - 1, this->size)]) / (2 * h);
+            vorticity[idx] = dv_dx - du_dy;
+        }
+    }
+}
+
+// OpenMP implementations
+
+void FluidMatrix::OMP_diffuse(const Axis mode, std::vector<double> &current, const std::vector<double> &previous, const double diffusion, const double dt) const {
+    double diffusionRate = dt * diffusion * (this->size - 2) * (this->size - 2);
+    OMP_jacobi_lin_solve(mode, current, previous, diffusionRate);
+}
+
+void FluidMatrix::OMP_advect(const Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, const double dt) const {
+#pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+    {
+        int i0, j0, i1, j1;
+        float x, y, s0, t0, s1, t1, dt0;
+
+        dt0 = dt * (this->size - 2);
+
+#pragma omp for
+        for (int i = 1; i < this->size - 1; i++) {
+            for (int j = 1; j < this->size - 1; j++) {
+                x = i - dt0 * vX[index(i, j, this->size)]; y = j - dt0 * vY[index(i, j, this->size)];
+                if (x < 0.5f) x = 0.5f;
+                if (x > this->size - 2 + 0.5f) x = this->size - 2 + 0.5f;
+                i0 = (int) x; i1 = i0 + 1;
+
+                if (y < 0.5f) y = 0.5f;
+                if (y > this->size - 2 + 0.5f) y = this->size - 2 + 0.5f;
+                j0 = (int) y; j1 = j0 + 1;
+
+                s1 = x - i0; s0 = 1 - s1; t1 = y - j0; t0 = 1 - t1;
+                d[index(i, j, this->size)] =
+                        s0 * (t0 * d0[index(i0, j0, this->size)] + t1 * d0[index(i0, j1, this->size)]) + s1 * (t0 * d0[index(i1, j0, this->size)] + t1 * d0[index(i1, j1, this->size)]);
+            }
+        }
+        OMP_set_bnd(mode, d);
+    }
 }
 
 void FluidMatrix::OMP_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
@@ -248,23 +328,6 @@ void FluidMatrix::OMP_project(std::vector<double> &vX, std::vector<double> &vY, 
     }
 }
 
-void FluidMatrix::set_bnd(const Axis mode, std::vector<double> &attr) const {
-    for (int i = 1; i < this->size - 1; i++) {
-        attr[index(i, 0, this->size)] = mode == Y ? -attr[index(i, 1, this->size)] : attr[index(i, 1, this->size)];
-        attr[index(i, this->size - 1, this->size)] = mode == Y ? -attr[index(i, this->size - 2, this->size)] : attr[index(i, this->size - 2, this->size)];
-    }
-
-    for (int j = 1; j < this->size - 1; j++) {
-        attr[index(0, j, this->size)] = mode == X ? -attr[index(1, j, this->size)] : attr[index(1, j, this->size)];
-        attr[index(this->size - 1, j, this->size)] = mode == X ? -attr[index(this->size - 2, j, this->size)] : attr[index(this->size - 2, j, this->size)];
-    }
-
-    attr[index(0, 0, this->size)] = 0.5f * (attr[index(1, 0, this->size)] + attr[index(0, 1, this->size)]);
-    attr[index(0, this->size - 1, this->size)] = 0.5f * (attr[index(1, this->size - 1, this->size)] + attr[index(0, this->size - 2, this->size)]);
-    attr[index(this->size - 1, 0, this->size)] = 0.5f * (attr[index(this->size - 2, 0, this->size)] + attr[index(this->size - 1, 1, this->size)]);
-    attr[index(this->size - 1, this->size - 1, this->size)] = 0.5f * (attr[index(this->size - 2, this->size - 1, this->size)] + attr[index(this->size - 1, this->size - 2, this->size)]);
-}
-
 void FluidMatrix::OMP_set_bnd(const Axis mode, std::vector<double> &attr) const {
 #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
     {
@@ -287,46 +350,6 @@ void FluidMatrix::OMP_set_bnd(const Axis mode, std::vector<double> &attr) const 
             attr[index(this->size - 1, 0, this->size)] = 0.5f * (attr[index(this->size - 2, 0, this->size)] + attr[index(this->size - 1, 1, this->size)]);
             attr[index(this->size - 1, this->size - 1, this->size)] = 0.5f * (attr[index(this->size - 2, this->size - 1, this->size)] + attr[index(this->size - 1, this->size - 2, this->size)]);
         }
-    }
-}
-
-void FluidMatrix::jacobi_lin_solve(const Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, const double diffusionRate) const {
-    double c = diffusionRate;
-    double cRecip = 1.0 / (1 + 4 * c);
-
-    // Create a temporary array to store the new values
-    std::vector<double> newValue(this->size * this->size, 0.0);
-
-    for (int k = 0; k < JACOBI_ITERATIONS; k++) {
-        for (int i = 1; i < this->size - 1; i++) {
-            for (int j = 1; j < this->size - 1; j++) {
-                // Compute the new value using the Jacobi method
-                newValue[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
-                                                                                                          value[index(i, j + 1, this->size)] + value[index(i, j - 1, this->size)])) *
-                                                    cRecip;
-            }
-        }
-        // Swap the new values into the main array
-        std::swap(value, newValue);
-
-        // Apply boundary conditions
-        set_bnd(mode, value);
-    }
-}
-
-void FluidMatrix::gauss_lin_solve(const Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, const double diffusionRate) const {
-    double c = diffusionRate;
-    double cRecip = 1.0 / (1 + 4 * c);
-
-    for (int k = 0; k < GAUSS_ITERATIONS; k++) {
-        for (int i = 1; i < this->size - 1; i++) {
-            for (int j = 1; j < this->size - 1; j++) {
-                value[index(i, j, this->size)] = (oldValue[index(i, j, this->size)] + diffusionRate * (value[index(i + 1, j, this->size)] + value[index(i - 1, j, this->size)] +
-                                                                                                       value[index(i, j + 1, this->size)] + value[index(i, j - 1, this->size)])) *
-                                                 cRecip;
-            }
-        }
-        set_bnd(mode, value);
     }
 }
 
@@ -375,30 +398,11 @@ void FluidMatrix::OMP_jacobi_lin_solve(const Axis mode, std::vector<double> &val
     }
 }
 
-void FluidMatrix::fadeDensity(std::vector<double> &density) const {
-    for (int i = 0; i < this->size * this->size; i++) {
-        double d = density[i];
-        density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
-    }
-}
-
 void FluidMatrix::OMP_fadeDensity(std::vector<double> &density) const {
 #pragma omp parallel for num_threads(this->numMaxThreads) default(shared)
     for (int i = 0; i < this->size * this->size; i++) {
         double d = density[i];
         density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
-    }
-}
-
-void FluidMatrix::CalculateVorticity(const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const {
-    const double h = 1.0 / (this->size - 2); // assuming unit length domain
-    for (int i = 1; i < this->size - 1; i++) {
-        for (int j = 1; j < this->size - 1; j++) {
-            int idx = index(i, j, this->size);
-            double dv_dx = (vY[index(i + 1, j, this->size)] - vY[index(i - 1, j, this->size)]) / (2 * h);
-            double du_dy = (vX[index(i, j + 1, this->size)] - vX[index(i, j - 1, this->size)]) / (2 * h);
-            vorticity[idx] = dv_dx - du_dy;
-        }
     }
 }
 
@@ -412,14 +416,6 @@ void FluidMatrix::OMP_CalculateVorticity(const std::vector<double> &vX, const st
             double dv_dx = (vY[index(i + 1, j, this->size)] - vY[index(i - 1, j, this->size)]) / (2 * h);
             double du_dy = (vX[index(i, j + 1, this->size)] - vX[index(i, j - 1, this->size)]) / (2 * h);
             vorticity[idx] = dv_dx - du_dy;
-        }
-    }
-}
-
-void FluidMatrix::applyGravity() {
-    for (int i = 1; i < size - 1; i++) {
-        for (int j = 1; j < size - 1; j++) {
-            vY[index(i, j, size)] += gravity; // Apply gravity acceleration to vertical velocity
         }
     }
 }

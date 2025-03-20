@@ -17,7 +17,6 @@ public:
     double dt;                        ///< Delta time
     double diff;                      ///< Diffusion
     double visc;                      ///< Viscosity
-    double gravity = -0.00981;        // Gravity acceleration
     std::vector<double> density;      ///< Density of the fluid
     std::vector<double> density_prev; ///< Density of the fluid in the previous step
     std::vector<double> vX;           ///< Velocity in the x-axis
@@ -50,7 +49,6 @@ public:
     void copyToDevice() const;
 #endif
 
-
     void addDensity(uint32_t x, uint32_t y, double amount);
     void addVelocity(uint32_t x, uint32_t y, double amountX, double amountY);
 
@@ -58,8 +56,6 @@ public:
     void CUDA_addVelocity(int x, int y, double amountX, double amountY) const;
     void CUDA_addDensity(int x, int y, double amount) const;
 #endif
-
-    void applyGravity();
 
 protected:
     int numMaxThreads; ///< Number of threads used by OpenMP
@@ -71,45 +67,35 @@ protected:
     void CUDA_destroy() const;
 #endif
 
+    // Serial implementations
+
     void diffuse(Axis mode, std::vector<double> &current, const std::vector<double> &previous, double diffusion, double dt) const;
-    void OMP_diffuse(Axis mode, std::vector<double> &current, const std::vector<double> &previous, double diffusion, double dt) const;
-#ifdef CUDA_SUPPORT
-    void CUDA_diffuse(Axis mode, double *current, const double *previous, double diffusion, double dt);
-#endif
-
     void advect(Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, double dt) const;
-    void OMP_advect(Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, double dt) const;
-#ifdef CUDA_SUPPORT
-    void CUDA_advect(Axis mode, double *d_density, const double *d_density0, const double *d_vX, const double *d_vY, double dt) const;
-#endif
-
     void project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
-    void OMP_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
-#ifdef CUDA_SUPPORT
-    void CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, double *d_vY_prev);
-#endif
-
     void set_bnd(Axis mode, std::vector<double> &attr) const;
-    void OMP_set_bnd(Axis mode, std::vector<double> &attr) const;
-#ifdef CUDA_SUPPORT
-    void CUDA_set_bnd(Axis mode, double *d_value) const;
-#endif
-
     void gauss_lin_solve(Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, double diffusionRate) const;
     void jacobi_lin_solve(Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, double diffusionRate) const;
+    void fadeDensity(std::vector<double> &density) const;
+    void CalculateVorticity(const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const;
+
+    // OpenMP implementations
+
+    void OMP_diffuse(Axis mode, std::vector<double> &current, const std::vector<double> &previous, double diffusion, double dt) const;
+    void OMP_advect(Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, double dt) const;
+    void OMP_project(std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const;
+    void OMP_set_bnd(Axis mode, std::vector<double> &attr) const;
     void OMP_gauss_lin_solve(Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, double diffusionRate) const;
     void OMP_jacobi_lin_solve(Axis mode, std::vector<double> &value, const std::vector<double> &oldValue, double diffusionRate) const;
-#ifdef CUDA_SUPPORT
-    void CUDA_lin_solve(Axis mode, double *d_value, const double *d_oldValue, double diffusionRate, double cRecip);
-#endif
-
-    void fadeDensity(std::vector<double> &density) const;
     void OMP_fadeDensity(std::vector<double> &density) const;
+    void OMP_CalculateVorticity(const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const;
+
+    // CUDA implementations
 #ifdef CUDA_SUPPORT
+    void CUDA_diffuse(Axis mode, double *current, const double *previous, double diffusion, double dt);
+    void CUDA_advect(Axis mode, double *d_density, const double *d_density0, const double *d_vX, const double *d_vY, double dt) const;
+    void CUDA_project(double *d_vX, double *d_vY, double *d_vX_prev, double *d_vY_prev);
+    void CUDA_set_bnd(Axis mode, double *d_value) const;
+    void CUDA_lin_solve(Axis mode, double *d_value, const double *d_oldValue, double diffusionRate, double cRecip);
     void CUDA_fadeDensity(double *density) const;
 #endif
-
-
-    void CalculateVorticity(const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const;
-    void OMP_CalculateVorticity(const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const;
 };

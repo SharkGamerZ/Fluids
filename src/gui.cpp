@@ -139,10 +139,6 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 #endif
         }
 
-        if (settings.gravity) {
-            matrix->applyGravity();
-        }
-
         // Reset simulation
         if (settings.resetSimulation) {
             matrix->reset();
@@ -280,8 +276,5 @@ void KeyCallback(GLFWwindow *window, const int key, [[maybe_unused]] const int s
     }
     // Toggle wind machine
     if (key == GLFW_KEY_W && action == GLFW_PRESS) settings->windMachine = !settings->windMachine;
-
-    // Toggle gravity
-    if (key == GLFW_KEY_G && action == GLFW_PRESS) settings->gravity = !settings->gravity;
 }
 } // namespace GUI

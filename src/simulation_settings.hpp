@@ -27,5 +27,4 @@ struct SimulationSettings {
     bool resetSimulation = false;
     bool frameSimulation = false;
     bool windMachine = false;
-    bool gravity = false;
 };
