@@ -58,29 +58,38 @@ endif ()
 #set(CUDA_SUPPORT TRUE)
 #add_compile_definitions(CUDA_SUPPORT=1)
 
-# Set build dependant flags
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-    message(STATUS "Building in Debug mode: No optimizations.")
-    set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-    set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
-    if (CUDA_SUPPORT)
-        set(CMAKE_CUDA_FLAGS_DEBUG "-O0 -g -G")
-    endif ()
-else ()
-    message(STATUS "Building in Release mode: Enabling full optimizations.")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
-    if (CUDA_SUPPORT)
-        set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -lineinfo --use_fast_math")
-    endif ()
+# ---------------------------------------------------------
+# Shared setup
+# ---------------------------------------------------------
+
+add_library(commons INTERFACE)
+target_compile_options(commons INTERFACE
+        $<$<CONFIG:Debug>:
+        $<$<COMPILE_LANGUAGE:CXX>:-O0 -g>
+        $<$<COMPILE_LANGUAGE:C>:-O0 -g>
+        >
+        $<$<CONFIG:Release>:
+        $<$<COMPILE_LANGUAGE:CXX>:-O3 -march=native>
+        $<$<COMPILE_LANGUAGE:C>:-O3 -march=native>
+        >
+        $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wpedantic>
+        $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wpedantic>
+)
+
+if (CUDA_SUPPORT)
+    target_compile_options(commons INTERFACE
+            $<$<COMPILE_LANGUAGE:CUDA>:
+            $<$<CONFIG:Debug>:-O0 -g -G>
+            $<$<CONFIG:Release>:-O3 -lineinfo --use_fast_math>
+            -Xcompiler=-Wall,-Wextra,-Wno-unknown-pragmas,-fopenmp
+            --Werror cross-execution-space-call
+            >
+    )
 endif ()
 
-# Set flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic") #-Werror
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic") #-Werror
-if (CUDA_SUPPORT)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-Wall,-Wextra,-Wno-unknown-pragmas --Werror cross-execution-space-call") #-Wpedantic
-endif ()
+# ---------------------------------------------------------
+# Default setup
+# ---------------------------------------------------------
 
 # Add ImGui sources
 file(GLOB IMGUI_SOURCES lib/imgui/*.cpp lib/imgui/backends/*.cpp)
@@ -101,14 +110,12 @@ endif ()
 add_executable(fluids ${SOURCE_FILES})
 
 if (CUDA_SUPPORT)
-    # Set CUDA separable compilation
     set_target_properties(fluids PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-    # Add OpenMP support for CUDA
-    target_compile_options(fluids PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp>)
 endif ()
 
 # Link libraries
 target_link_libraries(fluids PRIVATE
+        commons
         glfw
         OpenGL::GL
         GLEW
@@ -138,19 +145,11 @@ endif ()
 add_executable(test_fluids ${TEST_FILES})
 
 if (CUDA_SUPPORT)
-    # Set CUDA separable compilation
     set_target_properties(test_fluids PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-    # Add OpenMP support for CUDA
-    target_compile_options(test_fluids PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -fopenmp>)
 endif ()
-
-# Copy relevant flags and settings from main target
-target_compile_options(test_fluids PRIVATE
-        $<$<CONFIG:Release>:-O3 -march=native>
-        $<$<CONFIG:Debug>:-O0 -g>
-)
 
 # Link only necessary libraries
 target_link_libraries(test_fluids PRIVATE
+        commons
         OpenMP::OpenMP_CXX
 )
