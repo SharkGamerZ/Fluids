@@ -235,7 +235,7 @@ void Cleanup() {
     ImGui::DestroyContext();
 }
 
-void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+void KeyCallback(GLFWwindow *window, const int key, [[maybe_unused]] const int scancode, const int action, [[maybe_unused]] const int mods) {
     auto *settings = static_cast<SimulationSettings *>(glfwGetWindowUserPointer(window));
     if (!settings) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to get window user pointer");

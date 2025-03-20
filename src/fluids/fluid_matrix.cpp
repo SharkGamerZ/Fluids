@@ -83,7 +83,7 @@ void FluidMatrix::OMP_step() {
         std::swap(density_prev, density); OMP_advect(ZERO, density, density_prev, vX, vY, dt);
     }
 
-    fadeDensity(density);
+    OMP_fadeDensity(density);
 
     OMP_CalculateVorticity(vX, vY, vorticity);
 }
