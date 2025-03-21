@@ -3,6 +3,7 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <numeric>
 #include <random>
 #include <ranges>
 #include <string>

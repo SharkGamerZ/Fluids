@@ -1,11 +1,14 @@
 #include "fluid_matrix.hpp"
-#include <format>
+#include <sstream>
 
 #define gpuErrchk(ans) gpuAssert((ans), __FILE__, __LINE__);
 
 inline void gpuAssert(const cudaError_t code, const char *file, int line) {
     if (code != cudaSuccess) {
-        const std::string err_msg = std::format("CUDA error: {} at {}:{}", cudaGetErrorString(code), file, line);
+        std::ostringstream oss;
+        oss << "CUDA error: " << cudaGetErrorString(code) << " at " << file << ":" << line;
+        const std::string err_msg = oss.str();
+
         std::cerr << err_msg << std::endl;
         cudaDeviceReset();
         throw std::runtime_error(err_msg);

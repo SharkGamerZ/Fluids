@@ -1,3 +1,9 @@
+# Enable vcpkg support
+if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    message(STATUS "Setting CMAKE_TOOLCHAIN_FILE to vcpkg: $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif ()
+
 cmake_minimum_required(VERSION 3.30)
 project(fluids LANGUAGES CXX C)
 
@@ -13,6 +19,11 @@ endif ()
 # Find dependencies
 find_package(OpenMP REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
+find_package(glfw3 REQUIRED)
+if (NOT WIN32)
+    find_package(X11 REQUIRED)
+endif ()
 
 # CUDA support check
 include(CheckLanguage)
@@ -64,25 +75,43 @@ endif ()
 
 add_library(commons INTERFACE)
 target_compile_options(commons INTERFACE
+        # Debug configuration
         $<$<CONFIG:Debug>:
-        $<$<COMPILE_LANGUAGE:CXX>:-O0 -g>
-        $<$<COMPILE_LANGUAGE:C>:-O0 -g>
+            $<$<COMPILE_LANGUAGE:CXX,C>:
+                $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-O0 -g>
+                $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-O0 -g>
+                $<$<CXX_COMPILER_ID:MSVC>:/Od /Zi /MDd>
+                $<$<C_COMPILER_ID:MSVC>:/Od /Zi /MDd>
+            >
         >
+
+        # Release configuration
         $<$<CONFIG:Release>:
-        $<$<COMPILE_LANGUAGE:CXX>:-O3 -march=native>
-        $<$<COMPILE_LANGUAGE:C>:-O3 -march=native>
+            $<$<COMPILE_LANGUAGE:CXX,C>:
+                $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-O3 -march=native>
+                $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-O3 -march=native>
+                $<$<CXX_COMPILER_ID:MSVC>:/O2 /MD>
+                $<$<C_COMPILER_ID:MSVC>:/O2 /MD>
+            >
         >
-        $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wpedantic>
-        $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wpedantic>
+
+        # Warning configuration
+        $<$<COMPILE_LANGUAGE:CXX,C>:
+            $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic>
+            $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic>
+            $<$<CXX_COMPILER_ID:MSVC>:/W4>
+            $<$<C_COMPILER_ID:MSVC>:/W4>
+        >
 )
 
 if (CUDA_SUPPORT)
     target_compile_options(commons INTERFACE
             $<$<COMPILE_LANGUAGE:CUDA>:
-            $<$<CONFIG:Debug>:-O0 -g -G>
-            $<$<CONFIG:Release>:-O3 -lineinfo --use_fast_math>
-            -Xcompiler=-Wall,-Wextra,-Wno-unknown-pragmas,-fopenmp
-            --Werror cross-execution-space-call
+                $<$<CONFIG:Debug>:-O0 -g -G>
+                $<$<CONFIG:Release>:-O3 -lineinfo --use_fast_math>
+                $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Xcompiler=-Wall,-Wextra,-Wno-unknown-pragmas,-fopenmp>
+                $<$<CXX_COMPILER_ID:MSVC>:-Xcompiler=/W4,/openmp>
+                --Werror cross-execution-space-call
             >
     )
 endif ()
@@ -118,10 +147,10 @@ target_link_libraries(fluids PRIVATE
         commons
         glfw
         OpenGL::GL
-        GLEW
+        $<IF:$<PLATFORM_ID:Windows>,GLEW::GLEW,GLEW>
         OpenMP::OpenMP_CXX
-        m
-        X11
+        $<$<NOT:$<PLATFORM_ID:Windows>>:m>
+        $<$<NOT:$<PLATFORM_ID:Windows>>:X11>
 )
 
 # Include directories

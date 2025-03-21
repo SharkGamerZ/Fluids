@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../utils.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <omp.h>
