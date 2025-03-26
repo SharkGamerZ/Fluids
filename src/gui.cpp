@@ -1,4 +1,10 @@
 #include "gui.hpp"
+#ifdef CUDA_SUPPORT
+#include "fluids/cuda_fluid_strategy.cuh"
+#endif
+#include "fluids/fluid_data_model.hpp"
+#include "fluids/openmp_fluid_strategy.hpp"
+#include "fluids/serial_fluid_strategy.hpp"
 
 namespace GUI {
 void Init(GLFWwindow *window) {
@@ -16,7 +22,7 @@ void Init(GLFWwindow *window) {
     ImGui_ImplOpenGL3_Init();
 }
 
-void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix) {
+void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *simulation) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -40,8 +46,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
                 ImGui::SliderFloat("Mouse velocity", &settings.mouse_velocity, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_None);
 
                 // Update matrix parameters
-                matrix->visc = settings.viscosity;
-                matrix->dt = settings.deltaTime;
+                simulation->getDataModel().visc = settings.viscosity;
+                simulation->getDataModel().dt = settings.deltaTime;
 
                 // Visualization mode
                 constexpr std::array visualizationModeNames{"Density", "Velocity", "Vorticity"};
@@ -94,82 +100,61 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
 
     // Run simulation
     {
-        // Velocity related mouse controls
-        glfwGetCursorPos(window, &settings.xpos, &settings.ypos);
-        settings.xposScaled = round(settings.xpos / settings.scalingFactor);
-        settings.yposScaled = round(settings.ypos / settings.scalingFactor);
-        settings.mouseTime = glfwGetTime();
-        settings.mouseTimeDelta = settings.mouseTime - settings.mouseTimePrev;
-        settings.deltax = settings.xpos - settings.xposPrev;
-        settings.deltay = settings.ypos - settings.yposPrev;
-        settings.mouseTimePrev = settings.mouseTime;
+        if (glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+            // Velocity related mouse controls
+            glfwGetCursorPos(window, &settings.xpos, &settings.ypos);
+            settings.xposScaled = round(settings.xpos / settings.scalingFactor);
+            settings.yposScaled = round(settings.ypos / settings.scalingFactor);
+            settings.mouseTime = glfwGetTime();
+            settings.mouseTimeDelta = settings.mouseTime - settings.mouseTimePrev;
+            settings.deltax = settings.xpos - settings.xposPrev;
+            settings.deltay = settings.ypos - settings.yposPrev;
+            settings.mouseTimePrev = settings.mouseTime;
 
-        if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
-            // Add Density
-            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-                if (settings.executionMode != CUDA) matrix->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
-#ifdef CUDA_SUPPORT
-                else matrix->CUDA_addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
-#endif
+            if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
+                // Add Density
+                if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+                    simulation->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+                }
+
+                // Calculate velocity
+                settings.deltax /= settings.scalingFactor * 2;
+                settings.deltay /= settings.scalingFactor * 2;
+
+                // Add Velocity
+                simulation->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
+                                        settings.deltay * settings.mouse_velocity);
             }
 
-
-            // Calculate velocity
-            settings.deltax /= settings.scalingFactor * 2;
-            settings.deltay /= settings.scalingFactor * 2;
-
-            // Add Velocity
-            if (settings.executionMode != CUDA)
-                matrix->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity, settings.deltay * settings.mouse_velocity);
-#ifdef CUDA_SUPPORT
-            else
-                matrix->CUDA_addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
-                                         settings.deltay * settings.mouse_velocity);
-#endif
+            settings.xposPrev = settings.xpos;
+            settings.yposPrev = settings.ypos;
         }
-
-        settings.xposPrev = settings.xpos;
-        settings.yposPrev = settings.ypos;
 
         // Wind machine
         if (settings.windMachine) {
-            if (settings.executionMode != CUDA) matrix->addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
-#ifdef CUDA_SUPPORT
-            else matrix->CUDA_addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
-#endif
+            simulation->addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
         }
 
         // Reset simulation
         if (settings.resetSimulation) {
-            matrix->reset();
+            simulation->reset();
             settings.resetSimulation = false;
         }
 
         // Run simulation
         if (settings.isSimulationRunning || settings.frameSimulation) {
-            switch (settings.executionMode) {
-                case SERIAL:
+            if (settings.executionMode != settings.executionModePrev) {
+                switch (settings.executionMode) {
+                    case SERIAL: simulation->setStrategy(std::make_unique<SerialFluidStrategy>()); break;
+                    case OPENMP: simulation->setStrategy(std::make_unique<OpenMPFluidStrategy>()); break;
 #ifdef CUDA_SUPPORT
-                    if (settings.executionModePrev == CUDA) matrix->copyToHost();
+                    case CUDA: simulation->setStrategy(std::make_unique<CUDAFluidStrategy>()); break;
 #endif
-                    matrix->step();
-                    break;
-
-                case OPENMP:
-#ifdef CUDA_SUPPORT
-                    if (settings.executionModePrev == CUDA) matrix->copyToHost();
-#endif
-                    matrix->OMP_step();
-                    break;
-#ifdef CUDA_SUPPORT
-                case CUDA:
-                    if (settings.executionModePrev != CUDA) matrix->copyToDevice();
-                    matrix->CUDA_step();
-                    matrix->copyToHost();
-                    break;
-#endif
-                default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
+                    default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
+                }
             }
+            simulation->step();
+
 
             settings.frameSimulation = false;
             settings.executionModePrev = settings.executionMode;
@@ -177,7 +162,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
     }
 
     // Render matrix
-    RenderMatrix(settings, matrix);
+    RenderMatrix(settings, simulation);
 
     // TODO: Check why we have to do this
     int display_w, display_h;
@@ -189,7 +174,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matri
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix) {
+void RenderMatrix(const SimulationSettings &settings, const FluidSimulation *simulation) {
     if (const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute); !shaderProgram) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
         return;
@@ -208,9 +193,9 @@ void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *matrix)
 
         std::vector<float> verts;
         switch (settings.simulationAttribute) {
-            case DENSITY: verts = Renderer::getDensityVertices(&settings, matrix); break;
-            case VELOCITY: verts = Renderer::getVelocityVertices(&settings, matrix); break;
-            case VORTICITY: verts = Renderer::getVorticityVertices(&settings, matrix); break;
+            case DENSITY: verts = Renderer::getDensityVertices(&settings, simulation); break;
+            case VELOCITY: verts = Renderer::getVelocityVertices(&settings, simulation); break;
+            case VORTICITY: verts = Renderer::getVorticityVertices(&settings, simulation); break;
         }
 
         glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);

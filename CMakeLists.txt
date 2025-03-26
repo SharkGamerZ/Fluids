@@ -129,11 +129,15 @@ set(SOURCE_FILES
         src/gui.cpp
         src/renderer.cpp
         src/utils.cpp
-        src/fluids/fluid_matrix.cpp # C++ source file (serial/openmp)
         ${IMGUI_SOURCES}
+        src/fluids/fluid_data_model.hpp
+        src/fluids/fluid_simulation_strategy.hpp
+        src/fluids/fluid_simulation.cpp
+        src/fluids/serial_fluid_strategy.cpp
+        src/fluids/openmp_fluid_strategy.cpp
 )
 if (CUDA_SUPPORT)
-    list(APPEND SOURCE_FILES src/fluids/fluid_matrix.cu)
+    list(APPEND SOURCE_FILES src/fluids/cuda_fluid_strategy.cu)
 endif ()
 
 add_executable(fluids ${SOURCE_FILES})
@@ -162,16 +166,22 @@ target_include_directories(fluids PRIVATE lib/imgui/ lib/imgui/backends)
 
 # Add test files
 set(TEST_FILES
-        tests/test_performance.cpp
-        tests/test_fluid_matrix.hpp
-        src/fluids/fluid_matrix.cpp
         src/utils.cpp
+        src/fluids/serial_fluid_strategy.cpp
+        src/fluids/openmp_fluid_strategy.cpp
+        tests/test_performance.cpp
+        tests/test_serial_fluid_strategy.hpp
+        tests/test_openmp_fluid_strategy.hpp
 )
 if (CUDA_SUPPORT)
-    list(APPEND TEST_FILES src/fluids/fluid_matrix.cu)
+    list(APPEND TEST_FILES
+            src/fluids/cuda_fluid_strategy.cu
+            tests/test_cuda_fluid_strategy.hpp)
 endif ()
 
 add_executable(test_fluids ${TEST_FILES})
+
+target_compile_definitions(test_fluids PRIVATE ENABLE_TESTING=1)
 
 if (CUDA_SUPPORT)
     set_target_properties(test_fluids PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

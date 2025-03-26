@@ -1,4 +1,6 @@
 #include "renderer.hpp"
+#include "fluids/fluid_data_model.hpp"
+#include "fluids/fluid_simulation.hpp"
 
 namespace {
 /// Shader paths struct to hold vertex and fragment shader paths
@@ -136,12 +138,12 @@ int getVertexComponentCount(const SimulationAttribute attribute) {
     }
 }
 
-std::vector<float> getDensityVertices(const SimulationSettings *settings, const FluidMatrix *matrix) {
+std::vector<float> getDensityVertices(const SimulationSettings *settings, const FluidSimulation *simulation) {
     const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 3);
     const float scalingFactorInv = 1.0f / settings->scalingFactor;
     const float normFactor = 2.0f / (settings->viewportSize - 1);
-    const int matrixSize = matrix->size;
+    const int matrixSize = simulation->getDataModel().size;
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
@@ -154,7 +156,7 @@ std::vector<float> getDensityVertices(const SimulationSettings *settings, const 
             // Generate vertices x, y, density
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = matrix->density[idx];
+            vertices[vertexIdx + 2] = simulation->getDataModel().density[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
@@ -165,12 +167,12 @@ std::vector<float> getDensityVertices(const SimulationSettings *settings, const 
     return vertices;
 }
 
-std::vector<float> getVelocityVertices(const SimulationSettings *settings, const FluidMatrix *matrix) {
+std::vector<float> getVelocityVertices(const SimulationSettings *settings, const FluidSimulation *simulation) {
     const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 4);
     const float scalingFactorInv = 1.0f / settings->scalingFactor;
     const float normFactor = 2.0f / (settings->viewportSize - 1);
-    const int matrixSize = matrix->size;
+    const int matrixSize = simulation->getDataModel().size;
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
@@ -183,8 +185,8 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
             // Generate vertices x, y, vx, vy
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = matrix->vX[idx];
-            vertices[vertexIdx + 3] = matrix->vY[idx];
+            vertices[vertexIdx + 2] = simulation->getDataModel().vX[idx];
+            vertices[vertexIdx + 3] = simulation->getDataModel().vY[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
@@ -195,12 +197,12 @@ std::vector<float> getVelocityVertices(const SimulationSettings *settings, const
     return vertices;
 }
 
-std::vector<float> getVorticityVertices(const SimulationSettings *settings, const FluidMatrix *matrix) {
+std::vector<float> getVorticityVertices(const SimulationSettings *settings, const FluidSimulation *simulation) {
     const int n = settings->viewportSize;
     std::vector<float> vertices(n * n * 3);
     const float scalingFactorInv = 1.0f / settings->scalingFactor;
     const float normFactor = 2.0f / (settings->viewportSize - 1);
-    const int matrixSize = matrix->size;
+    const int matrixSize = simulation->getDataModel().size;
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
@@ -213,7 +215,7 @@ std::vector<float> getVorticityVertices(const SimulationSettings *settings, cons
             // Generate vertices x, y, vorticity
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = matrix->vorticity[idx];
+            vertices[vertexIdx + 2] = simulation->getDataModel().vorticity[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;

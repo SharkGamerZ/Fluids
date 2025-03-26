@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fluids/fluid_simulation.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -13,9 +14,9 @@ namespace GUI {
 /// Initialize GUI
 void Init(GLFWwindow *window);
 /// Main UI rendering function
-void Render(SimulationSettings &settings, GLFWwindow *window, FluidMatrix *matrix);
+void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *simulation);
 /// Render fluid matrix
-void RenderMatrix(const SimulationSettings &settings, const FluidMatrix *fluidMatrix);
+void RenderMatrix(const SimulationSettings &settings, const FluidSimulation *simulation);
 /// Cleanup GUI
 void Cleanup();
 /// Callback for key events

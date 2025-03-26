@@ -1,6 +1,15 @@
-#include "test_fluid_matrix.hpp"
+#include "../src/fluids/fluid_data_model.hpp"
+#include "../src/fluids/openmp_fluid_strategy.hpp"
+#include "../src/fluids/serial_fluid_strategy.hpp"
+#ifdef CUDA_SUPPORT
+#include "../src/fluids/cuda_fluid_strategy.cuh"
+#include "test_cuda_fluid_strategy.hpp"
+#endif
+#include "test_openmp_fluid_strategy.hpp"
+#include "test_serial_fluid_strategy.hpp"
 #include <algorithm>
 #include <chrono>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <numeric>
@@ -55,33 +64,33 @@ void test_function_performance(const std::string &func_name, const int num_runs,
 }
 
 // Function to generate random values for FluidMatrix parameters
-void generate_random_fluid_matrix_params(FluidMatrix &fluidMatrix, const int size) {
+void generate_random_fluid_matrix_params(FluidDataModel &dataModel, const int size) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution diff_dist(0.0, 100.0); // Random diffusion between 0.0 and 1.0
     std::uniform_real_distribution visc_dist(0.0, 100.0); // Random viscosity between 0.0 and 1.0
     std::uniform_real_distribution dt_dist(0.001, 0.1);   // Random delta time between 0.001 and 0.1
 
-    fluidMatrix.size = size;
-    fluidMatrix.dt = dt_dist(gen);
-    fluidMatrix.diff = diff_dist(gen);
-    fluidMatrix.visc = visc_dist(gen);
+    dataModel.size = size;
+    dataModel.dt = dt_dist(gen);
+    dataModel.diff = diff_dist(gen);
+    dataModel.visc = visc_dist(gen);
 
     // Resize the matrices
-    fluidMatrix.density.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.density_prev.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.vX.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.vY.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.vX_prev.resize(fluidMatrix.size * fluidMatrix.size);
-    fluidMatrix.vY_prev.resize(fluidMatrix.size * fluidMatrix.size);
+    dataModel.density.resize(dataModel.size * dataModel.size);
+    dataModel.density_prev.resize(dataModel.size * dataModel.size);
+    dataModel.vX.resize(dataModel.size * dataModel.size);
+    dataModel.vY.resize(dataModel.size * dataModel.size);
+    dataModel.vX_prev.resize(dataModel.size * dataModel.size);
+    dataModel.vY_prev.resize(dataModel.size * dataModel.size);
 
     // Initialize the matrices with some random values (just for testing)
-    std::ranges::generate(fluidMatrix.density, [&gen, &diff_dist] { return diff_dist(gen); });
-    std::ranges::generate(fluidMatrix.density_prev, [&gen, &diff_dist] { return diff_dist(gen); });
-    std::ranges::generate(fluidMatrix.vX, [&gen, &visc_dist] { return visc_dist(gen); });
-    std::ranges::generate(fluidMatrix.vY, [&gen, &visc_dist] { return visc_dist(gen); });
-    std::ranges::generate(fluidMatrix.vX, [&gen, &visc_dist] { return visc_dist(gen); });
-    std::ranges::generate(fluidMatrix.vY_prev, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(dataModel.density, [&gen, &diff_dist] { return diff_dist(gen); });
+    std::ranges::generate(dataModel.density_prev, [&gen, &diff_dist] { return diff_dist(gen); });
+    std::ranges::generate(dataModel.vX, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(dataModel.vY, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(dataModel.vX, [&gen, &visc_dist] { return visc_dist(gen); });
+    std::ranges::generate(dataModel.vY_prev, [&gen, &visc_dist] { return visc_dist(gen); });
 }
 
 void compareMatrixes(const std::vector<double> &m1, const std::vector<double> &m2, const bool printMatrix, FILE *fp) {
@@ -243,60 +252,41 @@ void test_linear_solvers() {
     for (int size: std::views::iota(start_size, end_size + 1) | std::views::stride(size_increment)) {
         std::cout << "Matrix Size: " << size << std::endl;
 
-        // Create a FluidMatrix object with randomized parameters
-        TestFluidMatrix fluidMatrix(size, 0.0, 0.0, 0.0);
-        generate_random_fluid_matrix_params(fluidMatrix, size);
+        // Create backing data model
+        FluidDataModel dataModel(size, 0.0, 0.0, 0.0);
+        generate_random_fluid_matrix_params(dataModel, size);
 
-        TestFluidMatrix OMP_fluidMatrix = fluidMatrix;
-        if (fluidMatrix.density != OMP_fluidMatrix.density) {
-            std::cerr << "OMP_FluidMatrix copy failed\n";
-        }
-
+        // Create strategy implementations
+        SerialFluidStrategy serialStrategy;
+        OpenMPFluidStrategy openmpStrategy;
 #ifdef CUDA_SUPPORT
-        TestFluidMatrix CUDA_fluidMatrix = fluidMatrix;
-        if (fluidMatrix.density != CUDA_fluidMatrix.density) {
-            std::cerr << "CUDA_FluidMatrix copy failed\n";
-        }
+        CUDAFluidStrategy cudaStrategy;
 #endif
 
         for (int i: std::views::iota(1, max_iterations + 1)) {
-            TestFluidMatrix fluidMatrix_copy = fluidMatrix;
-            TestFluidMatrix OMP_fluidMatrix_copy = OMP_fluidMatrix;
+            FluidDataModel serialDataModel = dataModel;
+            FluidDataModel openmpDataModel = dataModel;
 #ifdef CUDA_SUPPORT
-            TestFluidMatrix CUDA_fluidMatrix_copy = CUDA_fluidMatrix;
+            FluidDataModel cudaDataModel = dataModel;
 #endif
 
-            GAUSS_ITERATIONS = i;
-            JACOBI_ITERATIONS = i;
+            FluidSimulationStrategy::GAUSS_ITERATIONS = i;
+            FluidSimulationStrategy::JACOBI_ITERATIONS = i;
 
             std::cout << "Iterations: " << i << std::endl;
 
             // GAUSS
-            auto gauss_serial_time =
-                    measure_median_time([&fluidMatrix] { fluidMatrix.gauss_lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.visc); }, func_repeat);
-            auto gauss_omp_time = measure_median_time(
-                    [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_gauss_lin_solve(X, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.visc); }, func_repeat);
+            auto gauss_serial_time = measure_median_time([&serialStrategy, &serialDataModel] { TestSerialFluidStrategy::test_gauss_lin_solve(serialStrategy, serialDataModel); }, func_repeat);
+            auto gauss_omp_time = measure_median_time([&openmpStrategy, &openmpDataModel] { TestOpenMPFluidStrategy::test_gauss_lin_solve(openmpStrategy, openmpDataModel); }, func_repeat);
 #ifdef CUDA_SUPPORT
-            auto gauss_cuda_time = measure_median_time(
-                    [&CUDA_fluidMatrix] {
-                        CUDA_fluidMatrix.CUDA_lin_solve(X, CUDA_fluidMatrix.d_density, CUDA_fluidMatrix.d_density_prev, CUDA_fluidMatrix.visc,
-                                                        1.0 / (1 + 4 * CUDA_fluidMatrix.visc));
-                    },
-                    func_repeat);
+            auto gauss_cuda_time = measure_median_time([&cudaStrategy, &cudaDataModel] { TestCUDAFluidStrategy::test_gauss_lin_solve(cudaStrategy, cudaDataModel); }, func_repeat);
 #endif
 
             // JACOBI
-            auto jacobi_serial_time =
-                    measure_median_time([&fluidMatrix] { fluidMatrix.jacobi_lin_solve(X, fluidMatrix.density, fluidMatrix.density_prev, fluidMatrix.visc); }, func_repeat);
-            auto jacobi_omp_time = measure_median_time(
-                    [&OMP_fluidMatrix] { OMP_fluidMatrix.OMP_jacobi_lin_solve(X, OMP_fluidMatrix.density, OMP_fluidMatrix.density_prev, OMP_fluidMatrix.visc); }, func_repeat);
+            auto jacobi_serial_time = measure_median_time([&serialStrategy, &serialDataModel] { TestSerialFluidStrategy::test_jacobi_lin_solve(serialStrategy, serialDataModel); }, func_repeat);
+            auto jacobi_omp_time = measure_median_time([&openmpStrategy, &openmpDataModel] { TestOpenMPFluidStrategy::test_jacobi_lin_solve(openmpStrategy, openmpDataModel); }, func_repeat);
 #ifdef CUDA_SUPPORT
-            auto jacobi_cuda_time = measure_median_time(
-                    [&CUDA_fluidMatrix] {
-                        CUDA_fluidMatrix.CUDA_lin_solve(X, CUDA_fluidMatrix.d_density, CUDA_fluidMatrix.d_density_prev, CUDA_fluidMatrix.visc,
-                                                        1.0 / (1 + 4 * CUDA_fluidMatrix.visc));
-                    },
-                    func_repeat);
+            auto jacobi_cuda_time = measure_median_time([&cudaStrategy, &cudaDataModel] { TestCUDAFluidStrategy::test_jacobi_lin_solve(cudaStrategy, cudaDataModel); }, func_repeat);
 #endif
 
             // Write results to file in CSV format

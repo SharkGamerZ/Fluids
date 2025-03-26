@@ -1,3 +1,4 @@
+#include "fluids/serial_fluid_strategy.hpp"
 #include "gui.hpp"
 
 int main() {
@@ -35,7 +36,7 @@ int main() {
     glfwSetKeyCallback(window, GUI::KeyCallback);
 
     // Init fluid matrix
-    auto matrix = FluidMatrix(settings.matrixSize, 0.0f, settings.viscosity, settings.deltaTime);
+    auto simulation = FluidSimulation(settings.matrixSize, 0.0f, settings.viscosity, settings.deltaTime, std::make_unique<SerialFluidStrategy>());
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -45,7 +46,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Render GUI
-        GUI::Render(settings, window, &matrix);
+        GUI::Render(settings, window, &simulation);
 
         // Swap buffers
         glfwSwapBuffers(window);
