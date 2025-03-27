@@ -15,5 +15,5 @@ GLuint getShaderProgram(SimulationAttribute attribute);
 /// Get the number of components for a vertex attribute
 int getVertexComponentCount(SimulationAttribute attribute);
 /// Get the vertices to be rendered
-std::vector<float> getVertices(const SimulationSettings &settings, const FluidSimulation *simulation);
+std::vector<float> getVertices(const SimulationSettings &settings, const FluidSimulation &simulation);
 }; // namespace Renderer

@@ -16,8 +16,8 @@ const std::unordered_map<SimulationAttribute, ShaderPaths> SHADER_PATHS = {{DENS
                                                                            {VORTICITY, ShaderPaths("../src/shaders/vorticity.vert", "../src/shaders/vorticity.frag")}};
 /// Cache for compiled shaders and shader programs
 struct ShaderCache {
-    std::unordered_map<std::string, GLuint> compiledShaders;
-    std::unordered_map<SimulationAttribute, GLuint> shaderPrograms;
+    mutable std::unordered_map<std::string, GLuint> compiledShaders;
+    mutable std::unordered_map<SimulationAttribute, GLuint> shaderPrograms;
 
     ~ShaderCache() {
         for (const auto &program: std::views::values(shaderPrograms)) {
@@ -31,17 +31,14 @@ struct ShaderCache {
     }
 };
 
-ShaderCache &getShaderCache() {
-    static ShaderCache cache;
-    return cache;
-}
+inline const ShaderCache shaderCache;
 
 /// Get or compile shader from file
 /// @param path shader file path
 /// @param shaderType shader type
 /// @return compiled shader or nullopt if compilation failed
 std::optional<GLuint> getOrCompileShader(const std::string &path, const GLenum shaderType) {
-    auto &[compiledShaders, shaderPrograms] = getShaderCache();
+    auto &[compiledShaders, shaderPrograms] = shaderCache;
 
     // check if shader is already compiled
     if (const auto it = compiledShaders.find(path); it != compiledShaders.end()) {
@@ -75,12 +72,12 @@ std::optional<GLuint> getOrCompileShader(const std::string &path, const GLenum s
     return shader;
 }
 
-std::vector<float> getDensityVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+std::vector<float> getDensityVertices(const SimulationSettings &settings, const FluidSimulation &simulation) {
     const int n = settings.viewportSize;
     std::vector<float> vertices(n * n * 3);
     const float scalingFactorInv = 1.0f / settings.scalingFactor;
     const float normFactor = 2.0f / (settings.viewportSize - 1);
-    const int matrixSize = simulation->getDataModel().size;
+    const int matrixSize = simulation.getDataModel().size;
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
@@ -93,7 +90,7 @@ std::vector<float> getDensityVertices(const SimulationSettings &settings, const 
             // Generate vertices x, y, density
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = simulation->getDataModel().density[idx];
+            vertices[vertexIdx + 2] = simulation.getDataModel().density[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
@@ -104,12 +101,12 @@ std::vector<float> getDensityVertices(const SimulationSettings &settings, const 
     return vertices;
 }
 
-std::vector<float> getVelocityVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+std::vector<float> getVelocityVertices(const SimulationSettings &settings, const FluidSimulation &simulation) {
     const int n = settings.viewportSize;
     std::vector<float> vertices(n * n * 4);
     const float scalingFactorInv = 1.0f / settings.scalingFactor;
     const float normFactor = 2.0f / (settings.viewportSize - 1);
-    const int matrixSize = simulation->getDataModel().size;
+    const int matrixSize = simulation.getDataModel().size;
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
@@ -122,8 +119,8 @@ std::vector<float> getVelocityVertices(const SimulationSettings &settings, const
             // Generate vertices x, y, vx, vy
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = simulation->getDataModel().vX[idx];
-            vertices[vertexIdx + 3] = simulation->getDataModel().vY[idx];
+            vertices[vertexIdx + 2] = simulation.getDataModel().vX[idx];
+            vertices[vertexIdx + 3] = simulation.getDataModel().vY[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
@@ -134,12 +131,12 @@ std::vector<float> getVelocityVertices(const SimulationSettings &settings, const
     return vertices;
 }
 
-std::vector<float> getVorticityVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+std::vector<float> getVorticityVertices(const SimulationSettings &settings, const FluidSimulation &simulation) {
     const int n = settings.viewportSize;
     std::vector<float> vertices(n * n * 3);
     const float scalingFactorInv = 1.0f / settings.scalingFactor;
     const float normFactor = 2.0f / (settings.viewportSize - 1);
-    const int matrixSize = simulation->getDataModel().size;
+    const int matrixSize = simulation.getDataModel().size;
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for (int i = 0; i < n; i++) {
@@ -152,7 +149,7 @@ std::vector<float> getVorticityVertices(const SimulationSettings &settings, cons
             // Generate vertices x, y, vorticity
             vertices[vertexIdx] = j;
             vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = simulation->getDataModel().vorticity[idx];
+            vertices[vertexIdx + 2] = simulation.getDataModel().vorticity[idx];
 
             // Normalize coordinates
             vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
@@ -166,7 +163,7 @@ std::vector<float> getVorticityVertices(const SimulationSettings &settings, cons
 
 namespace Renderer {
 GLuint getShaderProgram(const SimulationAttribute attribute) {
-    auto &[compiledShaders, shaderPrograms] = getShaderCache();
+    auto &[compiledShaders, shaderPrograms] = shaderCache;
 
     // check if shader program is already cached
     if (const auto it = shaderPrograms.find(attribute); it != shaderPrograms.end()) {
@@ -226,7 +223,7 @@ int getVertexComponentCount(const SimulationAttribute attribute) {
     }
 }
 
-std::vector<float> getVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+std::vector<float> getVertices(const SimulationSettings &settings, const FluidSimulation &simulation) {
     switch (settings.simulationAttribute) {
         case DENSITY: return getDensityVertices(settings, simulation);
         case VELOCITY: return getVelocityVertices(settings, simulation);

@@ -46,7 +46,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Render GUI
-        GUI::Render(settings, window, &simulation);
+        GUI::Render(settings, window, simulation);
 
         // Swap buffers
         glfwSwapBuffers(window);

@@ -14,9 +14,9 @@ namespace GUI {
 /// Initialize GUI
 void Init(GLFWwindow *window);
 /// Main UI rendering function
-void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *simulation);
+void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation &simulation);
 /// Render fluid matrix
-void RenderMatrix(const SimulationSettings &settings, const FluidSimulation *simulation);
+void RenderMatrix(const SimulationSettings &settings, const FluidSimulation &simulation);
 /// Cleanup GUI
 void Cleanup();
 /// Callback for key events

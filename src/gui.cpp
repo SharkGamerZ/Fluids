@@ -22,7 +22,7 @@ void Init(GLFWwindow *window) {
     ImGui_ImplOpenGL3_Init();
 }
 
-void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *simulation) {
+void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation &simulation) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -46,8 +46,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *s
                 ImGui::SliderFloat("Mouse velocity", &settings.mouse_velocity, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_None);
 
                 // Update matrix parameters
-                simulation->getDataModel().visc = settings.viscosity;
-                simulation->getDataModel().dt = settings.deltaTime;
+                simulation.getDataModel().visc = settings.viscosity;
+                simulation.getDataModel().dt = settings.deltaTime;
 
                 // Visualization mode
                 constexpr std::array visualizationModeNames{"Density", "Velocity", "Vorticity"};
@@ -114,7 +114,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *s
             if (settings.xposScaled >= 0 && settings.xposScaled < settings.matrixSize && settings.yposScaled >= 0 && settings.yposScaled < settings.matrixSize) {
                 // Add Density
                 if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-                    simulation->addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
+                    simulation.addDensity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), 20.0f * settings.mouse_density);
                 }
 
                 // Calculate velocity
@@ -122,8 +122,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *s
                 settings.deltay /= settings.scalingFactor * 2;
 
                 // Add Velocity
-                simulation->addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
-                                        settings.deltay * settings.mouse_velocity);
+                simulation.addVelocity(static_cast<int>(settings.xposScaled), static_cast<int>(settings.yposScaled), settings.deltax * settings.mouse_velocity,
+                                       settings.deltay * settings.mouse_velocity);
             }
 
             settings.xposPrev = settings.xpos;
@@ -132,12 +132,12 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *s
 
         // Wind machine
         if (settings.windMachine) {
-            simulation->addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
+            simulation.addVelocity(2, settings.matrixSize / 2, 10, 0.0f);
         }
 
         // Reset simulation
         if (settings.resetSimulation) {
-            simulation->reset();
+            simulation.reset();
             settings.resetSimulation = false;
         }
 
@@ -145,15 +145,15 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *s
         if (settings.isSimulationRunning || settings.frameSimulation) {
             if (settings.executionMode != settings.executionModePrev) {
                 switch (settings.executionMode) {
-                    case SERIAL: simulation->setStrategy(std::make_unique<SerialFluidStrategy>()); break;
-                    case OPENMP: simulation->setStrategy(std::make_unique<OpenMPFluidStrategy>()); break;
+                    case SERIAL: simulation.setStrategy(std::make_unique<SerialFluidStrategy>()); break;
+                    case OPENMP: simulation.setStrategy(std::make_unique<OpenMPFluidStrategy>()); break;
 #ifdef CUDA_SUPPORT
                     case CUDA: simulation->setStrategy(std::make_unique<CUDAFluidStrategy>()); break;
 #endif
                     default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
                 }
             }
-            simulation->step();
+            simulation.step();
 
 
             settings.frameSimulation = false;
@@ -174,7 +174,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation *s
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void RenderMatrix(const SimulationSettings &settings, const FluidSimulation *simulation) {
+void RenderMatrix(const SimulationSettings &settings, const FluidSimulation &simulation) {
     if (const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute); !shaderProgram) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
         return;
