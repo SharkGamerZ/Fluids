@@ -190,13 +190,7 @@ void RenderMatrix(const SimulationSettings &settings, const FluidSimulation *sim
     {
         const int viewportSize = settings.viewportSize;
         const auto componentCount = Renderer::getVertexComponentCount(settings.simulationAttribute);
-
-        std::vector<float> verts;
-        switch (settings.simulationAttribute) {
-            case DENSITY: verts = Renderer::getDensityVertices(&settings, simulation); break;
-            case VELOCITY: verts = Renderer::getVelocityVertices(&settings, simulation); break;
-            case VORTICITY: verts = Renderer::getVorticityVertices(&settings, simulation); break;
-        }
+        std::vector<float> verts = Renderer::getVertices(settings, simulation);
 
         glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
         glVertexAttribPointer(0, componentCount, GL_FLOAT, GL_FALSE, componentCount * sizeof(float), nullptr);

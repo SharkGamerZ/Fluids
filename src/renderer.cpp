@@ -74,6 +74,94 @@ std::optional<GLuint> getOrCompileShader(const std::string &path, const GLenum s
     compiledShaders[path] = shader;
     return shader;
 }
+
+std::vector<float> getDensityVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+    const int n = settings.viewportSize;
+    std::vector<float> vertices(n * n * 3);
+    const float scalingFactorInv = 1.0f / settings.scalingFactor;
+    const float normFactor = 2.0f / (settings.viewportSize - 1);
+    const int matrixSize = simulation->getDataModel().size;
+
+#pragma omp parallel for schedule(guided) collapse(2)
+    for (int i = 0; i < n; i++) {
+        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
+
+        for (int j = 0; j < n; j++) {
+            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
+            const int vertexIdx = 3 * (i * n + j);
+
+            // Generate vertices x, y, density
+            vertices[vertexIdx] = j;
+            vertices[vertexIdx + 1] = i;
+            vertices[vertexIdx + 2] = simulation->getDataModel().density[idx];
+
+            // Normalize coordinates
+            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
+            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
+        }
+    }
+
+    return vertices;
+}
+
+std::vector<float> getVelocityVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+    const int n = settings.viewportSize;
+    std::vector<float> vertices(n * n * 4);
+    const float scalingFactorInv = 1.0f / settings.scalingFactor;
+    const float normFactor = 2.0f / (settings.viewportSize - 1);
+    const int matrixSize = simulation->getDataModel().size;
+
+#pragma omp parallel for schedule(guided) collapse(2)
+    for (int i = 0; i < n; i++) {
+        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
+
+        for (int j = 0; j < n; j++) {
+            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
+            const int vertexIdx = 4 * (i * n + j);
+
+            // Generate vertices x, y, vx, vy
+            vertices[vertexIdx] = j;
+            vertices[vertexIdx + 1] = i;
+            vertices[vertexIdx + 2] = simulation->getDataModel().vX[idx];
+            vertices[vertexIdx + 3] = simulation->getDataModel().vY[idx];
+
+            // Normalize coordinates
+            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
+            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
+        }
+    }
+
+    return vertices;
+}
+
+std::vector<float> getVorticityVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+    const int n = settings.viewportSize;
+    std::vector<float> vertices(n * n * 3);
+    const float scalingFactorInv = 1.0f / settings.scalingFactor;
+    const float normFactor = 2.0f / (settings.viewportSize - 1);
+    const int matrixSize = simulation->getDataModel().size;
+
+#pragma omp parallel for schedule(guided) collapse(2)
+    for (int i = 0; i < n; i++) {
+        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
+
+        for (int j = 0; j < n; j++) {
+            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
+            const int vertexIdx = 3 * (i * n + j);
+
+            // Generate vertices x, y, vorticity
+            vertices[vertexIdx] = j;
+            vertices[vertexIdx + 1] = i;
+            vertices[vertexIdx + 2] = simulation->getDataModel().vorticity[idx];
+
+            // Normalize coordinates
+            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
+            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
+        }
+    }
+
+    return vertices;
+}
 } // namespace
 
 namespace Renderer {
@@ -138,91 +226,12 @@ int getVertexComponentCount(const SimulationAttribute attribute) {
     }
 }
 
-std::vector<float> getDensityVertices(const SimulationSettings *settings, const FluidSimulation *simulation) {
-    const int n = settings->viewportSize;
-    std::vector<float> vertices(n * n * 3);
-    const float scalingFactorInv = 1.0f / settings->scalingFactor;
-    const float normFactor = 2.0f / (settings->viewportSize - 1);
-    const int matrixSize = simulation->getDataModel().size;
-
-#pragma omp parallel for schedule(guided) collapse(2)
-    for (int i = 0; i < n; i++) {
-        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
-
-        for (int j = 0; j < n; j++) {
-            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
-            const int vertexIdx = 3 * (i * n + j);
-
-            // Generate vertices x, y, density
-            vertices[vertexIdx] = j;
-            vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = simulation->getDataModel().density[idx];
-
-            // Normalize coordinates
-            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
-            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
-        }
+std::vector<float> getVertices(const SimulationSettings &settings, const FluidSimulation *simulation) {
+    switch (settings.simulationAttribute) {
+        case DENSITY: return getDensityVertices(settings, simulation);
+        case VELOCITY: return getVelocityVertices(settings, simulation);
+        case VORTICITY: return getVorticityVertices(settings, simulation);
+        default: log(Utils::LogLevel::ERROR, std::cerr, std::format("Unknown attribute {}", static_cast<int>(settings.simulationAttribute))); return {};
     }
-
-    return vertices;
-}
-
-std::vector<float> getVelocityVertices(const SimulationSettings *settings, const FluidSimulation *simulation) {
-    const int n = settings->viewportSize;
-    std::vector<float> vertices(n * n * 4);
-    const float scalingFactorInv = 1.0f / settings->scalingFactor;
-    const float normFactor = 2.0f / (settings->viewportSize - 1);
-    const int matrixSize = simulation->getDataModel().size;
-
-#pragma omp parallel for schedule(guided) collapse(2)
-    for (int i = 0; i < n; i++) {
-        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
-
-        for (int j = 0; j < n; j++) {
-            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
-            const int vertexIdx = 4 * (i * n + j);
-
-            // Generate vertices x, y, vx, vy
-            vertices[vertexIdx] = j;
-            vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = simulation->getDataModel().vX[idx];
-            vertices[vertexIdx + 3] = simulation->getDataModel().vY[idx];
-
-            // Normalize coordinates
-            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
-            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
-        }
-    }
-
-    return vertices;
-}
-
-std::vector<float> getVorticityVertices(const SimulationSettings *settings, const FluidSimulation *simulation) {
-    const int n = settings->viewportSize;
-    std::vector<float> vertices(n * n * 3);
-    const float scalingFactorInv = 1.0f / settings->scalingFactor;
-    const float normFactor = 2.0f / (settings->viewportSize - 1);
-    const int matrixSize = simulation->getDataModel().size;
-
-#pragma omp parallel for schedule(guided) collapse(2)
-    for (int i = 0; i < n; i++) {
-        const int i_scaled = static_cast<int>(i * scalingFactorInv) * matrixSize;
-
-        for (int j = 0; j < n; j++) {
-            const int idx = i_scaled + static_cast<int>(j * scalingFactorInv);
-            const int vertexIdx = 3 * (i * n + j);
-
-            // Generate vertices x, y, vorticity
-            vertices[vertexIdx] = j;
-            vertices[vertexIdx + 1] = i;
-            vertices[vertexIdx + 2] = simulation->getDataModel().vorticity[idx];
-
-            // Normalize coordinates
-            vertices[vertexIdx] = (vertices[vertexIdx] * normFactor) - 1.0f;
-            vertices[vertexIdx + 1] = 1 - (vertices[vertexIdx + 1] * normFactor);
-        }
-    }
-
-    return vertices;
 }
 } // namespace Renderer
