@@ -148,7 +148,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation &s
                     case SERIAL: simulation.setStrategy(std::make_unique<SerialFluidStrategy>()); break;
                     case OPENMP: simulation.setStrategy(std::make_unique<OpenMPFluidStrategy>()); break;
 #ifdef CUDA_SUPPORT
-                    case CUDA: simulation->setStrategy(std::make_unique<CUDAFluidStrategy>()); break;
+                    case CUDA: simulation.setStrategy(std::make_unique<CUDAFluidStrategy>()); break;
 #endif
                     default: log(Utils::LogLevel::ERROR, std::cerr, "Unknown execution mode"); return;
                 }
