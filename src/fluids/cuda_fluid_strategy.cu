@@ -231,9 +231,6 @@ void CUDAFluidStrategy::copyToHost(FluidDataModel &dataModel) const {
     }
 }
 
-// TODO copyToX should be checked on each gui::render call and be done only if we are switching to/from a different strategy
-// executionModePrev != CUDA -> copyToDevice
-// executionModePrev == CUDA -> copyToHost
 void CUDAFluidStrategy::step(FluidDataModel &dataModel) {
     // Initialize CUDA memory if not already done
     if (d_density == nullptr) {
@@ -312,7 +309,6 @@ void CUDAFluidStrategy::addVelocity(FluidDataModel &dataModel, const uint32_t x,
 }
 
 void CUDAFluidStrategy::reset(FluidDataModel &dataModel) {
-    // Reset host data TODO is this necessary for cuda?
     std::ranges::fill(dataModel.density, 0);
     std::ranges::fill(dataModel.density_prev, 0);
     std::ranges::fill(dataModel.vX, 0);

@@ -164,7 +164,7 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation &s
     // Render matrix
     RenderMatrix(settings, simulation);
 
-    // TODO: Check why we have to do this
+    // INFO: compatibility for Hyprland (scaling breaks otherwise)
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
@@ -175,8 +175,8 @@ void Render(SimulationSettings &settings, GLFWwindow *window, FluidSimulation &s
 }
 
 void RenderMatrix(const SimulationSettings &settings, const FluidSimulation &simulation) {
-    if (const GLuint shaderProgram = Renderer::getShaderProgram(settings.simulationAttribute); !shaderProgram) {
-        log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
+    if (!Renderer::setShaderProgram(settings.simulationAttribute)) {
+        log(Utils::LogLevel::ERROR, std::cerr, "Failed to set shader program");
         return;
     }
 

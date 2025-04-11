@@ -162,20 +162,20 @@ std::vector<float> getVorticityVertices(const SimulationSettings &settings, cons
 } // namespace
 
 namespace Renderer {
-GLuint getShaderProgram(const SimulationAttribute attribute) {
+bool setShaderProgram(const SimulationAttribute attribute) {
     auto &[compiledShaders, shaderPrograms] = shaderCache;
 
     // check if shader program is already cached
     if (const auto it = shaderPrograms.find(attribute); it != shaderPrograms.end()) {
         glUseProgram(it->second);
-        return it->second;
+        return true;
     }
 
     // Get shader paths for this attribute
     const auto pathsIt = SHADER_PATHS.find(attribute);
     if (pathsIt == SHADER_PATHS.end()) {
         log(Utils::LogLevel::ERROR, std::cerr, std::format("No shader paths defined for attribute {}", static_cast<int>(attribute)));
-        return 0;
+        return false;
     }
 
     // Get vertex and fragment shaders
@@ -184,14 +184,14 @@ GLuint getShaderProgram(const SimulationAttribute attribute) {
     const auto fragmentShader = getOrCompileShader(paths.fragmentPath, GL_FRAGMENT_SHADER);
     if (!vertexShader || !fragmentShader) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to compile shaders");
-        return 0;
+        return false;
     }
 
     // create and link shader program
     const GLuint shaderProgram = glCreateProgram();
     if (!shaderProgram) {
         log(Utils::LogLevel::ERROR, std::cerr, "Failed to create shader program");
-        return 0;
+        return false;
     }
 
     glAttachShader(shaderProgram, vertexShader.value());
@@ -205,13 +205,13 @@ GLuint getShaderProgram(const SimulationAttribute attribute) {
         glGetProgramInfoLog(shaderProgram, sizeof(infoLog), nullptr, infoLog);
         log(Utils::LogLevel::ERROR, std::cerr, std::format("ERROR::SHADER::PROGRAM::LINKING_FAILED\n{}", infoLog));
         glDeleteProgram(shaderProgram);
-        return 0;
+        return false;
     }
 
     // cache shader program
     shaderPrograms[attribute] = shaderProgram;
-    glUseProgram(shaderProgram); // TODO: maybe move to caller
-    return shaderProgram;
+    glUseProgram(shaderProgram);
+    return true;
 }
 
 int getVertexComponentCount(const SimulationAttribute attribute) {

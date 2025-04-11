@@ -10,8 +10,8 @@
 #include <vector>
 
 namespace Renderer {
-/// Get the shader program for rendering the matrix
-GLuint getShaderProgram(SimulationAttribute attribute);
+/// Set the shader program for rendering the matrix
+bool setShaderProgram(SimulationAttribute attribute);
 /// Get the number of components for a vertex attribute
 int getVertexComponentCount(SimulationAttribute attribute);
 /// Get the vertices to be rendered
