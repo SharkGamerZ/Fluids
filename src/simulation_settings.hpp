@@ -6,7 +6,7 @@ enum SimulationAttribute { DENSITY, VELOCITY, VORTICITY };
 struct SimulationSettings {
     // Used to set up the simulation
     int matrixSize = 400;
-    int scalingFactor = 2;
+    int scalingFactor = 1;
     int viewportSize = matrixSize * scalingFactor;
     int chunkSize = 9;
 

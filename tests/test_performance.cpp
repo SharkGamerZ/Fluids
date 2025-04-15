@@ -225,11 +225,11 @@ std::vector<double> solvePerfectMatrix(const uint32_t size, const std::vector<do
 ///
 /// The results are exported to a CSV file for further analysis.
 void test_linear_solvers() {
-    constexpr int max_iterations = 100;
+    constexpr int max_iterations = 50;
     constexpr int func_repeat = 10;
-    constexpr int start_size = 50;
-    constexpr int end_size = 1000;
-    constexpr int size_increment = 50;
+    constexpr int start_size = 100;
+    constexpr int end_size = 1500;
+    constexpr int size_increment = 100;
 
     // Open CSV to write results (file is cleared if it already exists)
     std::ofstream file("results.csv");
@@ -279,14 +279,18 @@ void test_linear_solvers() {
             auto gauss_serial_time = measure_median_time([&serialStrategy, &serialDataModel] { TestSerialFluidStrategy::test_gauss_lin_solve(serialStrategy, serialDataModel); }, func_repeat);
             auto gauss_omp_time = measure_median_time([&openmpStrategy, &openmpDataModel] { TestOpenMPFluidStrategy::test_gauss_lin_solve(openmpStrategy, openmpDataModel); }, func_repeat);
 #ifdef CUDA_SUPPORT
+            TestCUDAFluidStrategy::init(cudaStrategy, cudaDataModel);
             auto gauss_cuda_time = measure_median_time([&cudaStrategy, &cudaDataModel] { TestCUDAFluidStrategy::test_gauss_lin_solve(cudaStrategy, cudaDataModel); }, func_repeat);
+            TestCUDAFluidStrategy::destroy(cudaStrategy);
 #endif
 
             // JACOBI
             auto jacobi_serial_time = measure_median_time([&serialStrategy, &serialDataModel] { TestSerialFluidStrategy::test_jacobi_lin_solve(serialStrategy, serialDataModel); }, func_repeat);
             auto jacobi_omp_time = measure_median_time([&openmpStrategy, &openmpDataModel] { TestOpenMPFluidStrategy::test_jacobi_lin_solve(openmpStrategy, openmpDataModel); }, func_repeat);
 #ifdef CUDA_SUPPORT
+            TestCUDAFluidStrategy::init(cudaStrategy, cudaDataModel);
             auto jacobi_cuda_time = measure_median_time([&cudaStrategy, &cudaDataModel] { TestCUDAFluidStrategy::test_jacobi_lin_solve(cudaStrategy, cudaDataModel); }, func_repeat);
+            TestCUDAFluidStrategy::destroy(cudaStrategy);
 #endif
 
             // Write results to file in CSV format

@@ -24,6 +24,7 @@ public:
     double *d_vY = nullptr;
     double *d_vY_prev = nullptr;
     double *d_newValue = nullptr;
+    double *d_newValue_original = nullptr; // for remembering the original pointer
 
 private:
 #ifdef ENABLE_TESTING
@@ -39,6 +40,7 @@ private:
     void advect(const FluidDataModel &dataModel, Axis mode, double *d, const double *d0, const double *vX, const double *vY, double dt) const;
     void project(const FluidDataModel &dataModel, double *vX, double *vY, double *p, double *div);
     void set_bnd(const FluidDataModel &dataModel, Axis mode, double *attr) const;
-    void lin_solve(const FluidDataModel &dataModel, Axis mode, double *value, const double *oldValue, double diffusionRate, double cRecip);
+    void gauss_lin_solve(const FluidDataModel &dataModel, Axis mode, double *value, const double *oldValue, double diffusionRate, double cRecip);
+    void jacobi_lin_solve(const FluidDataModel &dataModel, Axis mode, double *value, const double *oldValue, double diffusionRate, double cRecip);
     void fadeDensity(const FluidDataModel &dataModel, double *density) const;
 };

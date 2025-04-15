@@ -100,7 +100,7 @@ void OpenMPFluidStrategy::advect(const FluidDataModel &dataModel, const Axis mod
 void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
     #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
     {
-        #pragma omp for schedule(guided) collapse(2)
+        #pragma omp for schedule(static) collapse(2)
         for (int i = 1; i < dataModel.size - 1; i++) {
             for (int j = 1; j < dataModel.size - 1; j++) {
                 div[FluidDataModel::index(i, j, dataModel.size)] =
@@ -121,7 +121,7 @@ void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<d
     for (int k = 0; k < JACOBI_ITERATIONS; k++) {
         #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
         {
-            #pragma omp for schedule(guided) collapse(2)
+            #pragma omp for schedule(static) collapse(2)
             for (int i = 1; i < dataModel.size - 1; i++) {
                 for (int j = 1; j < dataModel.size - 1; j++) {
                     p[FluidDataModel::index(i, j, dataModel.size)] =
@@ -138,7 +138,7 @@ void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<d
 
     #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
     {
-        #pragma omp for schedule(guided) collapse(2)
+        #pragma omp for schedule(static) collapse(2)
         for (int i = 1; i < dataModel.size - 1; i++) {
             for (int j = 1; j < dataModel.size - 1; j++) {
                 vX[FluidDataModel::index(i, j, dataModel.size)] -=
@@ -203,7 +203,7 @@ void OpenMPFluidStrategy::gauss_lin_solve(const FluidDataModel &dataModel, const
     for (int k = 0; k < GAUSS_ITERATIONS; k++) {
         #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
         {
-            #pragma omp for schedule(guided) collapse(2)
+            #pragma omp for schedule(static) collapse(2)
             for (int i = 1; i < dataModel.size - 1; i++) {
                 for (int j = 1; j < dataModel.size - 1; j++) {
                     value[FluidDataModel::index(i, j, dataModel.size)] =
@@ -226,10 +226,11 @@ void OpenMPFluidStrategy::jacobi_lin_solve(const FluidDataModel &dataModel, cons
     // Create a temporary array to store the new values
     std::vector<double> newValue(dataModel.size * dataModel.size, 0.0);
 
+
+    #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
     for (int k = 0; k < JACOBI_ITERATIONS; k++) {
-        #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
         {
-            #pragma omp for schedule(guided) collapse(2)
+            #pragma omp for schedule(static) collapse(2)
             for (int i = 1; i < dataModel.size - 1; i++) {
                 for (int j = 1; j < dataModel.size - 1; j++) {
                     newValue[FluidDataModel::index(i, j, dataModel.size)] =
@@ -241,9 +242,16 @@ void OpenMPFluidStrategy::jacobi_lin_solve(const FluidDataModel &dataModel, cons
                 }
             }
         }
-        // Swap the new values into the main array
-        std::swap(value, newValue);
-        set_bnd(dataModel, mode, value);
+
+        #pragma omp single
+        {
+            // Swap the new values into the main array
+            std::swap(value, newValue);
+            set_bnd(dataModel, mode, value);
+
+        }
+
+        #pragma omp barrier
     }
 }
 
