@@ -64,7 +64,7 @@ void OpenMPFluidStrategy::diffuse(const FluidDataModel &dataModel, const Axis mo
 }
 
 void OpenMPFluidStrategy::advect(const FluidDataModel &dataModel, const Axis mode, std::vector<double> &d, const std::vector<double> &d0, const std::vector<double> &vX, const std::vector<double> &vY, const double dt) const {
-    #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+    #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, d, d0, vX, vY, mode, dt)
     {
         int i0, j0, i1, j1;
         float x, y, s0, t0, s1, t1, dt0;
@@ -98,7 +98,7 @@ void OpenMPFluidStrategy::advect(const FluidDataModel &dataModel, const Axis mod
 }
 
 void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<double> &vX, std::vector<double> &vY, std::vector<double> &p, std::vector<double> &div) const {
-    #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+    #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, vX, vY, div, p)
     {
         #pragma omp for schedule(static) collapse(2)
         for (int i = 1; i < dataModel.size - 1; i++) {
@@ -119,7 +119,7 @@ void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<d
     double cRecip = 1.0 / 4;
 
     for (int k = 0; k < JACOBI_ITERATIONS; k++) {
-        #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+        #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, div, p, cRecip)
         {
             #pragma omp for schedule(static) collapse(2)
             for (int i = 1; i < dataModel.size - 1; i++) {
@@ -136,7 +136,7 @@ void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<d
         set_bnd(dataModel, Axis::ZERO, p);
     }
 
-    #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+    #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, vX, vY, p)
     {
         #pragma omp for schedule(static) collapse(2)
         for (int i = 1; i < dataModel.size - 1; i++) {
@@ -156,7 +156,7 @@ void OpenMPFluidStrategy::project(const FluidDataModel &dataModel, std::vector<d
 }
 
 void OpenMPFluidStrategy::set_bnd(const FluidDataModel &dataModel, const Axis mode, std::vector<double> &attr) const {
-    #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+    #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, mode, attr)
     {
         #pragma omp for
         for (int i = 1; i < dataModel.size - 1; i++) {
@@ -200,22 +200,25 @@ void OpenMPFluidStrategy::gauss_lin_solve(const FluidDataModel &dataModel, const
     double c = diffusionRate;
     double cRecip = 1.0 / (1 + 4 * c);
 
+    #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, mode, value, oldValue, diffusionRate, cRecip)
     for (int k = 0; k < GAUSS_ITERATIONS; k++) {
-        #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
-        {
-            #pragma omp for schedule(static) collapse(2)
-            for (int i = 1; i < dataModel.size - 1; i++) {
-                for (int j = 1; j < dataModel.size - 1; j++) {
-                    value[FluidDataModel::index(i, j, dataModel.size)] =
-                        (oldValue[FluidDataModel::index(i, j, dataModel.size)] +
-                         diffusionRate * (value[FluidDataModel::index(i + 1, j, dataModel.size)] +
-                                         value[FluidDataModel::index(i - 1, j, dataModel.size)] +
-                                         value[FluidDataModel::index(i, j + 1, dataModel.size)] +
-                                         value[FluidDataModel::index(i, j - 1, dataModel.size)])) * cRecip;
-                }
+        #pragma omp for schedule(static) collapse(2)
+        for (int i = 1; i < dataModel.size - 1; i++) {
+            for (int j = 1; j < dataModel.size - 1; j++) {
+                value[FluidDataModel::index(i, j, dataModel.size)] =
+                    (oldValue[FluidDataModel::index(i, j, dataModel.size)] +
+                     diffusionRate * (value[FluidDataModel::index(i + 1, j, dataModel.size)] +
+                                     value[FluidDataModel::index(i - 1, j, dataModel.size)] +
+                                     value[FluidDataModel::index(i, j + 1, dataModel.size)] +
+                                     value[FluidDataModel::index(i, j - 1, dataModel.size)])) * cRecip;
             }
         }
-        set_bnd(dataModel, mode, value);
+
+        #pragma omp single
+        {
+            set_bnd(dataModel, mode, value);
+        }
+        #pragma omp barrier
     }
 }
 
@@ -227,7 +230,7 @@ void OpenMPFluidStrategy::jacobi_lin_solve(const FluidDataModel &dataModel, cons
     std::vector<double> newValue(dataModel.size * dataModel.size, 0.0);
 
 
-    #pragma omp parallel default(shared) num_threads(this->numMaxThreads)
+    #pragma omp parallel num_threads(this->numMaxThreads) default(none) shared(dataModel, mode, value, oldValue, newValue, diffusionRate, cRecip)
     for (int k = 0; k < JACOBI_ITERATIONS; k++) {
         {
             #pragma omp for schedule(static) collapse(2)
@@ -248,15 +251,13 @@ void OpenMPFluidStrategy::jacobi_lin_solve(const FluidDataModel &dataModel, cons
             // Swap the new values into the main array
             std::swap(value, newValue);
             set_bnd(dataModel, mode, value);
-
         }
-
         #pragma omp barrier
     }
 }
 
 void OpenMPFluidStrategy::fadeDensity(const FluidDataModel &dataModel, std::vector<double> &density) const {
-    #pragma omp parallel for num_threads(this->numMaxThreads) default(shared)
+    #pragma omp parallel for num_threads(this->numMaxThreads) default(none) shared(dataModel, density)
     for (int i = 0; i < dataModel.size * dataModel.size; i++) {
         double d = density[i];
         density[i] = (d - 0.005f < 0) ? 0 : d - 0.005f;
@@ -266,7 +267,7 @@ void OpenMPFluidStrategy::fadeDensity(const FluidDataModel &dataModel, std::vect
 void OpenMPFluidStrategy::calculateVorticity(const FluidDataModel &dataModel, const std::vector<double> &vX, const std::vector<double> &vY, std::vector<double> &vorticity) const {
     const double h = 1.0 / (dataModel.size - 2); // assuming unit length domain
 
-    #pragma omp parallel for num_threads(this->numMaxThreads) default(shared)
+    #pragma omp parallel for num_threads(this->numMaxThreads) default(none) shared(dataModel, vX, vY, vorticity, h)
     for (int i = 1; i < dataModel.size - 1; i++) {
         for (int j = 1; j < dataModel.size - 1; j++) {
             int idx = FluidDataModel::index(i, j, dataModel.size);
